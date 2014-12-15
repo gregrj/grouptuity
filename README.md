@@ -1,6 +1,6 @@
 Grouptuity
 ==========
-Grouptuity is an Android app built to handle group bills when dining out. The app works as an advanced bill split calculator that takes into account all these complexities. It requires entry of who's dining, chosen from phone contacts, and the prices and splits for each item ordered. From this, it produces itemized bills for each person. To settle the bill, Grouptuity supports electronic payments through Venmo, IOU emails, and instructions for how much to pay with cash or credit.
+Grouptuity is an Android app built to handle group bills when dining out. The app works as an advanced bill split calculator that takes into account many complexities, including split dishes, group discounts, and different payment methods. It requires entry of who's dining, chosen from phone contacts, and the prices and splits for each item ordered. From this, it produces itemized bills for each person. To settle the bill, Grouptuity supports electronic payments through Venmo, IOU emails, and instructions for how much to pay with cash or credit.
 
 The app is available on Google Play as [Grouptuity Tip Calculator] [1].
 
