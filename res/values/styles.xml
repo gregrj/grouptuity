@@ -1,0 +1,7 @@
+<resources>
+	<style name="groutuitytheme" parent="android:Theme.Light"></style>
+		
+	<style name="body_text_color">
+		<item name="android:textColor">#FF555555</item>
+	</style>
+</resources>
