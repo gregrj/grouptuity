@@ -7,7 +7,11 @@
     <string name="nav_header_desc">Navigation header</string>
     <string name="action_settings">Settings</string>
 
-    <string name="menu_home">Home</string>
-    <string name="menu_gallery">Gallery</string>
-    <string name="menu_slideshow">Slideshow</string>
+    <string name="nav_drawer_bill_splitter">Group Bill Splitter</string>
+    <string name="nav_drawer_simple_calculator">Simple Tip Calculator</string>
+    <string name="nav_drawer_saved_bills_header">Saved Bills</string>
+    <string name="nav_drawer_settings">Settings</string>
+    <string name="nav_drawer_help">Help &amp; Feedback</string>
+
+    <string name="simple_calc_toolbar_title">Tip Calculator</string>
 </resources>

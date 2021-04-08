@@ -3,18 +3,42 @@
     xmlns:tools="http://schemas.android.com/tools"
     tools:showIn="navigation_view">
 
-    <group android:checkableBehavior="single">
+    <group
+        android:id="@+id/nav_group_main"
+        android:checkableBehavior="single">
         <item
-            android:id="@+id/nav_home"
-
-            android:title="@string/menu_home" />
+            android:id="@+id/nav_group_bill_splitter"
+            android:icon="@drawable/ic_menu_group"
+            android:title="@string/nav_drawer_bill_splitter"
+            android:checked="true"/>
         <item
-            android:id="@+id/nav_gallery"
+            android:id="@+id/nav_simple_calculator"
+            android:icon="@drawable/ic_menu_calc"
+            android:title="@string/nav_drawer_simple_calculator"/>
+    </group>
 
-            android:title="@string/menu_gallery" />
+    <item
+        android:id="@+id/nav_savedbills"
+        android:title="@string/nav_drawer_saved_bills_header">
+
+        <menu>
+            <item
+                android:id="@+id/placholder"
+                android:title="placholder"/>
+        </menu>
+    </item>
+
+    <group
+        android:id="@+id/nav_group_app_details"
+        android:checkableBehavior="none">
+
         <item
-            android:id="@+id/nav_slideshow"
-
-            android:title="@string/menu_slideshow" />
+            android:id="@+id/nav_settings"
+            android:icon="@drawable/ic_menu_settings"
+            android:title="@string/nav_drawer_settings"/>
+        <item
+            android:id="@+id/nav_help"
+            android:icon="@drawable/ic_menu_help"
+            android:title="@string/nav_drawer_help"/>
     </group>
 </menu>

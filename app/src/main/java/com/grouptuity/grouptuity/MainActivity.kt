@@ -1,31 +1,28 @@
 package com.grouptuity.grouptuity
 
 import android.os.Bundle
-import android.view.Menu
 import android.view.ViewGroup
-import com.google.android.material.floatingactionbutton.FloatingActionButton
-import com.google.android.material.snackbar.Snackbar
-import com.google.android.material.navigation.NavigationView
-import androidx.navigation.findNavController
+import androidx.appcompat.app.AppCompatActivity
+import androidx.appcompat.widget.Toolbar
+import androidx.core.view.*
+import androidx.drawerlayout.widget.DrawerLayout
+import androidx.navigation.NavController
+import androidx.navigation.NavDestination
+import androidx.navigation.fragment.NavHostFragment
 import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
-import androidx.drawerlayout.widget.DrawerLayout
-import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.Toolbar
-import androidx.core.view.*
-import androidx.navigation.NavController
-import androidx.navigation.NavDestination
-import androidx.navigation.fragment.NavHostFragment
 import com.grouptuity.grouptuity.databinding.ActivityMainBinding
 import com.grouptuity.grouptuity.ui.custom.CustomNavigator
 
 class MainActivity: AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
-    private lateinit var appBarConfiguration: AppBarConfiguration
-    private lateinit var navController: NavController
     private lateinit var navigator: CustomNavigator
+    private lateinit var appBarConfiguration: AppBarConfiguration
+
+    private lateinit var navController: NavController
+
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -49,12 +46,24 @@ class MainActivity: AppCompatActivity() {
             insets
         }
 
-        appBarConfiguration = AppBarConfiguration(setOf(R.id.billSplitFragment), binding.drawerLayout)
-
         configureNavigation()
     }
 
     override fun onSupportNavigateUp() = navController.navigateUp(appBarConfiguration) || super.onSupportNavigateUp()
+
+    override fun onBackPressed() {
+        if (binding.drawerLayout.isDrawerOpen(GravityCompat.START)) {
+            binding.drawerLayout.closeDrawer(GravityCompat.START)
+        } else {
+            super.onBackPressed()
+        }
+    }
+
+    fun attachToolbar(toolbar: Toolbar) {
+        setSupportActionBar(toolbar)
+        appBarConfiguration = AppBarConfiguration(setOf(R.id.billSplitFragment), binding.drawerLayout)
+        setupActionBarWithNavController(navController, appBarConfiguration)
+    }
 
     private fun configureNavigation() {
         val navHostFragment = supportFragmentManager.findFragmentById(R.id.fragment_container_view) as NavHostFragment
@@ -70,7 +79,22 @@ class MainActivity: AppCompatActivity() {
         binding.drawerNavView.setNavigationItemSelectedListener { menuItem ->
             when (navController.currentDestination?.id) {
                 R.id.billSplitFragment -> {
-
+                    when (menuItem.itemId) {
+                        R.id.nav_group_bill_splitter -> { binding.drawerLayout.closeDrawers() }
+                        R.id.nav_simple_calculator -> {
+                            navController.navigate(R.id.action_billSplitFragment_to_simpleCalcFragment)
+                            binding.drawerLayout.closeDrawers()
+                        }
+                    }
+                }
+                R.id.simpleCalcFragment -> {
+                    when (menuItem.itemId) {
+                        R.id.nav_group_bill_splitter -> {
+                            navController.popBackStack()
+                            binding.drawerLayout.closeDrawers()
+                        }
+                        R.id.nav_simple_calculator -> { binding.drawerLayout.closeDrawers() }
+                    }
                 }
             }
             true
@@ -85,6 +109,16 @@ class MainActivity: AppCompatActivity() {
 
     private fun updateForNavDestination(destination: NavDestination) {
         when(destination.id) {
+            R.id.billSplitFragment -> {
+                binding.drawerNavView.menu.findItem(R.id.nav_group_bill_splitter).isChecked = true
+                binding.drawerNavView.menu.findItem(R.id.nav_simple_calculator).isChecked = false
+                binding.drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED)
+            }
+            R.id.simpleCalcFragment -> {
+                binding.drawerNavView.menu.findItem(R.id.nav_group_bill_splitter).isChecked = false
+                binding.drawerNavView.menu.findItem(R.id.nav_simple_calculator).isChecked = true
+                binding.drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED)
+            }
             else -> {
                 binding.drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
             }

@@ -16,26 +16,20 @@ import androidx.navigation.NavOptions
 import androidx.navigation.Navigator
 import androidx.navigation.fragment.FragmentNavigator
 
-@Navigator.Name("fragment")
+@Navigator.Name("nav_fragment")
 class CustomNavigator(private val context: Context, private val manager: FragmentManager, private val containerId: Int): FragmentNavigator(context, manager, containerId) {
     private val mBackStack = ArrayDeque<Int>()
     var previousDestination: Int = -1
         private set
 
     override fun popBackStack(): Boolean {
-        if (mBackStack.isEmpty()) {
-            return false
-        }
-        if (manager.isStateSaved) {
+        if (mBackStack.isEmpty() || manager.isStateSaved) {
             return false
         }
 
         previousDestination = mBackStack.last()
 
-        manager.popBackStack(
-                generateBackStackName(mBackStack.size, mBackStack.last()),
-                FragmentManager.POP_BACK_STACK_INCLUSIVE
-        )
+        manager.popBackStack(generateBackStackName(mBackStack.size, mBackStack.last()), FragmentManager.POP_BACK_STACK_INCLUSIVE)
         mBackStack.removeLast()
         return true
     }

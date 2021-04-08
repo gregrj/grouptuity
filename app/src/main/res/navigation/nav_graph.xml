@@ -6,10 +6,20 @@
     app:startDestination="@+id/billSplitFragment"
     tools:ignore="UnusedNavigation">
 
-    <fragment
+    <nav_fragment
         android:id="@+id/billSplitFragment"
         android:name="com.grouptuity.grouptuity.ui.billsplit.BillSplitFragment"
         android:label="@string/app_name"
         tools:layout="@layout/frag_bill_split">
-    </fragment>
+
+        <action
+            android:id="@+id/action_billSplitFragment_to_simpleCalcFragment"
+            app:destination="@id/simpleCalcFragment" />
+    </nav_fragment>
+
+    <nav_fragment
+        android:id="@+id/simpleCalcFragment"
+        android:name="com.grouptuity.grouptuity.ui.simplecalc.SimpleCalcFragment"
+        android:label="@string/simple_calc_toolbar_title"
+        tools:layout="@layout/frag_simple_calc"/>
 </navigation>
