@@ -6,6 +6,7 @@ import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.core.view.*
 import androidx.drawerlayout.widget.DrawerLayout
+import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.NavController
 import androidx.navigation.NavDestination
 import androidx.navigation.fragment.NavHostFragment
@@ -13,19 +14,23 @@ import androidx.navigation.ui.AppBarConfiguration
 import androidx.navigation.ui.navigateUp
 import androidx.navigation.ui.setupActionBarWithNavController
 import androidx.navigation.ui.setupWithNavController
+import com.google.android.material.switchmaterial.SwitchMaterial
 import com.grouptuity.grouptuity.databinding.ActivityMainBinding
 import com.grouptuity.grouptuity.ui.custom.CustomNavigator
 
+
 class MainActivity: AppCompatActivity() {
+    private lateinit var appViewModel: AppViewModel
     private lateinit var binding: ActivityMainBinding
     private lateinit var navigator: CustomNavigator
     private lateinit var appBarConfiguration: AppBarConfiguration
-
     private lateinit var navController: NavController
 
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        appViewModel = ViewModelProvider(this).get(AppViewModel::class.java)
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -47,6 +52,21 @@ class MainActivity: AppCompatActivity() {
         }
 
         configureNavigation()
+
+        // TODO figure out what to do about menu item clickability
+        // TODO Retain setting and allow reversion to system default
+        val switchWidget = binding.drawerNavView.menu.findItem(R.id.dark_mode_switch).actionView.findViewById<SwitchMaterial>(R.id.switch_widget)
+        switchWidget.setOnClickListener {
+            if(switchWidget.isChecked) {
+                appViewModel.switchToDarkTheme()
+            } else {
+                appViewModel.switchToLightTheme()
+            }
+        }
+
+        appViewModel.darkThemeActive.observe(this) {
+            switchWidget.isChecked = it
+        }
     }
 
     override fun onSupportNavigateUp() = navController.navigateUp(appBarConfiguration) || super.onSupportNavigateUp()

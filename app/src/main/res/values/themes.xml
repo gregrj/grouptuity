@@ -8,10 +8,7 @@
         <item name="colorSecondaryVariant">@color/blue_dark</item>
         <item name="colorOnSecondary">@color/white</item>
 
-        <!-- Status bar color. -->
         <item name="android:statusBarColor">@android:color/transparent</item>
-
-        <!-- Customize your theme here. -->
     </style>
 
     <style name="Theme.Grouptuity.NoActionBar">

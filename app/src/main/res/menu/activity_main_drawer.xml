@@ -1,6 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     tools:showIn="navigation_view">
 
     <group
@@ -31,6 +32,11 @@
     <group
         android:id="@+id/nav_group_app_details"
         android:checkableBehavior="none">
+
+        <item android:id="@+id/dark_mode_switch"
+            app:actionLayout="@layout/menuitem_switch"
+            android:title="@string/nav_drawer_dark_mode"
+            android:icon="@drawable/ic_menu_dark_mode"/>
 
         <item
             android:id="@+id/nav_settings"
