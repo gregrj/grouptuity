@@ -3,7 +3,18 @@ package com.grouptuity.grouptuity.data
 import android.os.Parcel
 import android.os.Parcelable
 import androidx.room.*
+import org.json.JSONArray
+import org.json.JSONObject
 import java.util.*
+
+
+class Converters {
+    @TypeConverter
+    fun jsonToPreferences(json: String?): PaymentPreferences = json?.let { PaymentPreferences.fromJson(it) } ?: PaymentPreferences()
+
+    @TypeConverter
+    fun preferencesToJson(preferences: PaymentPreferences?): String = preferences?.toJson() ?: ""
+}
 
 
 private fun nameToInitials(name: String?): String {
@@ -19,23 +30,45 @@ private fun nameToInitials(name: String?): String {
     }
 }
 
-/**
- * A Bill object represents the calculation of payments associated with a meal at a restaurant.
- *
- * Bill objects contain metadata relevant to the payment calculation, such as a timestamp for the
- * meal and rules for handling tax and tip. The {@code id} field is referenced in the other
- * datastore entities so that SQL queries can retrieve the objects associated with this Bill.
- */
-@Entity(tableName = "bill_table")
-data class Bill(@PrimaryKey(autoGenerate = true) val id: Long,
-                val title: String,
-                val timeCreated: Long,
-                val tax: Double,
-                val taxAsPercent: Boolean,
-                val tip: Double,
-                val tipAsPercent: Boolean,
-                val isTaxTipped: Boolean?,
-                val discountsReduceTip: Boolean?)
+
+//TODO add more payment options as needed
+enum class PaymentMethod(val acceptedByRestaurant: Boolean, val peerToPeer: Boolean) {
+    CASH(true, true),
+    CREDIT_CARD_SPLIT(true, false),
+    CREDIT_CARD_INDIVIDUAL(true, false),
+    IOU_EMAIL(false, true),
+    VENMO(false, true)
+}
+
+
+class PaymentPreferences(private val preferenceMap: Map<Long, PaymentMethod>) {
+    constructor(): this(emptyMap())
+
+    fun forRecipient(id: Long): PaymentMethod? = preferenceMap[id]
+
+    fun toJson(): String {
+        val obj = JSONObject()
+        obj.put("payeeIds", JSONArray(preferenceMap.keys))
+        obj.put("methods", JSONArray(preferenceMap.values.map { it.name }))
+
+        return obj.toString()
+    }
+
+    companion object {
+        fun fromJson(json: String): PaymentPreferences {
+            val obj = JSONObject(json)
+            val payeeIds = obj.getJSONArray("payeeIds")
+            val methods = obj.getJSONArray("methods")
+
+            val newMap = mutableMapOf<Long, PaymentMethod>()
+            for (i in 0..payeeIds.length()) {
+                newMap[payeeIds[i] as Long] = PaymentMethod.valueOf(methods[i] as String)
+            }
+
+            return PaymentPreferences(newMap)
+        }
+    }
+}
 
 
 /**
@@ -90,3 +123,22 @@ data class Contact(@PrimaryKey val lookupKey: String,
         }
     }
 }
+
+
+/**
+ * A Bill object represents the calculation of payments associated with a meal at a restaurant.
+ *
+ * Bill objects contain metadata relevant to the payment calculation, such as a timestamp for the
+ * meal and rules for handling tax and tip. The {@code id} field is referenced in the other
+ * datastore entities so that SQL queries can retrieve the objects associated with this Bill.
+ */
+@Entity(tableName = "bill_table")
+data class Bill(@PrimaryKey(autoGenerate = true) val id: Long,
+                val title: String,
+                val timeCreated: Long,
+                val tax: Double,
+                val taxAsPercent: Boolean,
+                val tip: Double,
+                val tipAsPercent: Boolean,
+                val isTaxTipped: Boolean?,
+                val discountsReduceTip: Boolean?)
