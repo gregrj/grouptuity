@@ -9,6 +9,7 @@ import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.tabs.TabLayoutMediator
+import com.grouptuity.grouptuity.MainActivity
 import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.databinding.FragBillSplitBinding
 import com.grouptuity.grouptuity.ui.billsplit.diners.DinersFragment
@@ -38,6 +39,7 @@ class BillSplitFragment: Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         binding.toolbar.setNavigationIcon(R.drawable.ic_menu)
+        binding.toolbar.setNavigationOnClickListener { (activity as MainActivity).openNavViewDrawer() }
 
         binding.viewPager.adapter = object: FragmentStateAdapter(this) {
             override fun getItemCount() = 4

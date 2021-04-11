@@ -20,7 +20,7 @@ class TaxTipFragment : Fragment() {
         inflater: LayoutInflater, container: ViewGroup?,
         savedInstanceState: Bundle?
     ): View? {
-        return inflater.inflate(R.layout.frag_taxtip, container, false)
+        return inflater.inflate(R.layout.frag_tax_tip, container, false)
     }
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {

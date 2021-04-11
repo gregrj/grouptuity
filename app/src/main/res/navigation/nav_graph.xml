@@ -6,6 +6,10 @@
     app:startDestination="@+id/billSplitFragment"
     tools:ignore="UnusedNavigation">
 
+    <action
+        android:id="@+id/action_global_settingsFragment"
+        app:destination="@id/settingsHolderFragment"/>
+
     <nav_fragment
         android:id="@+id/billSplitFragment"
         android:name="com.grouptuity.grouptuity.ui.billsplit.BillSplitFragment"
@@ -22,4 +26,9 @@
         android:name="com.grouptuity.grouptuity.ui.simplecalc.SimpleCalcFragment"
         android:label="@string/simple_calc_toolbar_title"
         tools:layout="@layout/frag_simple_calc"/>
+
+    <nav_fragment
+        android:id="@+id/settingsHolderFragment"
+        android:name="com.grouptuity.grouptuity.ui.SettingsHolderFragment"
+        android:label="SettingsHolderFragment" />
 </navigation>

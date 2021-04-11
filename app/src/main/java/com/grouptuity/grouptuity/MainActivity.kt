@@ -70,23 +70,16 @@ class MainActivity: AppCompatActivity() {
             }
         }
 
+        // Hack: Setting the navigation bar color with xml style had issues during testing. Setting
+        // the color programmatically works.
         appViewModel.darkThemeActive.observe(this) {
             switchWidget.isChecked = it
             window.navigationBarColor = if(it) {
+                //TODO read from an attribute and move the color choice to xml
                 resources.getColor(R.color.black)
             } else {
                 resources.getColor(R.color.white)
             }
-
-//            val a = TypedValue()
-//            theme.resolveAttribute(android.R.attr.colorBackground, a, true)
-//            if (a.type >= TypedValue.TYPE_FIRST_COLOR_INT && a.type <= TypedValue.TYPE_LAST_COLOR_INT) {
-//                // windowBackground is a color
-//                val color = a.data
-//            } else {
-//                // windowBackground is not a color, probably a drawable
-//                val d: Drawable = activity.getResources().getDrawable(a.resourceId)
-//            }
         }
     }
 
@@ -111,59 +104,60 @@ class MainActivity: AppCompatActivity() {
 
         navigator = CustomNavigator(this, navHostFragment.childFragmentManager, R.id.fragment_container_view)
 
+        val updateDrawerForDestination: (NavDestination) -> Unit = { destination ->
+            when(destination.id) {
+                R.id.billSplitFragment -> {
+                    binding.drawerNavView.menu.findItem(R.id.nav_group_bill_splitter).isChecked = true
+                    binding.drawerNavView.menu.findItem(R.id.nav_simple_calculator).isChecked = false
+                    binding.drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED)
+                }
+                R.id.simpleCalcFragment -> {
+                    binding.drawerNavView.menu.findItem(R.id.nav_group_bill_splitter).isChecked = false
+                    binding.drawerNavView.menu.findItem(R.id.nav_simple_calculator).isChecked = true
+                    binding.drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED)
+                }
+                else -> {
+                    binding.drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
+                }
+            }
+        }
+
         navController = navHostFragment.navController
         navController.navigatorProvider.addNavigator(navigator)
         navController.setGraph(R.navigation.nav_graph)
-        navController.addOnDestinationChangedListener { _, destination, _ -> updateForNavDestination(destination) }
+        navController.addOnDestinationChangedListener { _, destination, _ -> updateDrawerForDestination(destination) }
 
         binding.drawerNavView.setupWithNavController(navController)
         binding.drawerNavView.setNavigationItemSelectedListener { menuItem ->
             when (navController.currentDestination?.id) {
                 R.id.billSplitFragment -> {
                     when (menuItem.itemId) {
-                        R.id.nav_group_bill_splitter -> { binding.drawerLayout.closeDrawers() }
-                        R.id.nav_simple_calculator -> {
-                            navController.navigate(R.id.action_billSplitFragment_to_simpleCalcFragment)
-                            binding.drawerLayout.closeDrawers()
-                        }
+                        R.id.nav_group_bill_splitter -> { }
+                        R.id.nav_simple_calculator -> { navController.navigate(R.id.action_billSplitFragment_to_simpleCalcFragment) }
+                        R.id.nav_settings -> { navController.navigate(R.id.action_global_settingsFragment) }
                     }
                 }
                 R.id.simpleCalcFragment -> {
                     when (menuItem.itemId) {
-                        R.id.nav_group_bill_splitter -> {
-                            navController.popBackStack()
-                            binding.drawerLayout.closeDrawers()
-                        }
-                        R.id.nav_simple_calculator -> { binding.drawerLayout.closeDrawers() }
+                        R.id.nav_group_bill_splitter -> { navController.popBackStack() }
+                        R.id.nav_simple_calculator -> { }
+                        R.id.nav_settings -> { navController.navigate(R.id.action_global_settingsFragment) }
                     }
                 }
             }
+            binding.drawerLayout.closeDrawers()
             true
         }
 
         // HACK: Checkable menu items in navigation drawer reset state when navigating back. This
         // listener ensures the correct state is shown.
         binding.drawerNavView.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
-            navController.currentDestination?.apply { updateForNavDestination(this) }
+            navController.currentDestination?.apply { updateDrawerForDestination(this) }
         }
     }
 
-    private fun updateForNavDestination(destination: NavDestination) {
-        when(destination.id) {
-            R.id.billSplitFragment -> {
-                binding.drawerNavView.menu.findItem(R.id.nav_group_bill_splitter).isChecked = true
-                binding.drawerNavView.menu.findItem(R.id.nav_simple_calculator).isChecked = false
-                binding.drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED)
-            }
-            R.id.simpleCalcFragment -> {
-                binding.drawerNavView.menu.findItem(R.id.nav_group_bill_splitter).isChecked = false
-                binding.drawerNavView.menu.findItem(R.id.nav_simple_calculator).isChecked = true
-                binding.drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED)
-            }
-            else -> {
-                binding.drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_LOCKED_CLOSED)
-            }
-        }
+    fun openNavViewDrawer() {
+        binding.drawerLayout.openDrawer(GravityCompat.START)
     }
 
     fun getNavigator() = navigator
