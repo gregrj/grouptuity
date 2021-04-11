@@ -9,6 +9,12 @@
         <item name="colorSecondaryVariant">@color/blue_dark</item>
         <item name="colorOnSecondary">@color/black</item>
 
+        <item name="colorSurface">@color/black</item>
+        <item name="colorOnSurface">@color/gray_light</item>
+
+        <item name="android:colorBackground">@color/black</item>
+        <item name="colorOnBackground">@color/gray_light</item>
+
         <item name="android:statusBarColor">@android:color/transparent</item>
     </style>
 

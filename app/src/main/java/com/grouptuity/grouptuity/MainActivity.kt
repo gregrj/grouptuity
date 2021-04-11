@@ -1,7 +1,13 @@
 package com.grouptuity.grouptuity
 
+import android.graphics.Color
+import android.graphics.drawable.Drawable
+import android.os.Build
 import android.os.Bundle
+import android.util.TypedValue
+import android.view.View
 import android.view.ViewGroup
+import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import androidx.core.view.*
@@ -66,6 +72,21 @@ class MainActivity: AppCompatActivity() {
 
         appViewModel.darkThemeActive.observe(this) {
             switchWidget.isChecked = it
+            window.navigationBarColor = if(it) {
+                resources.getColor(R.color.black)
+            } else {
+                resources.getColor(R.color.white)
+            }
+
+//            val a = TypedValue()
+//            theme.resolveAttribute(android.R.attr.colorBackground, a, true)
+//            if (a.type >= TypedValue.TYPE_FIRST_COLOR_INT && a.type <= TypedValue.TYPE_LAST_COLOR_INT) {
+//                // windowBackground is a color
+//                val color = a.data
+//            } else {
+//                // windowBackground is not a color, probably a drawable
+//                val d: Drawable = activity.getResources().getDrawable(a.resourceId)
+//            }
         }
     }
 
