@@ -15,6 +15,7 @@
 
         <item name="android:colorBackground">@color/black</item>
         <item name="colorOnBackground">@color/gray_light</item>
+        <item name="colorBaseBackground">@color/black</item>
 
         <item name="android:statusBarColor">@android:color/transparent</item>
     </style>
