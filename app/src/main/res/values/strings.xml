@@ -15,4 +15,9 @@
     <string name="nav_drawer_help">Help &amp; Feedback</string>
 
     <string name="simple_calc_toolbar_title">Tip Calculator</string>
+
+    <string name="billsplit_tab_diners">Diners</string>
+    <string name="billsplit_tab_items">Items</string>
+    <string name="billsplit_tab_taxtip">Tax&amp;Tip</string>
+    <string name="billsplit_tab_payment">Pay</string>
 </resources>
