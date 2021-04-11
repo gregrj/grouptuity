@@ -142,3 +142,231 @@ data class Bill(@PrimaryKey(autoGenerate = true) val id: Long,
                 val tipAsPercent: Boolean,
                 val isTaxTipped: Boolean?,
                 val discountsReduceTip: Boolean?)
+
+
+@Entity(tableName = "diner_table",
+    foreignKeys = [ ForeignKey(entity = Bill::class, parentColumns = ["id"], childColumns = ["billId"], onDelete = ForeignKey.CASCADE),
+        ForeignKey(entity = Contact::class, parentColumns = ["lookupKey"], childColumns = ["contact_lookupKey"], onDelete = ForeignKey.NO_ACTION)],
+    indices = [Index("billId"), Index("contact_lookupKey")]) //TODO is Index on contact_lookupkey useful?
+data class Diner(@PrimaryKey(autoGenerate = true) val id: Long,
+                 val billId: Long,
+                 @Embedded(prefix = "contact_") val contact: Contact,
+                 val paymentPreferences: PaymentPreferences,
+                 @Ignore val items: List<Long>,
+                 @Ignore val debtsOwed: List<Long>,
+                 @Ignore val debtsHeld: List<Long>,
+                 @Ignore val discountsReceived: List<Long>,
+                 @Ignore val discountsPurchased: List<Long>,
+                 @Ignore val paymentsSent: List<Long>,
+                 @Ignore val paymentsReceived: List<Long>): Parcelable {
+
+    @Ignore
+    val lookupKey = contact.lookupKey
+
+    @Ignore
+    val name = contact.name
+
+    @Ignore
+    val photoUri = contact.photoUri
+
+    constructor(id: Long, billId: Long, contact: Contact): this(id, billId, contact, PaymentPreferences(), emptyList(), emptyList(), emptyList(), emptyList(), emptyList(), emptyList(), emptyList())
+
+    fun getInitials() = nameToInitials(name)
+
+    fun withLists(newItems: List<Long>?=null, newDebtsOwed: List<Long>?=null,
+                  newDebtsHeld: List<Long>?=null, newDiscountsReceived: List<Long>?=null,
+                  newDiscountsPurchased: List<Long>?=null, newPaymentsSent: List<Long>?=null,
+                  newPaymentsReceived: List<Long>?=null) =
+        Diner(id, billId, contact, paymentPreferences,
+            newItems ?: items,
+            newDebtsOwed ?: debtsOwed,
+            newDebtsHeld ?: debtsHeld,
+            newDiscountsReceived ?: discountsReceived,
+            newDiscountsPurchased ?: discountsPurchased,
+            newPaymentsSent ?: paymentsSent,
+            newPaymentsReceived ?: paymentsReceived)
+
+    override fun describeContents() = 0
+
+    override fun writeToParcel(dest: Parcel?, flags: Int) {
+        dest?.apply {
+            this.writeLong(id)
+            this.writeLong(billId)
+            this.writeParcelable(contact, 0)
+            this.writeString(paymentPreferences.toJson())
+            this.writeLongArray(items.toLongArray())
+            this.writeLongArray(debtsOwed.toLongArray())
+            this.writeLongArray(debtsHeld.toLongArray())
+            this.writeLongArray(discountsReceived.toLongArray())
+            this.writeLongArray(discountsPurchased.toLongArray())
+            this.writeLongArray(paymentsSent.toLongArray())
+            this.writeLongArray(paymentsReceived.toLongArray())
+        }
+    }
+
+    companion object CREATOR : Parcelable.Creator<Diner> {
+        override fun createFromParcel(parcel: Parcel) = Diner(
+            parcel.readLong(),
+            parcel.readLong(),
+            parcel.readParcelable(Contact::class.java.classLoader) ?: Contact.dummy,
+            PaymentPreferences.fromJson(parcel.readString() ?: ""),
+            parcel.createLongArray()?.toList() ?: emptyList(),
+            parcel.createLongArray()?.toList() ?: emptyList(),
+            parcel.createLongArray()?.toList() ?: emptyList(),
+            parcel.createLongArray()?.toList() ?: emptyList(),
+            parcel.createLongArray()?.toList() ?: emptyList(),
+            parcel.createLongArray()?.toList() ?: emptyList(),
+            parcel.createLongArray()?.toList() ?: emptyList()
+        )
+
+        override fun newArray(size: Int): Array<Diner?> = arrayOfNulls(size)
+    }
+}
+
+
+@Entity(tableName = "item_table",
+    foreignKeys = [ForeignKey(entity = Bill::class, parentColumns = ["id"], childColumns = ["billId"], onDelete = ForeignKey.CASCADE)],
+    indices = [Index("billId")])
+data class Item(@PrimaryKey(autoGenerate = true) val id: Long,
+                val billId: Long,
+                val price: Double,
+                val name: String,
+                @Ignore val diners: List<Long>,
+                @Ignore val discounts: List<Long>): Parcelable {
+
+    constructor(id: Long, billId: Long, price: Double, name: String): this(id, billId, price, name, emptyList(), emptyList())
+
+    fun withLists(newDiners: List<Long>?=null, newDiscounts: List<Long>?=null) =
+        Item(id, billId, price, name, newDiners ?: diners, newDiscounts ?: discounts)
+
+    override fun describeContents() = 0
+
+    override fun writeToParcel(dest: Parcel?, flags: Int) {
+        dest?.apply {
+            this.writeLong(id)
+            this.writeLong(billId)
+            this.writeDouble(price)
+            this.writeString(name)
+            this.writeLongArray(diners.toLongArray())
+            this.writeLongArray(discounts.toLongArray())
+        }
+    }
+
+    companion object CREATOR : Parcelable.Creator<Item> {
+        override fun createFromParcel(parcel: Parcel) = Item(
+            parcel.readLong(),
+            parcel.readLong(),
+            parcel.readDouble(),
+            parcel.readString() ?: "Item",
+            parcel.createLongArray()?.toList() ?: emptyList(),
+            parcel.createLongArray()?.toList() ?: emptyList())
+
+
+        override fun newArray(size: Int): Array<Item?> = arrayOfNulls(size)
+    }
+}
+
+
+@Entity(tableName = "debt_table",
+    foreignKeys = [ForeignKey(entity = Bill::class, parentColumns = ["id"], childColumns = ["billId"], onDelete = ForeignKey.CASCADE)],
+    indices = [Index("billId")])
+data class Debt(@PrimaryKey(autoGenerate = true) val id: Long,
+                val billId: Long,
+                val amount: Double,
+                @Ignore val debtors: List<Long>,
+                @Ignore val creditors: List<Long>): Parcelable {
+
+    constructor(id: Long, billId: Long, amount: Double): this(id, billId, amount, emptyList(), emptyList())
+
+    fun withLists(newDebtors: List<Long>?=null, newCreditors: List<Long>?=null) =
+        Debt(id, billId, amount, newDebtors ?: debtors, newCreditors ?: creditors)
+
+    override fun describeContents() = 0
+
+    override fun writeToParcel(dest: Parcel?, flags: Int) {
+        dest?.apply {
+            this.writeLong(id)
+            this.writeLong(billId)
+            this.writeDouble(amount)
+            this.writeLongArray(debtors.toLongArray())
+            this.writeLongArray(creditors.toLongArray())
+        }
+    }
+
+    companion object CREATOR : Parcelable.Creator<Debt> {
+        override fun createFromParcel(parcel: Parcel) = Debt(
+            parcel.readLong(),
+            parcel.readLong(),
+            parcel.readDouble(),
+            parcel.createLongArray()?.toList() ?: emptyList(),
+            parcel.createLongArray()?.toList() ?: emptyList())
+
+        override fun newArray(size: Int): Array<Debt?> = arrayOfNulls(size)
+    }
+}
+
+
+@Entity(tableName = "discount_table",
+    foreignKeys = [ForeignKey(entity = Bill::class, parentColumns = ["id"], childColumns = ["billId"], onDelete = ForeignKey.CASCADE)],
+    indices = [Index("billId")])
+data class Discount(@PrimaryKey(autoGenerate = true) val id: Long,
+                    val billId: Long,
+                    val asPercent: Boolean,
+                    val onItems: Boolean,
+                    val value: Double,
+                    val cost: Double?,
+                    @Ignore val items: List<Long> = emptyList(),
+                    @Ignore val recipients: List<Long> = emptyList(),
+                    @Ignore val purchasers: List<Long> = emptyList()): Parcelable {
+
+    constructor(id: Long, billId: Long, asPercent: Boolean, onItems: Boolean, value: Double, cost: Double?):
+            this(id, billId, asPercent, onItems, value, cost, emptyList(), emptyList(), emptyList())
+
+    fun withLists(newItems: List<Long>?=null, newRecipients: List<Long>?=null, newPurchasers: List<Long>?=null) =
+        Discount(id, billId, asPercent, onItems, value, cost, newItems ?: items, newRecipients ?: recipients, newPurchasers ?: purchasers)
+
+    override fun describeContents() = 0
+
+    override fun writeToParcel(dest: Parcel?, flags: Int) {
+        dest?.apply {
+            this.writeLong(id)
+            this.writeLong(billId)
+            this.writeInt(if (asPercent) 1 else  0)
+            this.writeInt(if (onItems) 1 else  0)
+            this.writeDouble(value)
+            this.writeDouble(cost ?: -1.0)
+            this.writeLongArray(items.toLongArray())
+            this.writeLongArray(recipients.toLongArray())
+            this.writeLongArray(purchasers.toLongArray())
+        }
+    }
+
+    companion object CREATOR : Parcelable.Creator<Discount> {
+        override fun createFromParcel(parcel: Parcel) = Discount(
+            parcel.readLong(),
+            parcel.readLong(),
+            parcel.readInt() == 1,
+            parcel.readInt() == 1,
+            parcel.readDouble(),
+            parcel.readDouble().let { if(it < 0.0) null else it },
+            parcel.createLongArray()?.toList() ?: emptyList(),
+            parcel.createLongArray()?.toList() ?: emptyList(),
+            parcel.createLongArray()?.toList() ?: emptyList())
+
+        override fun newArray(size: Int): Array<Discount?> = arrayOfNulls(size)
+    }
+}
+
+
+@Entity(tableName = "payment_table",
+    foreignKeys = [ForeignKey(entity = Bill::class, parentColumns = ["id"], childColumns = ["billId"], onDelete = ForeignKey.CASCADE),
+        ForeignKey(entity = Diner::class, parentColumns = ["id"], childColumns = ["payerId"], onDelete = ForeignKey.CASCADE),
+        ForeignKey(entity = Diner::class, parentColumns = ["id"], childColumns = ["payeeId"], onDelete = ForeignKey.CASCADE)],
+    indices = [Index("billId"), Index("payerId"), Index("payeeId")])
+data class Payment(@PrimaryKey(autoGenerate = true) val id: Long,
+                   val billId: Long,
+                   val amount: Double,
+                   val method: String,
+                   val committed: Boolean,
+                   val payerId: Long,
+                   val payeeId: Long)
