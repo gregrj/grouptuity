@@ -5,6 +5,7 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.ViewModelProvider
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -20,6 +21,7 @@ import com.grouptuity.grouptuity.ui.custom.setNullOnDestroy
 
 class BillSplitFragment: Fragment() {
     private var binding by setNullOnDestroy<FragBillSplitBinding>()
+    private lateinit var billSplitViewModel: BillSplitViewModel
     private var fabPageIndex = 0
 
     companion object {
@@ -30,8 +32,9 @@ class BillSplitFragment: Fragment() {
     }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        binding = FragBillSplitBinding.inflate(inflater, container, false)
+        billSplitViewModel = ViewModelProvider(this).get(BillSplitViewModel::class.java)
 
+        binding = FragBillSplitBinding.inflate(inflater, container, false)
         return binding.root
     }
 
@@ -97,5 +100,27 @@ class BillSplitFragment: Fragment() {
                 else -> getString(R.string.billsplit_tab_payment)
             }
         }.attach()
+
+        // Overlay badge on diners tab showing how many diners are on the bill
+        billSplitViewModel.dinerCount.observe(viewLifecycleOwner) {
+            binding.tabLayout.getTabAt(FRAG_POSITION_DINERS)?.apply {
+                if(it > 0) {
+                    orCreateBadge.number = it
+                } else {
+                    removeBadge()
+                }
+            }
+        }
+
+        // Overlay badge on items tab showing how many items are on the bill
+        billSplitViewModel.itemCount.observe(viewLifecycleOwner) {
+            binding.tabLayout.getTabAt(FRAG_POSITION_ITEMS)?.apply {
+                if(it > 0) {
+                    orCreateBadge.number = it
+                } else {
+                    removeBadge()
+                }
+            }
+        }
     }
 }
