@@ -10,12 +10,8 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.mapLatest
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.*
 
 
 val Context.preferenceDataStore: DataStore<Preferences> by preferencesDataStore(name = "grouptuity_preferences")
@@ -46,6 +42,32 @@ class Repository(context: Context) {
     // App-level Data
     val bills = billDao.getSavedBills()
     val appContacts = contactDao.getSavedContacts()
+
+    // Bill entity lists
+    val loadedBill = loadedBillId.transformLatest{ emitAll(billDao.getBill(it)) }.flowOn(Dispatchers.IO).filterNotNull()
+    val diners = loadedBill.transformLatest{ emitAll(dinerDao.getDinersOnBill(it.id)) }.flowOn(Dispatchers.IO)
+    val items = loadedBill.transformLatest{ emitAll(itemDao.getItemsOnBill(it.id)) }.flowOn(Dispatchers.IO)
+    val debts = loadedBill.transformLatest{ emitAll(debtDao.getDebtsOnBill(it.id)) }.flowOn(Dispatchers.IO)
+    val discounts = loadedBill.transformLatest{ emitAll(discountDao.getDiscountsOnBill(it.id)) }.flowOn(Dispatchers.IO)
+    val payments = loadedBill.transformLatest{ emitAll(paymentDao.getPaymentsOnBill(it.id)) }.flowOn(Dispatchers.IO)
+    val restaurant = loadedBill.transformLatest{ emitAll(billDao.getRestaurantId(it.id)) }.transformLatest{ emitAll(dinerDao.getDiner(it)) }.flowOn(Dispatchers.IO)
+
+    // Bill entity ID maps
+    val dinerIdMap = diners.mapLatest { dinerArray -> dinerArray.map { Pair(it.id, it) }.toMap() }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, emptyMap())
+    val itemIdMap = items.mapLatest { itemArray -> itemArray.map { Pair(it.id, it) }.toMap() }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, emptyMap())
+    val debtIdMap = debts.mapLatest { debtArray -> debtArray.map { Pair(it.id, it) }.toMap() }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, emptyMap())
+    val discountIdMap = discounts.mapLatest { discountArray -> discountArray.map { Pair(it.id, it) }.toMap() }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, emptyMap())
+    val paymentIdMap = payments.mapLatest { paymentArray -> paymentArray.map { Pair(it.id, it) }.toMap() }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, emptyMap())
+
+    // Bill entity counts
+    val numberOfDiners = diners.mapLatest { it.size }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, 0)
+    val numberOfItems = items.mapLatest { it.size }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, 0)
+    val numberOfDebts = debts.mapLatest { it.size }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, 0)
+    val numberOfDiscounts = discounts.mapLatest { it.size }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, 0)
+    val numberOfPayments = payments.mapLatest { it.size }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, 0)
+
+    // Subtotals
+    val dinerSubtotals: Flow<Map<Long, Double>> = combine(diners, itemIdMap) { diners, itemMap -> diners.associate { diner -> diner.id to getDinerSubtotal(diner, itemMap) } }
 
     private fun <T> getPreferenceFlow(key: Preferences.Key<T>, defaultValue: T, initialValue: T? = null): StateFlow<T> =
         preferenceDataStore.data.mapLatest { preferences ->
