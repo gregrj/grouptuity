@@ -43,8 +43,8 @@ class MainActivity: AppCompatActivity() {
 
         /* Some fragments and transitions may draw content or animations where the status bar is
         located. Setting decorFitsSystemWindows to false allows the app to draw under the status
-        bar. However, the margins for any non-status bar decorations (i.e., the navigation bar at
-        the bottom of the screen) are still required and have to be added via a window inset
+        bar. However, the margins for any non-status bar decorations (for example, the navigation
+        bar at the bottom of the screen) are still required and have to be added via a window inset
         listener. */
         WindowCompat.setDecorFitsSystemWindows(window, false)
         ViewCompat.setOnApplyWindowInsetsListener(binding.root) { view, insets ->
