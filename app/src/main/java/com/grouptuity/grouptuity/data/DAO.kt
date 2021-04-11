@@ -235,3 +235,209 @@ interface ItemDao: BaseDao<Item> {
             }
         }
 }
+
+
+@Dao
+interface DebtDao: BaseDao<Debt> {
+    @Query("SELECT id FROM debt_table WHERE billId = :billId")
+    fun _getDebtIdsOnBill(billId: Long): Flow<List<Long>>
+
+    @Query("SELECT id FROM debt_table INNER JOIN debt_debtor_join_table ON debt_table.id=debt_debtor_join_table.debtId WHERE debt_debtor_join_table.dinerId=:dinerId")
+    fun _getDebtIdsOwedByDiner(dinerId: Long): Flow<List<Long>>
+
+    @Query("SELECT id FROM debt_table INNER JOIN debt_creditor_join_table ON debt_table.id=debt_creditor_join_table.debtId WHERE debt_creditor_join_table.dinerId=:dinerId")
+    fun _getDebtIdsHeldByDiner(dinerId: Long): Flow<List<Long>>
+
+    @Query("SELECT * FROM debt_table WHERE id = :debtId")
+    fun _getBaseDebt(debtId: Long): Flow<Debt?>
+
+    @Query("SELECT id FROM diner_table INNER JOIN debt_debtor_join_table ON diner_table.id=debt_debtor_join_table.dinerId WHERE debt_debtor_join_table.debtId=:debtId")
+    fun _getDebtorsForDebt(debtId: Long): Flow<List<Long>>
+
+    @Query("SELECT id FROM diner_table INNER JOIN debt_creditor_join_table ON diner_table.id=debt_creditor_join_table.dinerId WHERE debt_creditor_join_table.debtId=:debtId")
+    fun _getCreditorsForDebt(debtId: Long): Flow<List<Long>>
+
+    @Insert
+    suspend fun addDebtorsForDebt(joins: List<DebtDebtorJoin>)
+
+    @Insert
+    suspend fun addCreditorsForDebt(joins: List<DebtCreditorJoin>)
+
+    @Transaction
+    suspend fun save(debt: Debt) {
+        delete(debt)
+        val debtId = _insert(debt)
+        addDebtorsForDebt(debt.debtors.map { DebtDebtorJoin(debtId, it) })
+        addCreditorsForDebt(debt.creditors.map { DebtCreditorJoin(debtId, it) })
+    }
+
+    fun getDebt(debtId: Long): Flow<Debt> = combine(_getBaseDebt(debtId).distinctUntilChanged(),
+        _getDebtorsForDebt(debtId).distinctUntilChanged(),
+        _getCreditorsForDebt(debtId).distinctUntilChanged()) { debt, debtors, creditors ->
+        debt?.withLists(debtors, creditors)
+    }.filterNotNull()
+
+    fun getDebtsOnBill(billId: Long): Flow<Array<Debt>> = _getDebtIdsOnBill(billId).distinctUntilChanged()
+        .transformLatest { debtIds ->
+            if(debtIds.isEmpty()) {
+                emitAll(flow { emit(emptyArray<Debt>()) })
+            } else {
+                emitAll(combine(debtIds.map { getDebt(it) }){ it })
+            }
+        }
+
+    fun getDebtsOwedByDiner(dinerId: Long): Flow<Array<Debt>> = _getDebtIdsOwedByDiner(dinerId).distinctUntilChanged()
+        .transformLatest { debtIds ->
+            if(debtIds.isEmpty()) {
+                emitAll(flow { emit(emptyArray<Debt>()) })
+            } else {
+                emitAll(combine(debtIds.map { getDebt(it) }){ it })
+            }
+        }
+
+    fun getDebtsHeldByDiner(dinerId: Long): Flow<Array<Debt>> = _getDebtIdsHeldByDiner(dinerId).distinctUntilChanged()
+        .transformLatest { debtIds ->
+            if(debtIds.isEmpty()) {
+                emitAll(flow { emit(emptyArray<Debt>()) })
+            } else {
+                emitAll(combine(debtIds.map { getDebt(it) }){ it })
+            }
+        }
+}
+
+
+@Dao
+interface DiscountDao: BaseDao<Discount> {
+    @Query("SELECT id FROM discount_table WHERE billId = :billId")
+    fun _getDiscountIdsOnBill(billId: Long): Flow<List<Long>>
+
+    @Query("SELECT id FROM discount_table INNER JOIN discount_recipient_join_table ON discount_table.id=discount_recipient_join_table.discountId WHERE discount_recipient_join_table.dinerId=:dinerId")
+    fun _getDiscountIdsReceivedByDiner(dinerId: Long): Flow<List<Long>>
+
+    @Query("SELECT id FROM discount_table INNER JOIN discount_purchaser_join_table ON discount_table.id=discount_purchaser_join_table.discountId WHERE discount_purchaser_join_table.dinerId=:dinerId")
+    fun _getDiscountIdsPurchasedByDiner(dinerId: Long): Flow<List<Long>>
+
+    @Query("SELECT * FROM discount_table WHERE id = :discountId")
+    fun _getBaseDiscount(discountId: Long): Flow<Discount?>
+
+    @Query("SELECT id FROM item_table INNER JOIN discount_item_join_table ON item_table.id=discount_item_join_table.itemId WHERE discount_item_join_table.discountId=:discountId")
+    fun _getItemsForDiscount(discountId: Long): Flow<List<Long>>
+
+    @Query("SELECT id FROM diner_table INNER JOIN discount_recipient_join_table ON diner_table.id=discount_recipient_join_table.dinerId WHERE discount_recipient_join_table.discountId=:discountId")
+    fun _getRecipientsForDiscount(discountId: Long): Flow<List<Long>>
+
+    @Query("SELECT id FROM diner_table INNER JOIN discount_purchaser_join_table ON diner_table.id=discount_purchaser_join_table.dinerId WHERE discount_purchaser_join_table.discountId=:discountId")
+    fun _getPurchasersForDiscount(discountId: Long): Flow<List<Long>>
+
+    @Insert
+    suspend fun addItemsForDiscount(joins: List<DiscountItemJoin>)
+
+    @Insert
+    suspend fun addRecipientsForDiscount(joins: List<DiscountRecipientJoin>)
+
+    @Insert
+    suspend fun addPurchasersForDiscount(joins: List<DiscountPurchaserJoin>)
+
+    @Transaction
+    suspend fun save(discount: Discount): Long {
+        delete(discount)
+        val discountId = _insert(discount)
+        addItemsForDiscount(discount.items.map { DiscountItemJoin(discountId, it) })
+        addRecipientsForDiscount(discount.recipients.map { DiscountRecipientJoin(discountId, it) })
+        addPurchasersForDiscount(discount.purchasers.map { DiscountPurchaserJoin(discountId, it) })
+        return discountId
+    }
+
+    fun getDiscount(discountId: Long): Flow<Discount> = combine(_getBaseDiscount(discountId).distinctUntilChanged(),
+        _getItemsForDiscount(discountId).distinctUntilChanged(),
+        _getRecipientsForDiscount(discountId).distinctUntilChanged(),
+        _getPurchasersForDiscount(discountId).distinctUntilChanged()) { discount, items, recipients, purchasers ->
+        discount?.withLists(items, recipients, purchasers)
+    }.filterNotNull()
+
+    fun getDiscountsOnBill(billId: Long): Flow<Array<Discount>> = _getDiscountIdsOnBill(billId).distinctUntilChanged()
+        .transformLatest { discountIds ->
+            if(discountIds.isEmpty()) {
+                emitAll(flow { emit(emptyArray<Discount>()) })
+            } else {
+                emitAll(combine(discountIds.map { getDiscount(it) }){ it })
+            }
+        }
+
+    fun getDiscountsReceivedByDiner(dinerId: Long): Flow<Array<Discount>> = _getDiscountIdsReceivedByDiner(dinerId).distinctUntilChanged()
+        .transformLatest { discountIds ->
+            if(discountIds.isEmpty()) {
+                emitAll(flow { emit(emptyArray<Discount>()) })
+            } else {
+                emitAll(combine(discountIds.map { getDiscount(it) }){ it })
+            }
+        }
+
+    fun getDiscountsPurchasedByDiner(dinerId: Long): Flow<Array<Discount>> = _getDiscountIdsPurchasedByDiner(dinerId).distinctUntilChanged()
+        .transformLatest { discountIds ->
+            if(discountIds.isEmpty()) {
+                emitAll(flow { emit(emptyArray<Discount>()) })
+            } else {
+                emitAll(combine(discountIds.map { getDiscount(it) }){ it })
+            }
+        }
+}
+
+
+@Dao
+interface PaymentDao: BaseDao<Payment> {
+    @Query("SELECT id FROM payment_table WHERE billId = :billId")
+    fun _getPaymentIdsOnBill(billId: Long): Flow<List<Long>>
+
+    @Query("SELECT id FROM payment_table INNER JOIN payment_payer_join_table ON payment_table.id=payment_payer_join_table.paymentId WHERE payment_payer_join_table.dinerId=:dinerId")
+    fun _getPaymentIdsSentByDiner(dinerId: Long): Flow<List<Long>>
+
+    @Query("SELECT id FROM payment_table INNER JOIN payment_payee_join_table ON payment_table.id=payment_payee_join_table.paymentId WHERE payment_payee_join_table.dinerId=:dinerId")
+    fun _getPaymentIdsReceivedByDiner(dinerId: Long): Flow<List<Long>>
+
+    @Query("SELECT * FROM payment_table WHERE id = :paymentId")
+    fun _getBasePayment(paymentId: Long): Flow<Payment?>
+
+    @Insert
+    suspend fun addPayerForPayment(join: PaymentPayerJoin)
+
+    @Insert
+    suspend fun addPayeeForPayment(join: PaymentPayeeJoin)
+
+    @Transaction
+    suspend fun save(payment: Payment) {
+        delete(payment)
+        val paymentId = _insert(payment)
+        addPayerForPayment(PaymentPayerJoin(paymentId, payment.payerId))
+        addPayeeForPayment(PaymentPayeeJoin(paymentId, payment.payeeId))
+    }
+
+    fun getPayment(paymentId: Long): Flow<Payment> = _getBasePayment(paymentId).distinctUntilChanged().filterNotNull()
+
+    fun getPaymentsOnBill(billId: Long): Flow<Array<Payment>> = _getPaymentIdsOnBill(billId).distinctUntilChanged()
+        .transformLatest { paymentIds ->
+            if(paymentIds.isEmpty()) {
+                emitAll(flow { emit(emptyArray<Payment>()) })
+            } else {
+                emitAll(combine(paymentIds.map { getPayment(it) }){ it })
+            }
+        }
+
+    fun getPaymentsSentByDiner(dinerId: Long): Flow<Array<Payment>> = _getPaymentIdsSentByDiner(dinerId).distinctUntilChanged()
+        .transformLatest { paymentIds ->
+            if(paymentIds.isEmpty()) {
+                emitAll(flow { emit(emptyArray<Payment>()) })
+            } else {
+                emitAll(combine(paymentIds.map { getPayment(it) }){ it })
+            }
+        }
+
+    fun getPaymentsReceivedByDiner(dinerId: Long): Flow<Array<Payment>> = _getPaymentIdsReceivedByDiner(dinerId).distinctUntilChanged()
+        .transformLatest { paymentIds ->
+            if(paymentIds.isEmpty()) {
+                emitAll(flow { emit(emptyArray<Payment>()) })
+            } else {
+                emitAll(combine(paymentIds.map { getPayment(it) }){ it })
+            }
+        }
+}
