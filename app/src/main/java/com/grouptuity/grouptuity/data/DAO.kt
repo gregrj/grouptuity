@@ -50,6 +50,38 @@ interface ContactDao: BaseDao<Contact> {
 
 
 @Dao
+interface BillDao: BaseDao<Bill> {
+    @Query("SELECT * FROM bill_table")
+    fun getSavedBills(): Flow<List<Bill>>
+
+    @Query("SELECT * FROM bill_table WHERE id = :id LIMIT 1")
+    fun getBill(id: Long): Flow<Bill?>
+
+    @Query("SELECT id FROM diner_table WHERE billId = :billId AND contact_lookupKey='grouptuity_restaurant_contact_lookupKey' LIMIT 1")
+    fun getRestaurantId(billId: Long): Flow<Long>
+
+    @Query("SELECT contact_lookupKey FROM diner_table WHERE billId = :billId")
+    fun getContactLookupKeys(billId: Long): Flow<List<String>>
+
+    @Transaction
+    suspend fun save(bill: Bill, addSelf: Boolean=true): Long {
+        val billId = _insert(bill)
+
+        addDinerToBill(Diner(0L, billId, Contact.restaurant))
+
+        if(addSelf) {
+            addDinerToBill(Diner(0L, billId, Contact.self))
+        }
+
+        return billId
+    }
+
+    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    suspend fun addDinerToBill(diner: Diner): Long
+}
+
+
+@Dao
 interface DinerDao: BaseDao<Diner> {
     @Query("SELECT id FROM diner_table WHERE billId = :billId AND contact_lookupKey!='grouptuity_restaurant_contact_lookupKey'")
     fun _getDinerIdsOnBill(billId: Long): Flow<List<Long>>
