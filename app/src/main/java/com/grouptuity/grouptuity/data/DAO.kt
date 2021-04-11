@@ -177,3 +177,61 @@ interface DinerDao: BaseDao<Diner> {
             }
         }
 }
+
+
+@Dao
+interface ItemDao: BaseDao<Item> {
+    @Query("SELECT id FROM item_table WHERE billId = :billId")
+    fun _getItemIdsOnBill(billId: Long): Flow<List<Long>>
+
+    @Query("SELECT id FROM item_table INNER JOIN diner_item_join_table ON item_table.id=diner_item_join_table.itemId WHERE diner_item_join_table.dinerId=:dinerId")
+    fun _getItemIdsForDiner(dinerId: Long): Flow<List<Long>>
+
+    @Query("SELECT * FROM item_table WHERE id = :itemId")
+    fun _getBaseItem(itemId: Long): Flow<Item?>
+
+    @Query("SELECT id FROM diner_table INNER JOIN diner_item_join_table ON diner_table.id=diner_item_join_table.dinerId WHERE diner_item_join_table.itemId=:itemId")
+    fun _getDinersForItem(itemId: Long): Flow<List<Long>>
+
+    @Query("SELECT id FROM discount_table INNER JOIN discount_item_join_table ON discount_table.id=discount_item_join_table.discountId WHERE discount_item_join_table.itemId=:itemId")
+    fun _getDiscountsForItem(itemId: Long): Flow<List<Long>>
+
+    @Insert
+    suspend fun addDinersForItem(joins: List<DinerItemJoin>)
+
+    @Insert
+    suspend fun addDiscountsForItem(joins: List<DiscountItemJoin>)
+
+    @Transaction
+    suspend fun save(item: Item): Long {
+        delete(item)
+        val itemId = _insert(item)
+        addDinersForItem(item.diners.map { DinerItemJoin(it, itemId) })
+        addDiscountsForItem(item.discounts.map { DiscountItemJoin(it, itemId) })
+        return itemId
+    }
+
+    fun getItem(itemId: Long): Flow<Item> = combine(_getBaseItem(itemId).distinctUntilChanged(),
+        _getDinersForItem(itemId).distinctUntilChanged(),
+        _getDiscountsForItem(itemId).distinctUntilChanged()) { item, diners, discounts ->
+        item?.withLists(diners, discounts)
+    }.filterNotNull()
+
+    fun getItemsOnBill(billId: Long): Flow<Array<Item>> = _getItemIdsOnBill(billId).distinctUntilChanged()
+        .transformLatest { itemIds ->
+            if(itemIds.isEmpty()) {
+                emitAll(flow { emit(emptyArray<Item>()) })
+            } else {
+                emitAll(combine(itemIds.map { getItem(it) }){ it })
+            }
+        }
+
+    fun getItemsForDiner(dinerId: Long): Flow<Array<Item>> = _getItemIdsForDiner(dinerId).distinctUntilChanged()
+        .transformLatest { itemIds ->
+            if(itemIds.isEmpty()) {
+                emitAll(flow { emit(emptyArray<Item>()) })
+            } else {
+                emitAll(combine(itemIds.map { getItem(it) }){ it })
+            }
+        }
+}
