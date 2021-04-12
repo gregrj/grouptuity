@@ -9,11 +9,13 @@
     <color name="blue_dark">#FF3A78CB</color>
 
     <color name="white">#FFFFFFFF</color>
-    <color name="gray_lighter">#BDBDBD</color>
+    <color name="off_white">#BDBDBD</color>
+
     <color name="gray_light">#EBEBEB</color>
     <color name="gray">#FF757575</color>
     <color name="gray_dark">#FF424242</color>
-    <color name="gray_darker">#FF1E1E1E</color>
+
+    <color name="off_black">#FF1E1E1E</color>
     <color name="black">#FF000000</color>
 
     <color name="TranslucentOverlay">#46000000</color>

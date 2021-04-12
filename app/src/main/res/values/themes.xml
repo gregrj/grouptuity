@@ -9,7 +9,12 @@
         <item name="colorSecondaryVariant">@color/blue_dark</item>
         <item name="colorOnSecondary">@color/white</item>
 
+        <item name="colorTertiary">@color/gray</item>
+        <item name="colorTertiaryVariant">@color/gray_dark</item>
+        <item name="colorOnTertiary">@color/white</item>
+
         <item name="colorSurface">@color/white</item>
+        <item name="offColorSurface">@color/off_white</item>
         <item name="colorSurfaceVariant">@color/gray</item>
         <item name="colorOnSurface">@color/black</item>
 

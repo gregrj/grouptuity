@@ -1,5 +1,18 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <attr name="colorTertiary" format="reference" />
+    <attr name="colorTertiaryVariant" format="reference" />
+    <attr name="colorOnTertiary" format="reference" />
     <attr name="colorSurfaceVariant" format="reference" />
+    <attr name="offColorSurface" format="reference" />
     <attr name="colorBaseBackground" format="reference" />
+
+    <declare-styleable name="ContactIcon">
+        <attr name="backgroundColor" format="color"/>
+        <attr name="borderColor" format="color"/>
+        <attr name="borderWidth" format="dimension"/>
+        <attr name="textColor" format="color"/>
+        <attr name="useInitialsPlaceholder" format="boolean"/>
+        <attr name="selectable" format="boolean"/>
+    </declare-styleable>
 </resources>
