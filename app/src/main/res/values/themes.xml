@@ -25,9 +25,9 @@
         <item name="android:statusBarColor">@android:color/transparent</item>
     </style>
 
-    <style name="Theme.Grouptuity.NoActionBar">
-        <item name="windowActionBar">false</item>
-        <item name="windowNoTitle">true</item>
+    <style name="Theme.Grouptuity.Secondary" parent="Theme.Grouptuity">
+        <item name="colorPrimary">@color/blue</item>
+        <item name="colorPrimaryVariant">@color/blue_dark</item>
     </style>
 
     <style name="Theme.Grouptuity.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />

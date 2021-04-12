@@ -1,11 +1,10 @@
 package com.grouptuity.grouptuity.ui.billsplit
 
 import android.os.Bundle
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
+import android.view.*
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
+import androidx.navigation.fragment.findNavController
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.floatingactionbutton.FloatingActionButton
@@ -18,6 +17,8 @@ import com.grouptuity.grouptuity.ui.billsplit.items.ItemsFragment
 import com.grouptuity.grouptuity.ui.billsplit.payments.PaymentsFragment
 import com.grouptuity.grouptuity.ui.billsplit.taxtip.TaxTipFragment
 import com.grouptuity.grouptuity.ui.custom.setNullOnDestroy
+import com.grouptuity.grouptuity.ui.custom.transitions.CircularRevealTransition
+
 
 class BillSplitFragment: Fragment() {
     private var binding by setNullOnDestroy<FragBillSplitBinding>()
@@ -119,6 +120,17 @@ class BillSplitFragment: Fragment() {
                     orCreateBadge.number = it
                 } else {
                     removeBadge()
+                }
+            }
+        }
+
+        binding.fab.setOnClickListener {
+            when(binding.viewPager.currentItem) {
+                0 -> {  // Show address book for contact selection
+                    findNavController().navigate(BillSplitFragmentDirections.actionBillSplitFragmentToAddressBookFragment(CircularRevealTransition.OriginParams(binding.fab)))
+                }
+                1 -> {  // Show fragment for item entry
+                    //TODO
                 }
             }
         }

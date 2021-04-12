@@ -15,6 +15,7 @@ import androidx.navigation.NavDestination
 import androidx.navigation.NavOptions
 import androidx.navigation.Navigator
 import androidx.navigation.fragment.FragmentNavigator
+import com.grouptuity.grouptuity.ui.custom.transitions.Revealable
 
 @Navigator.Name("nav_fragment")
 class CustomNavigator(private val context: Context, private val manager: FragmentManager, private val containerId: Int): FragmentNavigator(context, manager, containerId) {

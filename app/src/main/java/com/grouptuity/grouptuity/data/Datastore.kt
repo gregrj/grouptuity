@@ -1,9 +1,11 @@
 package com.grouptuity.grouptuity.data
 
+import android.app.Application
 import android.content.Context
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
+import androidx.lifecycle.AndroidViewModel
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
@@ -15,6 +17,27 @@ import kotlinx.coroutines.flow.*
 
 
 val Context.preferenceDataStore: DataStore<Preferences> by preferencesDataStore(name = "grouptuity_preferences")
+
+
+abstract class UIViewModel(app: Application): AndroidViewModel(app) {
+    protected val repository = Repository.getInstance(app)
+
+    private val inputLocks = mutableListOf<Flow<Boolean>>()
+    protected var isInputLocked: Flow<Boolean> = MutableStateFlow(false)
+        private set
+
+    private val _isOutputFlowing = MutableStateFlow(true)
+    protected val isOutputFlowing: Flow<Boolean> = _isOutputFlowing
+
+    protected fun addInputLock(lock: Flow<Boolean>) {
+        inputLocks.add(lock)
+        isInputLocked = combine(inputLocks) { locks ->
+            locks.any { it }
+        }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, true)
+    }
+    fun freezeOutput() { _isOutputFlowing.value = false }
+    fun unFreezeOutput() { _isOutputFlowing.value = true }
+}
 
 
 class Repository(context: Context) {

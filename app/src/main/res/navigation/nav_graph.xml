@@ -19,7 +19,15 @@
         <action
             android:id="@+id/action_billSplitFragment_to_simpleCalcFragment"
             app:destination="@id/simpleCalcFragment" />
+        <action
+            android:id="@+id/action_billSplitFragment_to_addressBookFragment"
+            app:destination="@id/addressBookFragment" />
     </nav_fragment>
+
+    <nav_fragment
+        android:id="@+id/settingsHolderFragment"
+        android:name="com.grouptuity.grouptuity.ui.SettingsHolderFragment"
+        android:label="SettingsHolderFragment" />
 
     <nav_fragment
         android:id="@+id/simpleCalcFragment"
@@ -28,7 +36,11 @@
         tools:layout="@layout/frag_simple_calc"/>
 
     <nav_fragment
-        android:id="@+id/settingsHolderFragment"
-        android:name="com.grouptuity.grouptuity.ui.SettingsHolderFragment"
-        android:label="SettingsHolderFragment" />
+        android:id="@+id/addressBookFragment"
+        android:name="com.grouptuity.grouptuity.ui.billsplit.addressbook.AddressBookFragment"
+        android:label="AddressBookFragment">
+        <argument
+            android:name="origin_params"
+            app:argType="com.grouptuity.grouptuity.ui.custom.transitions.CircularRevealTransition$OriginParams"/>
+    </nav_fragment>
 </navigation>

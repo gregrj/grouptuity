@@ -1,4 +1,4 @@
-package com.grouptuity.grouptuity.ui.custom
+package com.grouptuity.grouptuity.ui.custom.transitions
 
 import android.graphics.Bitmap
 
