@@ -10,10 +10,11 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
-import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.Diner
+import com.grouptuity.grouptuity.databinding.FragDinersBinding
 import com.grouptuity.grouptuity.databinding.FragDinersListitemBinding
-import com.grouptuity.grouptuity.ui.custom.*
+import com.grouptuity.grouptuity.ui.custom.RecyclerViewListener
+import com.grouptuity.grouptuity.ui.custom.setNullOnDestroy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -25,15 +26,18 @@ class DinersFragment : Fragment() {
         fun newInstance() = DinersFragment()
     }
 
+    private var binding by setNullOnDestroy<FragDinersBinding>()
     private lateinit var viewModel: DinersViewModel
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View? {
-        return inflater.inflate(R.layout.frag_diners, container, false)
+    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        viewModel = ViewModelProvider(this).get(DinersViewModel::class.java)
+        binding = FragDinersBinding.inflate(inflater, container, false)
+        return binding.root
     }
 
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
-        viewModel = ViewModelProvider(this).get(DinersViewModel::class.java)
+
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {

@@ -16,10 +16,10 @@
         <item name="colorSurface">@color/white</item>
         <item name="offColorSurface">@color/off_white</item>
         <item name="colorSurfaceVariant">@color/gray</item>
-        <item name="colorOnSurface">@color/black</item>
+        <item name="colorOnSurface">@color/gray_dark</item>
 
         <item name="android:colorBackground">@color/white</item>
-        <item name="colorOnBackground">@color/black</item>
+        <item name="colorOnBackground">@color/gray_dark</item>
         <item name="colorBaseBackground">@color/gray_light</item>
 
         <item name="android:statusBarColor">@android:color/transparent</item>
