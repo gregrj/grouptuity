@@ -1,20 +1,23 @@
 package com.grouptuity.grouptuity.ui.billsplit.diners
 
 import android.content.Context
-import androidx.lifecycle.ViewModelProvider
 import android.os.Bundle
-import androidx.fragment.app.Fragment
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import androidx.fragment.app.Fragment
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.Diner
 import com.grouptuity.grouptuity.databinding.FragDinersListitemBinding
-import com.grouptuity.grouptuity.ui.custom.RecyclerViewListener
+import com.grouptuity.grouptuity.ui.custom.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+
 
 class DinersFragment : Fragment() {
 
@@ -31,9 +34,23 @@ class DinersFragment : Fragment() {
     override fun onActivityCreated(savedInstanceState: Bundle?) {
         super.onActivityCreated(savedInstanceState)
         viewModel = ViewModelProvider(this).get(DinersViewModel::class.java)
-        // TODO: Use the ViewModel
     }
 
+    override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
+        super.onViewCreated(view, savedInstanceState)
+
+        val recyclerAdapter = DinersRecyclerViewAdapter(requireContext(), object: RecyclerViewListener {
+            override fun onClick(view: View) { }
+            override fun onLongClick(view: View): Boolean { return false }
+        })
+
+        viewModel.dinerData.observe(viewLifecycleOwner, { dinerData ->
+            lifecycleScope.launch {
+                recyclerAdapter.updateDataSet(dinerData)
+            }
+
+        })
+    }
 }
 
 class DinersRecyclerViewAdapter(private val context: Context,

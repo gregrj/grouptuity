@@ -16,7 +16,7 @@
         android:id="@+id/checkmark"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        app:srcCompat="@drawable/ic_check_circle"
+        app:srcCompat="@drawable/check_circle"
         android:rotationY="180"
         android:alpha="0"
         app:shapeAppearanceOverlay="@style/circleImageView" />

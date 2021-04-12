@@ -113,16 +113,16 @@ class ContactIcon @JvmOverloads constructor(context: Context, attrs: AttributeSe
             if(useInitialsPlaceholder) {
                 binding.text.text = initials
                 binding.image.setColorFilter(backgroundColor, PorterDuff.Mode.MULTIPLY)
-                binding.image.setImageResource(R.drawable.ic_person_blank)
+                binding.image.setImageResource(R.drawable.person_blank)
             }
             else {
                 binding.text.text = ""
 
                 if(visibility == Contact.HIDDEN) {
-                    binding.image.setImageResource(R.drawable.ic_person_hidden)
+                    binding.image.setImageResource(R.drawable.person_hidden)
                     binding.image.colorFilter = desaturationColorFilter
                 } else {
-                    binding.image.setImageResource(R.drawable.ic_person)
+                    binding.image.setImageResource(R.drawable.person)
                     binding.image.clearColorFilter()
                 }
             }
@@ -143,7 +143,7 @@ class ContactIcon @JvmOverloads constructor(context: Context, attrs: AttributeSe
 
             Glide.with(this)
                     .load(Uri.parse(photoUri))
-                    .placeholder(R.drawable.ic_person_blank)
+                    .placeholder(R.drawable.person_blank)
                     .listener(object : RequestListener<Drawable> {
                         override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>?, isFirstResource: Boolean): Boolean {
                             loadFinishedCallback?.let { it(false) }
