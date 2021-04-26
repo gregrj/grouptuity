@@ -52,7 +52,7 @@ class ContactIcon @JvmOverloads constructor(context: Context, attrs: AttributeSe
         binding.image.strokeColor = attributes.getColorStateList(R.styleable.ContactIcon_borderColor) ?:
             ColorStateList(
                 arrayOf(intArrayOf(android.R.attr.state_enabled)),
-                intArrayOf(TypedValue().also { context.theme.resolveAttribute(R.attr.offColorSurface, it, true) }.data))
+                intArrayOf(TypedValue().also { context.theme.resolveAttribute(R.attr.colorOnSurfaceLowEmphasis, it, true) }.data))
         strokeWidth = attributes.getDimensionPixelSize(R.styleable.ContactIcon_borderWidth, resources.displayMetrics.density.toInt()).toFloat() // default = 1dp
         binding.text.setTextColor(attributes.getColor(R.styleable.ContactIcon_textColor,
             TypedValue().also { context.theme.resolveAttribute(R.attr.colorOnTertiary, it, true) }.data))

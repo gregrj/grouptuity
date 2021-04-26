@@ -12,7 +12,7 @@
                     android:paddingLeft="22dp"
                     android:paddingRight="22dp" />
 
-                <solid android:color="?attr/colorOnBackground" />
+                <solid android:color="?attr/colorOnBackgroundLowEmphasis" />
             </shape>
         </aapt:attr>
     </item>
@@ -29,7 +29,7 @@
                     android:paddingLeft="22dp"
                     android:paddingRight="22dp" />
 
-                <solid android:color="?attr/colorOnBackground" />
+                <solid android:color="?attr/colorOnBackgroundLowEmphasis" />
             </shape>
         </aapt:attr>
     </item>

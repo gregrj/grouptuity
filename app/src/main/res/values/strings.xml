@@ -21,7 +21,37 @@
     <string name="billsplit_tab_taxtip">Tax&amp;Tip</string>
     <string name="billsplit_tab_payment">Pay</string>
 
+    <string name="addressbook_toolbar_default">Select Diners</string>
+    <string name="addressbook_toolbar_selected">Selected</string>
+    <string name="addressbook_toolbar_search_instructions">Search contacts</string>
+    <string name="addressbook_toolbar_create_instructions">Enter diner name</string>
+    <string name="addressbook_toolbar_create_button">Create New Diner:</string>
+    <string name="addressbook_toolbar_new_contact">New Contact</string>
+    <string name="addressbook_toolbar_favorite">Favorite</string>
+    <string name="addressbook_toolbar_unfavorite">Unfavorite</string>
+    <string name="addressbook_toolbar_hide">Hide</string>
+    <string name="addressbook_toolbar_unhide">Unhide</string>
+    <string name="addressbook_toolbar_refresh">Refresh list</string>
+    <string name="addressbook_toolbar_reset_favorites">Clear favorites</string>
+    <string name="addressbook_toolbar_reset_hidden">Unhide all</string>
+    <string name="addressbook_toolbar_show_hidden">Show hidden</string>
+    <string name="addressbook_alert_read_contacts_title">Reason for accessing your contacts</string>
+    <string name="addressbook_alert_read_contacts_message">Your contacts will be displayed in a list so you can quickly pick them instead of typing out their names</string>
+    <string name="addressbook_snackbar_no_read_contacts_permission">Cannot display all your contacts until permission is granted</string>
+    <string name="addressbook_snackbar_favorited">Contacts favorited</string>
+    <string name="addressbook_snackbar_unfavorited">Contacts unfavorited</string>
+    <string name="addressbook_snackbar_unhide_all">All contacts visible</string>
+    <string name="addressbook_snackbar_unfavorite_all">All favorites cleared</string>
+    <string name="addressbook_snackbar_hidden">Contacts hidden</string>
+    <string name="addressbook_snackbar_unhidden">Contacts unhidden</string>
+    <string name="addressbook_listitem_hidden">(contact hidden)</string>
+
+
     <string name="settings_toolbar_title">Settings</string>
+
+    <string name="ok">OK</string>
+    <string name="cancel">Cancel</string>
+    <string name="proceed">Continue</string>
 
     <!-- Preference Titles -->
     <string name="messages_header">Messages</string>
@@ -37,4 +67,8 @@
     <string name="attachment_summary_on">Automatically download attachments for incoming emails
     </string>
     <string name="attachment_summary_off">Only download attachments when manually requested</string>
+
+    <string-array name="addressbook_excluded_names">
+        <item>Voice Mail</item>
+    </string-array>
 </resources>

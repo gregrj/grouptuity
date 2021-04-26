@@ -14,13 +14,14 @@
         <item name="colorOnTertiary">@color/white</item>
 
         <item name="colorSurface">@color/white</item>
-        <item name="offColorSurface">@color/off_white</item>
         <item name="colorSurfaceVariant">@color/gray</item>
         <item name="colorOnSurface">@color/gray_dark</item>
+        <item name="colorOnSurfaceLowEmphasis">@color/off_white</item>
 
         <item name="android:colorBackground">@color/white</item>
+        <item name="colorBackgroundVariant">@color/gray_light</item>
         <item name="colorOnBackground">@color/gray_dark</item>
-        <item name="colorBaseBackground">@color/gray_light</item>
+        <item name="colorOnBackgroundLowEmphasis">@color/gray</item>
 
         <item name="android:statusBarColor">@android:color/transparent</item>
     </style>
@@ -37,5 +38,11 @@
         <item name="android:windowBackground">@drawable/splash_screen</item>
         <item name="colorPrimary">@color/red</item>
         <item name="android:statusBarColor">@color/red_dark</item>
+    </style>
+
+    <style name="AlertDialogPosSuggestionSecondary" parent="Theme.MaterialComponents.DayNight.Dialog.Alert">
+        <item name="colorPrimary">@color/blue</item>
+        <item name="buttonBarPositiveButtonStyle">@style/Widget.MaterialComponents.Button</item>
+        <item name="buttonBarNegativeButtonStyle">@style/Widget.MaterialComponents.Button.TextButton.Dialog</item>
     </style>
 </resources>

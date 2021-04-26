@@ -1,11 +1,16 @@
 package com.grouptuity.grouptuity.data
 
+import android.Manifest
 import android.app.Application
 import android.content.Context
+import android.content.pm.PackageManager
+import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ProcessLifecycleOwner
+import androidx.lifecycle.lifecycleScope
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
@@ -16,13 +21,17 @@ import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 
 
+fun <T> Flow<T>.withOutputSwitch(switch: Flow<Boolean>): Flow<T> { return combineTransform(switch) { data, enabled -> if(enabled) emit(data) } }
+
+
 val Context.preferenceDataStore: DataStore<Preferences> by preferencesDataStore(name = "grouptuity_preferences")
 
 
 abstract class UIViewModel(app: Application): AndroidViewModel(app) {
     protected val repository = Repository.getInstance(app)
 
-    private val inputLocks = mutableListOf<Flow<Boolean>>()
+    private val transitionInputLocked = MutableStateFlow(false)
+    private val inputLocks = mutableListOf<Flow<Boolean>>(transitionInputLocked)
     protected var isInputLocked: Flow<Boolean> = MutableStateFlow(false)
         private set
 
@@ -37,6 +46,11 @@ abstract class UIViewModel(app: Application): AndroidViewModel(app) {
     }
     fun freezeOutput() { _isOutputFlowing.value = false }
     fun unFreezeOutput() { _isOutputFlowing.value = true }
+
+    open fun notifyTransitionStarted() { transitionInputLocked.value = true }
+    open fun notifyTransitionFinished() { transitionInputLocked.value = false }
+
+    fun isPermissionGranted(permissionString: String) = getApplication<Application>().checkSelfPermission(permissionString) == PackageManager.PERMISSION_GRANTED
 }
 
 
@@ -74,6 +88,7 @@ class Repository(context: Context) {
     val discounts = loadedBill.transformLatest{ emitAll(discountDao.getDiscountsOnBill(it.id)) }.flowOn(Dispatchers.IO)
     val payments = loadedBill.transformLatest{ emitAll(paymentDao.getPaymentsOnBill(it.id)) }.flowOn(Dispatchers.IO)
     val restaurant = loadedBill.transformLatest{ emitAll(billDao.getRestaurantId(it.id)) }.transformLatest{ emitAll(dinerDao.getDiner(it)) }.flowOn(Dispatchers.IO)
+    val dinerContactLookupKeys = diners.mapLatest { it.map { diner -> diner.lookupKey } }
 
     // Bill entity ID maps
     val dinerIdMap = diners.mapLatest { dinerArray -> dinerArray.map { Pair(it.id, it) }.toMap() }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, emptyMap())
@@ -92,6 +107,22 @@ class Repository(context: Context) {
     // Subtotals
     val dinerSubtotals: Flow<Map<Long, Double>> = combine(diners, itemIdMap) { diners, itemMap -> diners.associate { diner -> diner.id to getDinerSubtotal(diner, itemMap) } }
 
+    init {
+        combine(userName, userPhotoUri) { userName, userPhotoUri ->
+            Contact.updateSelfContactData(userName, userPhotoUri)
+            //TODO database.contactDao().save(Contact.self)
+        }
+
+        ProcessLifecycleOwner.get().lifecycleScope.launchWhenResumed {
+            loadedBillId.collect {
+                if (it == 0L) {
+                    //TODO check if old bill is expired
+                    createAndLoadNewBill()
+                }
+            }
+        }
+    }
+
     private fun <T> getPreferenceFlow(key: Preferences.Key<T>, defaultValue: T, initialValue: T? = null): StateFlow<T> =
         preferenceDataStore.data.mapLatest { preferences ->
             preferences[key] ?: defaultValue
@@ -100,6 +131,27 @@ class Repository(context: Context) {
         CoroutineScope(Dispatchers.IO).launch {
             preferenceDataStore.edit { preferences -> preferences[key] = newValue }
         }
+
+    fun loadBill(billId: Long) = setPreferenceValue(Companion.LOADED_BILL_ID_KEY, billId)
+    fun createAndLoadNewBill() = CoroutineScope(Dispatchers.IO).launch {
+        // TODO assign title and date to new bill
+        loadBill(billDao.save(Bill(0L,
+                "New Bill",
+                0L,
+                taxPercent.value,
+                true,
+                tipPercent.value,
+                true,
+                taxIsTipped.value,
+                discountsReduceTip.value), addSelf = false))
+    }
+
+    fun saveContact(contact: Contact) = CoroutineScope(Dispatchers.IO).launch { contactDao.save(contact) }
+    fun saveContacts(contacts: List<Contact>) = CoroutineScope(Dispatchers.IO).launch { contactDao.save(contacts) }
+    fun removeContact(contact: Contact) = CoroutineScope(Dispatchers.IO).launch { contactDao.delete(contact) }
+    fun hasContact(lookupKey: String): Boolean = contactDao.hasLookupKey(lookupKey)
+    fun unfavoriteFavoriteContacts() = CoroutineScope(Dispatchers.IO).launch { contactDao.unfavoriteAllFavorites() }
+    fun unhideHiddenContacts() = CoroutineScope(Dispatchers.IO).launch { contactDao.unhideAllHidden() }
 
     companion object {
         @Volatile

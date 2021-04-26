@@ -3,9 +3,12 @@
     <attr name="colorTertiary" format="reference" />
     <attr name="colorTertiaryVariant" format="reference" />
     <attr name="colorOnTertiary" format="reference" />
+
     <attr name="colorSurfaceVariant" format="reference" />
-    <attr name="offColorSurface" format="reference" />
-    <attr name="colorBaseBackground" format="reference" />
+    <attr name="colorOnSurfaceLowEmphasis" format="reference" />
+
+    <attr name="colorBackgroundVariant" format="reference" />
+    <attr name="colorOnBackgroundLowEmphasis" format="reference" />
 
     <declare-styleable name="ContactIcon">
         <attr name="backgroundColor" format="color"/>

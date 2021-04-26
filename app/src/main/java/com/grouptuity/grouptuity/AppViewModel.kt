@@ -9,8 +9,7 @@ import androidx.lifecycle.MutableLiveData
 
 
 class Event<out T>(private val content: T) {
-    //TODO does this need to be thread safe?
-
+    @Volatile
     private var unconsumed = true
 
     fun consume(): T? {
@@ -29,11 +28,11 @@ class AppViewModel(app: Application): AndroidViewModel(app) {
     private val _darkThemeActive = MutableLiveData<Boolean>()
     val darkThemeActive: LiveData<Boolean> = _darkThemeActive
 
-    private val _permissionGetAccounts = MutableLiveData<Event<Boolean>>()
-    val permissionGetAccounts: LiveData<Event<Boolean>> = _permissionGetAccounts
-
-    private val _permissionReadContacts = MutableLiveData<Event<Boolean>>()
-    val permissionReadContacts: LiveData<Event<Boolean>> = _permissionReadContacts
+//    private val _permissionGetAccounts = MutableLiveData<Event<Boolean>>()
+//    val permissionGetAccounts: LiveData<Event<Boolean>> = _permissionGetAccounts
+//
+//    private val _permissionReadContacts = MutableLiveData<Event<Boolean>>()
+//    val permissionReadContacts: LiveData<Event<Boolean>> = _permissionReadContacts
 
     private val _voiceInputMutable = MutableLiveData<Event<String>>()
     val voiceInput: LiveData<Event<String>> = _voiceInputMutable

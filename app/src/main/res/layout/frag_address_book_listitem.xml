@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:foreground="?attr/selectableItemBackground"
+    android:background="?attr/colorSurface">
+
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:padding="8dp">
+
+        <com.grouptuity.grouptuity.ui.custom.views.ContactIcon
+            android:id="@+id/contact_icon"
+            android:layout_width="@dimen/contact_photo_size"
+            android:layout_height="@dimen/contact_photo_size"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:useInitialsPlaceholder="false"
+            android:layout_margin="0dp"/>
+
+        <TextView
+            android:id="@+id/name"
+            android:layout_width="0dp"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            android:layout_marginStart="8dp"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toTopOf="@+id/visibility_description"
+            app:layout_constraintStart_toEndOf="@+id/contact_icon"
+            app:layout_constraintEnd_toStartOf="@+id/visibility_button_holder"
+            android:maxLines="1"
+            android:ellipsize="end"
+            style="@android:style/TextAppearance.Large" />
+
+        <TextView
+            android:id="@+id/visibility_description"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:gravity="center_vertical"
+            app:layout_constraintTop_toBottomOf="@+id/name"
+            app:layout_constraintStart_toStartOf="@+id/name"
+            app:layout_constraintBottom_toBottomOf="parent"
+            android:textColor="?attr/colorOnSurfaceLowEmphasis"
+            style="@android:style/TextAppearance.Small" />
+
+        <FrameLayout
+            android:id="@+id/visibility_button_holder"
+            android:layout_width="@dimen/contact_photo_size"
+            android:layout_height="@dimen/contact_photo_size"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            android:layout_margin="0dp"
+            android:padding="12dp">
+
+            <ImageView
+                android:id="@+id/unfavorite"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_favorite"
+                app:tint="?attr/colorSurface"/>
+
+            <ImageView
+                android:id="@+id/unhide"
+                android:layout_width="24dp"
+                android:layout_height="24dp"
+                android:src="@drawable/ic_visibility_off"
+                app:tint="?attr/colorOnSurfaceLowEmphasis"/>
+        </FrameLayout>
+    </androidx.constraintlayout.widget.ConstraintLayout>
+</LinearLayout>
