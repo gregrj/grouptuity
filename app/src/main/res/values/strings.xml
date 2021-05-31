@@ -21,7 +21,7 @@
     <string name="billsplit_tab_taxtip">Tax&amp;Tip</string>
     <string name="billsplit_tab_payment">Pay</string>
 
-    <string name="addressbook_toolbar_default">Select Diners</string>
+    <string name="addressbook_toolbar_select_diners">Select Diners</string>
     <string name="addressbook_toolbar_selected">Selected</string>
     <string name="addressbook_toolbar_search_instructions">Search contacts</string>
     <string name="addressbook_toolbar_create_instructions">Enter diner name</string>
@@ -35,8 +35,13 @@
     <string name="addressbook_toolbar_reset_favorites">Clear favorites</string>
     <string name="addressbook_toolbar_reset_hidden">Unhide all</string>
     <string name="addressbook_toolbar_show_hidden">Show hidden</string>
-    <string name="addressbook_alert_read_contacts_title">Reason for accessing your contacts</string>
-    <string name="addressbook_alert_read_contacts_message">Your contacts will be displayed in a list so you can quickly pick them instead of typing out their names</string>
+    <string name="addressbook_fab_new_contact">New Contact</string>
+    <string name="addressbook_alert_read_contacts_title">Displaying your contacts</string>
+    <string name="addressbook_alert_read_contacts_message">Grouptuity lets you select people from your device\s saved contacts, but enabling this feature needs your permission</string>
+    <string name="addressbook_alert_reset_hidden_title">Reset all hidden contacts?</string>
+    <string name="addressbook_alert_reset_hidden_message">Any contacts that were hidden will have that status cleared. This action cannot be reversed.</string>
+    <string name="addressbook_alert_reset_favorites_title">Reset all favorite contacts?</string>
+    <string name="addressbook_alert_reset_favorites_message">Any contacts that were favorited will have that status cleared. This action cannot be reversed.</string>
     <string name="addressbook_snackbar_no_read_contacts_permission">Cannot display all your contacts until permission is granted</string>
     <string name="addressbook_snackbar_favorited">Contacts favorited</string>
     <string name="addressbook_snackbar_unfavorited">Contacts unfavorited</string>
@@ -46,12 +51,17 @@
     <string name="addressbook_snackbar_unhidden">Contacts unhidden</string>
     <string name="addressbook_listitem_hidden">(contact hidden)</string>
 
-
     <string name="settings_toolbar_title">Settings</string>
+
+    <plurals name="num_selected">
+        <item quantity="one">%d selected</item>
+        <item quantity="other">%d selected</item>
+    </plurals>
 
     <string name="ok">OK</string>
     <string name="cancel">Cancel</string>
     <string name="proceed">Continue</string>
+    <string name="undo">UNDO</string>
 
     <!-- Preference Titles -->
     <string name="messages_header">Messages</string>

@@ -40,7 +40,7 @@
                     android:id="@+id/toolbar"
                     android:layout_width="match_parent"
                     android:layout_height="?attr/actionBarSize"
-                    app:title="test"
+                    app:title="@string/addressbook_toolbar_select_diners"
                     style="@style/Widget.MaterialComponents.Toolbar.Primary"/>
             </com.google.android.material.appbar.AppBarLayout>
 
@@ -80,7 +80,7 @@
                 android:layout_gravity="center_horizontal|bottom"
                 android:layout_margin="@dimen/fab_margin"
                 app:layout_behavior="com.google.android.material.behavior.HideBottomViewOnScrollBehavior"
-                android:text="test"
+                android:text="@string/addressbook_fab_new_contact"
                 app:icon="@drawable/ic_add_person" />
         </androidx.coordinatorlayout.widget.CoordinatorLayout>
 

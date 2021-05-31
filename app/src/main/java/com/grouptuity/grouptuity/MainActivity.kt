@@ -1,11 +1,14 @@
 package com.grouptuity.grouptuity
 
 import android.Manifest
+import android.app.SearchManager
+import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Color
 import android.graphics.drawable.Drawable
 import android.os.Build
 import android.os.Bundle
+import android.util.Log
 import android.util.TypedValue
 import android.view.View
 import android.view.ViewGroup
@@ -96,6 +99,18 @@ class MainActivity: AppCompatActivity() {
         }
     }
 
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+
+        if(Intent.ACTION_SEARCH == intent.action) {
+            intent.getStringExtra(SearchManager.QUERY)?.also {
+                appViewModel.receiveVoiceInput(it)
+            }
+        }
+    }
+
+    // TODO Remove this after retrofitting simple calc?
     fun attachToolbar(toolbar: Toolbar) {
         setSupportActionBar(toolbar)
         appBarConfiguration = AppBarConfiguration(setOf(R.id.billSplitFragment), binding.drawerLayout)

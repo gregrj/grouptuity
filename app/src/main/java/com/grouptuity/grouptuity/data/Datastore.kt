@@ -44,6 +44,7 @@ abstract class UIViewModel(app: Application): AndroidViewModel(app) {
             locks.any { it }
         }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, true)
     }
+
     fun freezeOutput() { _isOutputFlowing.value = false }
     fun unFreezeOutput() { _isOutputFlowing.value = true }
 
@@ -152,6 +153,13 @@ class Repository(context: Context) {
     fun hasContact(lookupKey: String): Boolean = contactDao.hasLookupKey(lookupKey)
     fun unfavoriteFavoriteContacts() = CoroutineScope(Dispatchers.IO).launch { contactDao.unfavoriteAllFavorites() }
     fun unhideHiddenContacts() = CoroutineScope(Dispatchers.IO).launch { contactDao.unhideAllHidden() }
+
+    fun createDinersForContacts(dinerContacts: Collection<Contact>, billId: Long? = null) = CoroutineScope(Dispatchers.IO).launch {
+        (billId ?: loadedBillId.value).let { billId ->
+            dinerDao.save(dinerContacts.map { Diner(0L, billId, it) }) //TODO pull payment preference from contact
+        }
+    }
+
 
     companion object {
         @Volatile

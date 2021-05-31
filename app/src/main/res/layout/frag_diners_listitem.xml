@@ -69,6 +69,7 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:src="@drawable/ic_close"/>
+            android:src="@drawable/ic_close"
+            app:tint="?attr/colorOnSurface" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 </com.google.android.material.card.MaterialCardView>

@@ -66,12 +66,16 @@ class BillSplitFragment: Fragment() {
                             super.onHidden(fab)
                             fabPageIndex = position
                             when (position) {
-                                0 -> {  fab.setImageResource(R.drawable.ic_add_person)
-                                    fab.show() }
-                                1 -> {  fab.setImageResource(R.drawable.ic_add_item)
-                                    fab.show() }
-                                2 -> { /* no fab on the tax&tip fragment */ }
-                                3 -> { /* no fab on the payment fragment */ }
+                                0 -> {
+                                    fab.setImageResource(R.drawable.ic_add_person)
+                                    fab.show()
+                                }
+                                1 -> {
+                                    fab.setImageResource(R.drawable.ic_add_item)
+                                    fab.show()
+                                }
+                                2 -> { /* no FAB on the Tax&Tip fragment */ }
+                                3 -> { /* no FAB on the Payment fragment */ }
                             }
                         }
                     })

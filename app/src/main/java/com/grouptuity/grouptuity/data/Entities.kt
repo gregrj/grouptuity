@@ -2,6 +2,7 @@ package com.grouptuity.grouptuity.data
 
 import android.os.Parcel
 import android.os.Parcelable
+import android.util.Log
 import androidx.room.*
 import org.json.JSONArray
 import org.json.JSONObject
@@ -59,6 +60,10 @@ class PaymentPreferences(private val preferenceMap: Map<Long, PaymentMethod>) {
             val obj = JSONObject(json)
             val payeeIds = obj.getJSONArray("payeeIds")
             val methods = obj.getJSONArray("methods")
+
+            if (payeeIds.length() == 0) {
+                return PaymentPreferences(emptyMap())
+            }
 
             val newMap = mutableMapOf<Long, PaymentMethod>()
             for (i in 0..payeeIds.length()) {

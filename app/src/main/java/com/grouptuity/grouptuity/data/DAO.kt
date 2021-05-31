@@ -41,10 +41,10 @@ interface ContactDao: BaseDao<Contact> {
         }
     }
 
-    @Query("UPDATE contact_table SET visibility = 1 WHERE visibility = 2")
+    @Query("UPDATE contact_table SET visibility = 0 WHERE visibility = 1")
     suspend fun unfavoriteAllFavorites()
 
-    @Query("UPDATE contact_table SET visibility = 1 WHERE visibility = 3")
+    @Query("UPDATE contact_table SET visibility = 0 WHERE visibility = 2")
     suspend fun unhideAllHidden()
 }
 

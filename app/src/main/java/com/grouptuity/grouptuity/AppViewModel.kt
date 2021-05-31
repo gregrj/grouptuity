@@ -49,4 +49,6 @@ class AppViewModel(app: Application): AndroidViewModel(app) {
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO)
         _darkThemeActive.value = false
     }
+
+    fun receiveVoiceInput(input: String) { _voiceInputMutable.value = Event(input) }
 }

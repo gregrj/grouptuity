@@ -5,9 +5,11 @@
     <attr name="colorOnTertiary" format="reference" />
 
     <attr name="colorSurfaceVariant" format="reference" />
+    <attr name="colorOnSurfaceMediumEmphasis" format="reference" />
     <attr name="colorOnSurfaceLowEmphasis" format="reference" />
 
     <attr name="colorBackgroundVariant" format="reference" />
+    <attr name="colorOnBackgroundMediumEmphasis" format="reference" />
     <attr name="colorOnBackgroundLowEmphasis" format="reference" />
 
     <declare-styleable name="ContactIcon">

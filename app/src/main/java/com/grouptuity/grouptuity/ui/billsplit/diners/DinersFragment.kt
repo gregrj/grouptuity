@@ -62,7 +62,7 @@ class DinersRecyclerViewAdapter(private val context: Context,
 
     private var mDataSet = emptyList<Pair<Diner,String>>()
 
-    inner class ViewHolder(val viewBinding: FragDinersListitemBinding): RecyclerView.ViewHolder(viewBinding.root) {
+    inner class ViewHolder(viewBinding: FragDinersListitemBinding): RecyclerView.ViewHolder(viewBinding.root) {
         init {
             itemView.setOnClickListener(listener)
             itemView.setOnLongClickListener(listener)

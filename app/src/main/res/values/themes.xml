@@ -14,15 +14,19 @@
         <item name="colorOnTertiary">@color/white</item>
 
         <item name="colorSurface">@color/white</item>
-        <item name="colorSurfaceVariant">@color/gray</item>
+        <item name="colorSurfaceVariant">@color/gray_light</item>
         <item name="colorOnSurface">@color/gray_dark</item>
+        <item name="colorOnSurfaceMediumEmphasis">@color/gray</item>
         <item name="colorOnSurfaceLowEmphasis">@color/off_white</item>
 
         <item name="android:colorBackground">@color/white</item>
         <item name="colorBackgroundVariant">@color/gray_light</item>
         <item name="colorOnBackground">@color/gray_dark</item>
-        <item name="colorOnBackgroundLowEmphasis">@color/gray</item>
+        <item name="colorOnBackgroundMediumEmphasis">@color/gray</item>
+        <item name="colorOnBackgroundLowEmphasis">@color/off_white</item>
 
+        <item name="android:editTextColor">@color/white</item>
+        <item name="android:textColorHint">@color/white</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
     </style>
 

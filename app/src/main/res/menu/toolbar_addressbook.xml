@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context=".MainActivity">
+
+    <group android:id="@+id/group_search">
+        <item
+            android:id="@+id/search_view"
+            android:title="@string/addressbook_toolbar_search_instructions"
+            app:actionViewClass="androidx.appcompat.widget.SearchView"
+            app:showAsAction="always"/>
+    </group>
+
+    <group android:id="@+id/group_other">
+        <item android:id="@+id/action_refresh"
+            android:title="@string/addressbook_toolbar_refresh"
+            app:showAsAction="never"/>
+
+        <item android:id="@+id/action_show_hidden"
+            android:title="@string/addressbook_toolbar_show_hidden"
+            android:checkable="true"
+            app:showAsAction="never"/>
+
+        <item android:id="@+id/action_reset_hidden"
+            android:title="@string/addressbook_toolbar_reset_hidden"
+            app:showAsAction="never"/>
+
+        <item android:id="@+id/action_reset_favorites"
+            android:title="@string/addressbook_toolbar_reset_favorites"
+            app:showAsAction="never"/>
+    </group>
+
+    <group android:id="@+id/group_favorite">
+        <item
+            android:id="@+id/action_favorite"
+            android:title="@string/addressbook_toolbar_favorite"
+            android:icon="@drawable/ic_favorite_border"
+            android:orderInCategory="1"
+            app:showAsAction="ifRoom"
+            android:visible="false" />
+    </group>
+
+    <group android:id="@+id/group_unfavorite">
+        <item
+            android:id="@+id/action_unfavorite"
+            android:title="@string/addressbook_toolbar_favorite"
+            android:icon="@drawable/ic_favorite"
+            android:orderInCategory="2"
+            app:showAsAction="ifRoom"
+            android:visible="false" />
+    </group>
+
+    <group android:id="@+id/group_hide">
+        <item
+            android:id="@+id/action_hide"
+            android:title="@string/addressbook_toolbar_hide"
+            android:icon="@drawable/ic_visibility_off"
+            android:orderInCategory="3"
+            app:showAsAction="ifRoom"
+            android:visible="false" />
+    </group>
+
+    <group android:id="@+id/group_unhide">
+        <item
+            android:id="@+id/action_unhide"
+            android:title="@string/addressbook_toolbar_unhide"
+            android:icon="@drawable/ic_visibility_on"
+            android:orderInCategory="4"
+            app:showAsAction="ifRoom"
+            android:visible="false" />
+    </group>
+</menu>
