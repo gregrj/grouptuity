@@ -159,6 +159,7 @@ class Repository(context: Context) {
             dinerDao.save(dinerContacts.map { Diner(0L, billId, it) }) //TODO pull payment preference from contact
         }
     }
+    fun deleteDiner(diner: Diner) = CoroutineScope(Dispatchers.IO).launch { dinerDao.delete(diner) }
 
 
     companion object {

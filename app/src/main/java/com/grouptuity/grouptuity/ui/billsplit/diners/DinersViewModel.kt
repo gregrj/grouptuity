@@ -16,12 +16,12 @@ class DinersViewModel(application: Application): AndroidViewModel(application) {
     // Diners paired with their individual subtotals as currency strings
     val dinerData: LiveData<List<Pair<Diner, String>>> = combine(repository.diners, repository.dinerSubtotals) { diners, subtotals ->
         diners.map { diner ->
-            diner to formatter.format(subtotals[diner.id])
+            diner to formatter.format(subtotals.getOrDefault(diner.id, 0.0))
         }
     }.asLiveData()
 
     fun removeDiner(diner: Diner) {
-        // TODO repository.deleteDiner(diner)
+        repository.deleteDiner(diner)
     }
 
     fun addSelfToBill() {

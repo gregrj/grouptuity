@@ -21,8 +21,18 @@
     <string name="billsplit_tab_taxtip">Tax&amp;Tip</string>
     <string name="billsplit_tab_payment">Pay</string>
 
+    <string name="diners_add_self">Include yourself</string>>
+    <string name="diners_zero_items">0 items</string>>
+    <plurals name="diners_num_items_with_subtotal">
+        <item quantity="one">%2$s (1 item)</item>
+        <item quantity="other">%2$s (%1$d items)</item>
+    </plurals>
+
     <string name="addressbook_toolbar_select_diners">Select Diners</string>
-    <string name="addressbook_toolbar_selected">Selected</string>
+    <plurals name="addressbook_toolbar_num_selected">
+        <item quantity="one">%d selected</item>
+        <item quantity="other">%d selected</item>
+    </plurals>
     <string name="addressbook_toolbar_search_instructions">Search contacts</string>
     <string name="addressbook_toolbar_create_instructions">Enter diner name</string>
     <string name="addressbook_toolbar_create_button">Create New Diner:</string>
@@ -53,15 +63,45 @@
 
     <string name="settings_toolbar_title">Settings</string>
 
-    <plurals name="num_selected">
-        <item quantity="one">%d selected</item>
-        <item quantity="other">%d selected</item>
-    </plurals>
-
     <string name="ok">OK</string>
     <string name="cancel">Cancel</string>
     <string name="proceed">Continue</string>
     <string name="undo">UNDO</string>
+    <string name="currency_symbol">$</string>
+    <string name="decimal_symbol">.</string>
+    <string name="digits_separator">,</string>
+    <string name="percent_symbol">%</string>
+    <string name="negative_sign">\u002D</string>
+    <string name="number_0">0</string>
+    <string name="number_1">1</string>
+    <string name="number_2">2</string>
+    <string name="number_3">3</string>
+    <string name="number_4">4</string>
+    <string name="number_5">5</string>
+    <string name="number_6">6</string>
+    <string name="number_7">7</string>
+    <string name="number_8">8</string>
+    <string name="number_9">9</string>
+    <string name="add_symbol">\u002B</string>
+    <string name="subtract_symbol">\u2212</string>
+    <string name="multiply_symbol">\u00D7</string>
+    <string name="divide_symbol">\u00F7</string>
+    <string name="plus_minus">\u00B1</string>
+    <string name="equals_symbol">\u003D</string>
+    <string name="open_parenthesis">(</string>
+    <string name="close_parenthesis">)</string>
+
+    <string-array name="addressbook_excluded_names">
+        <item>Voice Mail</item>
+    </string-array>
+
+
+
+
+
+
+
+
 
     <!-- Preference Titles -->
     <string name="messages_header">Messages</string>
@@ -77,8 +117,4 @@
     <string name="attachment_summary_on">Automatically download attachments for incoming emails
     </string>
     <string name="attachment_summary_off">Only download attachments when manually requested</string>
-
-    <string-array name="addressbook_excluded_names">
-        <item>Voice Mail</item>
-    </string-array>
 </resources>

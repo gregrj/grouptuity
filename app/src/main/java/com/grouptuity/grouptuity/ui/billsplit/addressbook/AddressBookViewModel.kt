@@ -119,7 +119,7 @@ class AddressBookViewModel(app: Application): UIViewModel(app) {
                 showOtherButtons = !isSearching)
         } else {
             ToolBarState(
-                getApplication<Application>().resources.getQuantityString(R.plurals.num_selected, selectedContacts.size, selectedContacts.size),
+                getApplication<Application>().resources.getQuantityString(R.plurals.addressbook_toolbar_num_selected, selectedContacts.size, selectedContacts.size),
                 navButtonAsClose = if(isSearching) null else true,
                 searchInactive = !isSearching,
                 alternateBackground = !isSearching,
