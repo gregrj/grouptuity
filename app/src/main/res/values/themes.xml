@@ -8,6 +8,7 @@
         <item name="colorSecondary">@color/blue</item>
         <item name="colorSecondaryVariant">@color/blue_dark</item>
         <item name="colorOnSecondary">@color/white</item>
+        <item name="colorSecondaryHighlight">@color/blue</item>
 
         <item name="colorTertiary">@color/gray</item>
         <item name="colorTertiaryVariant">@color/gray_dark</item>
@@ -20,6 +21,7 @@
         <item name="colorOnSurfaceLowEmphasis">@color/off_white</item>
 
         <item name="android:colorBackground">@color/white</item>
+        <item name="colorBackground">@color/white</item>
         <item name="colorBackgroundVariant">@color/gray_light</item>
         <item name="colorOnBackground">@color/gray_dark</item>
         <item name="colorOnBackgroundMediumEmphasis">@color/gray</item>
@@ -48,5 +50,13 @@
         <item name="colorPrimary">@color/blue</item>
         <item name="buttonBarPositiveButtonStyle">@style/Widget.MaterialComponents.Button</item>
         <item name="buttonBarNegativeButtonStyle">@style/Widget.MaterialComponents.Button.TextButton.Dialog</item>
+    </style>
+
+    <style name="AppThemeSecondaryEditTextActionView" parent="Theme.Grouptuity.Secondary">
+        <item name="searchViewStyle">@style/EditTextActionViewStyle</item>
+    </style>
+
+    <style name="EditTextActionViewStyle" parent="Widget.AppCompat.Light.SearchView">
+        <item name="searchHintIcon">@null</item>
     </style>
 </resources>

@@ -1,0 +1,209 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.grouptuity.grouptuity.ui.custom.views.LockableFrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/root_layout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <ImageView
+        android:id="@+id/covered_fragment"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
+
+    <View
+        android:id="@+id/scrim"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#000000"
+        android:alpha="0"/>
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/item_entry_container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:cardCornerRadius="0dp">
+
+        <ImageView
+            android:id="@+id/inner_covered_fragment"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"/>
+
+        <FrameLayout
+            android:id="@+id/revealed_layout"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <androidx.coordinatorlayout.widget.CoordinatorLayout
+                android:id="@+id/coordinator_layout"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:theme="@style/AppThemeSecondaryEditTextActionView"
+                tools:context=".views.billsplit.items.ItemEntryFragment">
+
+                <com.google.android.material.appbar.AppBarLayout
+                    android:id="@+id/appbar_layout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <View
+                        android:id="@+id/status_bar_background_view"
+                        android:layout_width="match_parent"
+                        android:layout_height="@dimen/status_bar_height"
+                        android:background="?attr/colorSecondaryVariant"/>
+
+                    <androidx.appcompat.widget.Toolbar
+                        android:id="@+id/toolbar"
+                        android:layout_width="match_parent"
+                        android:layout_height="?attr/actionBarSize"
+                        style="@style/Widget.MaterialComponents.Toolbar.Primary"/>
+                </com.google.android.material.appbar.AppBarLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+                    <FrameLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:background="?attr/colorBackground">
+
+                        <TextView
+                            android:id="@+id/price_textview"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:paddingVertical="16dp"
+                            android:paddingStart="52dp"
+                            android:paddingEnd="52dp"
+                            android:gravity="center"
+                            android:textSize="40sp"
+                            android:maxLines="1"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            style="@android:style/TextAppearance.Material.Large"/>
+
+                        <ImageButton
+                            android:id="@+id/button_backspace"
+                            android:layout_width="32dp"
+                            android:layout_height="32dp"
+                            android:scaleType="fitXY"
+                            android:layout_gravity="end|center_vertical"
+                            android:layout_marginEnd="16dp"
+                            app:tint="?attr/colorOnBackgroundLowEmphasis"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:src="@drawable/ic_backspace"/>
+
+                        <ImageView
+                            android:id="@+id/button_edit"
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            android:layout_gravity="end|center_vertical"
+                            android:layout_marginEnd="16dp"
+                            android:src="?attr/selectableItemBackgroundBorderless"
+                            android:visibility="gone"/>
+                    </FrameLayout>
+
+                    <androidx.coordinatorlayout.widget.CoordinatorLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="0dp"
+                        android:layout_weight="1">
+
+                        <androidx.coordinatorlayout.widget.CoordinatorLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent">
+
+                            <LinearLayout
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"
+                                android:orientation="vertical">
+
+                                <androidx.constraintlayout.widget.ConstraintLayout
+                                    android:id="@+id/item_details"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:orientation="vertical"
+                                    android:paddingBottom="8dp"
+                                    android:elevation="4dp"
+                                    android:background="?attr/colorBackground">
+
+                                    <com.google.android.material.button.MaterialButton
+                                        android:id="@+id/select_all"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        app:layout_constraintTop_toTopOf="parent"
+                                        app:layout_constraintStart_toStartOf="parent"
+                                        app:layout_constraintEnd_toStartOf="@+id/clear_selections"
+                                        style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                                        android:textColor="@color/secondary_outlined_button_foreground_colors"
+                                        app:strokeColor="@color/secondary_outlined_button_stroke_colors"
+                                        app:backgroundTint="@color/secondary_outlined_button_background_colors"
+                                        app:rippleColor="?attr/colorSecondaryHighlight"
+                                        android:textSize="18sp"
+                                        android:text="@string/itementry_select_all"/>
+
+                                    <com.google.android.material.button.MaterialButton
+                                        android:id="@+id/clear_selections"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        app:layout_constraintStart_toEndOf="@+id/select_all"
+                                        app:layout_constraintEnd_toEndOf="parent"
+                                        app:layout_constraintTop_toTopOf="parent"
+                                        style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
+                                        app:backgroundTint="?attr/colorBackground"
+                                        android:textColor="?attr/colorOnBackground"
+                                        android:textSize="18sp"
+                                        android:text="@string/itementry_clear_selections"/>
+
+                                </androidx.constraintlayout.widget.ConstraintLayout>
+
+                                <androidx.recyclerview.widget.RecyclerView
+                                    android:id="@+id/diner_list"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="0dp"
+                                    android:layout_weight="1.0"
+                                    android:orientation="vertical"
+                                    android:background="?attr/colorBackground"
+                                    app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                                    tools:listitem="@layout/list_diner"/>
+
+                            </LinearLayout>
+
+                            <com.google.android.material.floatingactionbutton.FloatingActionButton
+                                android:id="@+id/fab"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="end|bottom"
+                                android:layout_margin="@dimen/fab_margin"
+                                android:src="@drawable/ic_arrow_forward"
+                                android:visibility="invisible"
+                                app:layout_behavior="com.google.android.material.behavior.HideBottomViewOnScrollBehavior"
+                                android:contentDescription="TODO" />
+                        </androidx.coordinatorlayout.widget.CoordinatorLayout>
+
+                        <include
+                            android:id="@+id/calculator"
+                            layout="@layout/calculator"
+                            android:elevation="4dp"/>
+
+                    </androidx.coordinatorlayout.widget.CoordinatorLayout>
+
+                </LinearLayout>
+
+                <View
+                    android:id="@+id/edit_name_scrim"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:background="#000000"
+                    android:alpha="0"/>
+            </androidx.coordinatorlayout.widget.CoordinatorLayout>
+
+            <View
+                android:id="@+id/fade_view"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="?attr/colorSecondary"/>
+        </FrameLayout>
+    </com.google.android.material.card.MaterialCardView>
+</com.grouptuity.grouptuity.ui.custom.views.LockableFrameLayout>

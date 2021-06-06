@@ -3,11 +3,15 @@
     <words>
       <w>addressbook</w>
       <w>billsplit</w>
+      <w>bottomsheet</w>
       <w>favorited</w>
       <w>grouptuity</w>
+      <w>itementry</w>
       <w>listitem</w>
+      <w>snackbar</w>
       <w>taxtip</w>
       <w>unfavorite</w>
+      <w>unfavorited</w>
       <w>unhide</w>
     </words>
   </dictionary>

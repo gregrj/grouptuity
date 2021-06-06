@@ -110,9 +110,9 @@ class AddressBookViewModel(app: Application): UIViewModel(app) {
         if(selectedContacts.isEmpty()) {
             ToolBarState(
                 getApplication<Application>().resources.getString(R.string.addressbook_toolbar_select_diners),
-                navButtonAsClose = if(isSearching) null else false,
+                navIconAsClose = if(isSearching) null else false,
                 searchInactive = !isSearching,
-                alternateBackground = false,
+                tertiaryBackground = false,
                 hideVisibilityButtons = true,
                 showAsUnfavorite = false,
                 showAsUnhide = false,
@@ -120,9 +120,9 @@ class AddressBookViewModel(app: Application): UIViewModel(app) {
         } else {
             ToolBarState(
                 getApplication<Application>().resources.getQuantityString(R.plurals.addressbook_toolbar_num_selected, selectedContacts.size, selectedContacts.size),
-                navButtonAsClose = if(isSearching) null else true,
+                navIconAsClose = if(isSearching) null else true,
                 searchInactive = !isSearching,
-                alternateBackground = !isSearching,
+                tertiaryBackground = !isSearching,
                 hideVisibilityButtons = isSearching,
                 showAsUnfavorite = selectedContacts.isNotEmpty() && selectedContacts.all { it.value.visibility == Contact.FAVORITE },
                 showAsUnhide = selectedContacts.isNotEmpty() && selectedContacts.all { it.value.visibility == Contact.HIDDEN },
@@ -155,6 +155,7 @@ class AddressBookViewModel(app: Application): UIViewModel(app) {
 
     fun handleOnBackPressed() {
         when {
+            isInputLocked.value -> { return }
             searchQuery.value != null -> { stopSearch() }
             _selections.value.isNotEmpty() -> { deselectAllContacts() }
             else -> { closeFragmentEventMutable.value = Event(false) }
@@ -338,9 +339,9 @@ class AddressBookViewModel(app: Application): UIViewModel(app) {
 
     companion object {
         data class ToolBarState(val title: String,
-                                val navButtonAsClose: Boolean?, // null -> hide navigation icon
+                                val navIconAsClose: Boolean?, // null -> hide navigation icon
                                 val searchInactive: Boolean,
-                                val alternateBackground: Boolean,
+                                val tertiaryBackground: Boolean,
                                 val hideVisibilityButtons: Boolean,
                                 val showAsUnfavorite: Boolean,
                                 val showAsUnhide: Boolean,

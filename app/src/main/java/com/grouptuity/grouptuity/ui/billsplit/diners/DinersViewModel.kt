@@ -25,6 +25,6 @@ class DinersViewModel(application: Application): AndroidViewModel(application) {
     }
 
     fun addSelfToBill() {
-        // TODO repository.addSelfToBill()
+        repository.createDinerForSelf()
     }
 }

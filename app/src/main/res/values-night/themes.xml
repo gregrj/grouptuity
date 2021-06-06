@@ -19,6 +19,7 @@
         <item name="colorOnSurfaceLowEmphasis">@color/off_white</item>
 
         <item name="android:colorBackground">@color/white</item>
+        <item name="colorBackground">@color/white</item>
         <item name="colorOnBackground">@color/gray_dark</item>
         <item name="colorBackgroundVariant">@color/gray_light</item>
 

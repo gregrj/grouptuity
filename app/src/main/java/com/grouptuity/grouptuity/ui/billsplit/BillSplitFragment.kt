@@ -134,7 +134,7 @@ class BillSplitFragment: Fragment() {
                     findNavController().navigate(BillSplitFragmentDirections.actionBillSplitFragmentToAddressBookFragment(CircularRevealTransition.OriginParams(binding.fab)))
                 }
                 1 -> {  // Show fragment for item entry
-                    //TODO
+                    findNavController().navigate(BillSplitFragmentDirections.actionBillSplitToItemEntry(editedItem = null, CircularRevealTransition.OriginParams(binding.fab)))
                 }
             }
         }

@@ -1,6 +1,5 @@
 package com.grouptuity.grouptuity.data
 
-import android.Manifest
 import android.app.Application
 import android.content.Context
 import android.content.pm.PackageManager
@@ -8,9 +7,7 @@ import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
-import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.ProcessLifecycleOwner
-import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.*
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
@@ -32,7 +29,7 @@ abstract class UIViewModel(app: Application): AndroidViewModel(app) {
 
     private val transitionInputLocked = MutableStateFlow(false)
     private val inputLocks = mutableListOf<Flow<Boolean>>(transitionInputLocked)
-    protected var isInputLocked: Flow<Boolean> = MutableStateFlow(false)
+    var isInputLocked: StateFlow<Boolean> = transitionInputLocked
         private set
 
     private val _isOutputFlowing = MutableStateFlow(true)
@@ -147,6 +144,7 @@ class Repository(context: Context) {
                 discountsReduceTip.value), addSelf = false))
     }
 
+    // Contact functions
     fun saveContact(contact: Contact) = CoroutineScope(Dispatchers.IO).launch { contactDao.save(contact) }
     fun saveContacts(contacts: List<Contact>) = CoroutineScope(Dispatchers.IO).launch { contactDao.save(contacts) }
     fun removeContact(contact: Contact) = CoroutineScope(Dispatchers.IO).launch { contactDao.delete(contact) }
@@ -154,6 +152,8 @@ class Repository(context: Context) {
     fun unfavoriteFavoriteContacts() = CoroutineScope(Dispatchers.IO).launch { contactDao.unfavoriteAllFavorites() }
     fun unhideHiddenContacts() = CoroutineScope(Dispatchers.IO).launch { contactDao.unhideAllHidden() }
 
+    // Diner functions
+    fun createDinerForSelf() = CoroutineScope(Dispatchers.IO).launch { billDao.addDinerToBill(Diner(0L, loadedBillId.value, Contact.self)) }
     fun createDinersForContacts(dinerContacts: Collection<Contact>, billId: Long? = null) = CoroutineScope(Dispatchers.IO).launch {
         (billId ?: loadedBillId.value).let { billId ->
             dinerDao.save(dinerContacts.map { Diner(0L, billId, it) }) //TODO pull payment preference from contact
@@ -161,6 +161,13 @@ class Repository(context: Context) {
     }
     fun deleteDiner(diner: Diner) = CoroutineScope(Dispatchers.IO).launch { dinerDao.delete(diner) }
 
+    // Item functions
+    fun getItemsForDiner(dinerId: Long) = itemDao.getItemsForDiner(dinerId).flowOn(Dispatchers.IO)
+    fun createItem(price: Double, name: String, diners: Collection<Diner>) = CoroutineScope(Dispatchers.IO).launch {
+        itemDao.save(Item(0, loadedBillId.value, price, name, diners.map { it.id }, emptyList()))
+    }
+
+    fun deleteItem(item: Item) = CoroutineScope(Dispatchers.IO).launch { itemDao.delete(item) }
 
     companion object {
         @Volatile

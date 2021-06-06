@@ -14,14 +14,11 @@ import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.WindowManager
 import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.SearchView
 import androidx.core.os.bundleOf
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.doOnPreDraw
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
@@ -92,6 +89,13 @@ class AddressBookFragment: Fragment(), Revealable by RevealableImpl() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
+        // Intercept user interactions while while fragment transitions are running
+        binding.rootLayout.attachLock(addressBookViewModel.isInputLocked)
+
+        // Intercept back pressed events to allow fragment-specific behaviors
+        backPressedCallback = object: OnBackPressedCallback(true) { override fun handleOnBackPressed() { addressBookViewModel.handleOnBackPressed() } }
+        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, backPressedCallback)
+
         binding.coveredFragment.setImageBitmap(coveredFragmentBitmap)
 
         enterTransition = CircularRevealTransition(
@@ -109,9 +113,6 @@ class AddressBookFragment: Fragment(), Revealable by RevealableImpl() {
 
         postponeEnterTransition()
         view.doOnPreDraw { startPostponedEnterTransition() }
-
-        backPressedCallback = object: OnBackPressedCallback(true) { override fun handleOnBackPressed() { addressBookViewModel.handleOnBackPressed() } }
-        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, backPressedCallback)
 
         /* Need a way to discriminate between user dismissal of keyboard and system dismissal from starting voice search
         requireActivity().window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN)
@@ -268,14 +269,12 @@ class AddressBookFragment: Fragment(), Revealable by RevealableImpl() {
         }
 
         addressBookViewModel.toolBarState.observe(viewLifecycleOwner) { toolBarState ->
-            Log.e("toolBarState", "" + toolBarState.navButtonAsClose)
-
             binding.toolbar.title = toolBarState.title
 
-            if(toolBarState.navButtonAsClose == null) {
+            if(toolBarState.navIconAsClose == null) {
                 binding.toolbar.navigationIcon = null
             } else {
-                binding.toolbar.setNavigationIcon(if(toolBarState.navButtonAsClose) R.drawable.ic_close else R.drawable.ic_arrow_back)
+                binding.toolbar.setNavigationIcon(if(toolBarState.navIconAsClose) R.drawable.ic_close else R.drawable.ic_arrow_back)
             }
 
             if(toolBarState.searchInactive) {
@@ -305,35 +304,35 @@ class AddressBookFragment: Fragment(), Revealable by RevealableImpl() {
 
             binding.toolbar.menu.setGroupVisible(R.id.group_other, toolBarState.showOtherButtons)
 
-            if(toolBarState.alternateBackground != toolbarInTertiaryState) {
+            if(toolBarState.tertiaryBackground != toolbarInTertiaryState) {
                 val secondaryColor = TypedValue().also { requireContext().theme.resolveAttribute(R.attr.colorSecondary, it, true) }.data
                 val secondaryDarkColor = TypedValue().also { requireContext().theme.resolveAttribute(R.attr.colorSecondaryVariant, it, true) }.data
                 val tertiaryColor = TypedValue().also { requireContext().theme.resolveAttribute(R.attr.colorTertiary, it, true) }.data
                 val tertiaryDarkColor = TypedValue().also { requireContext().theme.resolveAttribute(R.attr.colorTertiaryVariant, it, true) }.data
 
                 if(toolbarInTertiaryState) {
-                    val toolBarColorAnimation = ValueAnimator.ofObject(ArgbEvaluator(), tertiaryColor, secondaryColor)
-                    toolBarColorAnimation.duration = resources.getInteger(R.integer.viewprop_animation_duration).toLong()
-                    toolBarColorAnimation.addUpdateListener { animator -> binding.toolbar.setBackgroundColor(animator.animatedValue as Int) }
-                    toolBarColorAnimation.start()
+                    ValueAnimator.ofObject(ArgbEvaluator(), tertiaryColor, secondaryColor).apply {
+                        duration = resources.getInteger(R.integer.viewprop_animation_duration).toLong()
+                        addUpdateListener { animator -> binding.toolbar.setBackgroundColor(animator.animatedValue as Int) }
+                    }.start()
 
-                    val statusBarColorAnimation = ValueAnimator.ofObject(ArgbEvaluator(), tertiaryDarkColor, secondaryDarkColor)
-                    statusBarColorAnimation.duration = resources.getInteger(R.integer.viewprop_animation_duration).toLong()
-                    statusBarColorAnimation.addUpdateListener { animator -> binding.statusBarBackgroundView.setBackgroundColor(animator.animatedValue as Int) }
-                    statusBarColorAnimation.start()
+                    ValueAnimator.ofObject(ArgbEvaluator(), tertiaryDarkColor, secondaryDarkColor).apply {
+                        duration = resources.getInteger(R.integer.viewprop_animation_duration).toLong()
+                        addUpdateListener { animator -> binding.statusBarBackgroundView.setBackgroundColor(animator.animatedValue as Int) }
+                    }.start()
                 } else {
-                    val toolBarColorAnimation = ValueAnimator.ofObject(ArgbEvaluator(), secondaryColor, tertiaryColor)
-                    toolBarColorAnimation.duration = resources.getInteger(R.integer.viewprop_animation_duration).toLong()
-                    toolBarColorAnimation.addUpdateListener { animator -> binding.toolbar.setBackgroundColor(animator.animatedValue as Int) }
-                    toolBarColorAnimation.start()
+                    ValueAnimator.ofObject(ArgbEvaluator(), secondaryColor, tertiaryColor).apply {
+                        duration = resources.getInteger(R.integer.viewprop_animation_duration).toLong()
+                        addUpdateListener { animator -> binding.toolbar.setBackgroundColor(animator.animatedValue as Int) }
+                    }.start()
 
-                    val statusBarColorAnimation = ValueAnimator.ofObject(ArgbEvaluator(), secondaryDarkColor, tertiaryDarkColor)
-                    statusBarColorAnimation.duration = resources.getInteger(R.integer.viewprop_animation_duration).toLong()
-                    statusBarColorAnimation.addUpdateListener { animator -> binding.statusBarBackgroundView.setBackgroundColor(animator.animatedValue as Int) }
-                    statusBarColorAnimation.start()
+                    ValueAnimator.ofObject(ArgbEvaluator(), secondaryDarkColor, tertiaryDarkColor).apply {
+                        duration = resources.getInteger(R.integer.viewprop_animation_duration).toLong()
+                        addUpdateListener { animator -> binding.statusBarBackgroundView.setBackgroundColor(animator.animatedValue as Int) }
+                    }.start()
                 }
 
-                toolbarInTertiaryState = toolBarState.alternateBackground
+                toolbarInTertiaryState = toolBarState.tertiaryBackground
             }
         }
 

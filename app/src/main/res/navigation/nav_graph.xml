@@ -16,12 +16,9 @@
         android:label="@string/app_name"
         tools:layout="@layout/frag_bill_split">
 
-        <action
-            android:id="@+id/action_billSplitFragment_to_simpleCalcFragment"
-            app:destination="@id/simpleCalcFragment" />
-        <action
-            android:id="@+id/action_billSplitFragment_to_addressBookFragment"
-            app:destination="@id/addressBookFragment" />
+        <action android:id="@+id/action_billSplitFragment_to_simpleCalcFragment" app:destination="@id/simpleCalcFragment" />
+        <action android:id="@+id/action_billSplitFragment_to_addressBookFragment" app:destination="@id/addressBookFragment" />
+        <action android:id="@+id/action_billSplit_to_itemEntry" app:destination="@id/itemEntryFragment"/>
     </nav_fragment>
 
     <nav_fragment
@@ -41,6 +38,21 @@
         android:label="AddressBookFragment">
         <argument
             android:name="origin_params"
+            app:argType="com.grouptuity.grouptuity.ui.custom.transitions.CircularRevealTransition$OriginParams"/>
+    </nav_fragment>
+
+    <nav_fragment
+        android:id="@+id/itemEntryFragment"
+        android:name="com.grouptuity.grouptuity.ui.billsplit.itementry.ItemEntryFragment"
+        android:label="@string/app_name"
+        tools:layout="@layout/frag_itementry">
+        <argument
+            android:name="edited_item"
+            app:nullable="true"
+            app:argType="com.grouptuity.grouptuity.data.Item"/>
+        <argument
+            android:name="origin_params"
+            app:nullable="true"
             app:argType="com.grouptuity.grouptuity.ui.custom.transitions.CircularRevealTransition$OriginParams"/>
     </nav_fragment>
 </navigation>

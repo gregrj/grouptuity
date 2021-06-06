@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <attr name="colorSecondaryHighlight" format="reference" />
+
     <attr name="colorTertiary" format="reference" />
     <attr name="colorTertiaryVariant" format="reference" />
     <attr name="colorOnTertiary" format="reference" />
@@ -8,6 +10,7 @@
     <attr name="colorOnSurfaceMediumEmphasis" format="reference" />
     <attr name="colorOnSurfaceLowEmphasis" format="reference" />
 
+    <attr name="colorBackground" format="reference" />
     <attr name="colorBackgroundVariant" format="reference" />
     <attr name="colorOnBackgroundMediumEmphasis" format="reference" />
     <attr name="colorOnBackgroundLowEmphasis" format="reference" />

@@ -61,6 +61,24 @@
     <string name="addressbook_snackbar_unhidden">Contacts unhidden</string>
     <string name="addressbook_listitem_hidden">(contact hidden)</string>
 
+    <string name="itementry_clear_selections">Clear</string>
+    <string name="itementry_select_all">Everyone</string>
+    <string name="itementry_toolbar_edit_name">Edit item name</string>
+    <string name="itementry_toolbar_enter_name">Enter item name</string>
+    <string name="itementry_toolbar_select_diners">Select Diners</string>
+    <string name="itementry_toolbar_item_number">Item #</string>
+    <string name="itementry_zero_items">0 items</string>>
+    <plurals name="itementry_num_items_with_subtotal">
+        <item quantity="one">%2$s (1 item)</item>
+        <item quantity="other">%2$s (%1$d items)</item>
+    </plurals>
+    <plurals name="itementry_num_diners_selected">
+        <item quantity="other">%d selected</item>
+    </plurals>
+    <plurals name="itementry_num_diners_selected_everyone">
+        <item quantity="other">%d selected (everyone)</item>
+    </plurals>
+
     <string name="settings_toolbar_title">Settings</string>
 
     <string name="ok">OK</string>
