@@ -35,16 +35,20 @@ class ItemEntryViewModel(app: Application): UIViewModel(app) {
     private var hasUntouchedPriorSelections = false
 
     // UI State
+    private var creatingNewItem = true
+    private val pauseDinerRefresh: MutableStateFlow<Boolean> = MutableStateFlow(true)
     private val closeFragmentEventMutable = MutableLiveData<Event<Boolean>>()
     private val _editingName = MutableStateFlow(false)
     val editingName: StateFlow<Boolean> = _editingName
 
     // Live Data Output
     val closeFragmentEvent: LiveData<Event<Boolean>> = closeFragmentEventMutable
-    val dinerData: LiveData<List<Pair<Diner, String>>> = combine(repository.diners, repository.dinerSubtotals) { diners, subtotals ->
-        // Diners paired with their individual subtotals as currency strings
-        diners.map { diner ->
-            diner to formatter.format(subtotals.getOrDefault(diner.id, 0.0))
+    val dinerData: LiveData<List<Pair<Diner, String>>> = combineTransform(repository.diners, repository.dinerSubtotals, pauseDinerRefresh) { diners, subtotals, pause ->
+        if(!pause) {
+            // Diners paired with their individual subtotals as currency strings
+            emit(diners.map { diner ->
+                diner to formatter.format(subtotals.getOrDefault(diner.id, 0.0))
+            })
         }
     }.withOutputSwitch(isOutputFlowing).asLiveData()
     val itemName: LiveData<String> = repository.items.combine(itemNameInput) { items, nameInput ->
@@ -81,17 +85,31 @@ class ItemEntryViewModel(app: Application): UIViewModel(app) {
     val priceDecimalButtonEnabled: LiveData<Boolean> = calculator.decimalButtonEnabled.withOutputSwitch(isOutputFlowing).asLiveData()
     val priceAcceptButtonEnabled: LiveData<Boolean> = calculator.acceptButtonEnabled.withOutputSwitch(isOutputFlowing).asLiveData()
 
+    override fun notifyTransitionFinished() {
+        super.notifyTransitionFinished()
+
+        // For better performance, allow the diners to update only after transition finishes
+        if(creatingNewItem) {
+            pauseDinerRefresh.value = false
+        }
+    }
+
     fun initializeForItem(item: Item?) {
+        unFreezeOutput()
+
         selectionSet.clear()
         _editingName.value = false
 
         if(item == null) {
             // New item
+            creatingNewItem = true
             calculator.initialize(null, false, showNumberPad = true)
             itemNameInput.value = null
             hasUntouchedPriorSelections = false
         } else {
             // Editing existing item
+            creatingNewItem = false
+            pauseDinerRefresh.value = false
             calculator.initialize(item.price.toString(), false, showNumberPad = false)
             itemNameInput.value = item.name
             selectionSet.addAll(item.diners)

@@ -76,13 +76,12 @@ class CustomNavigator(private val context: Context, private val manager: Fragmen
         }
 
         ft.replace(containerId, frag)
-
         ft.setPrimaryNavigationFragment(frag)
 
         @IdRes val destId = destination.id
         val initialNavigation = mBackStack.isEmpty()
-
         val isSingleTopReplacement = (navOptions != null && !initialNavigation && navOptions.shouldLaunchSingleTop() && mBackStack.last() == destId)
+
         val isAdded: Boolean = if (initialNavigation) { true } else if (isSingleTopReplacement) {
             // Single Top means we only want one instance on the back stack
             if (mBackStack.size > 1) {

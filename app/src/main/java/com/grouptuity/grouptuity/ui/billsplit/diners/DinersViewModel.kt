@@ -6,11 +6,11 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.asLiveData
 import com.grouptuity.grouptuity.data.Diner
 import com.grouptuity.grouptuity.data.Repository
+import com.grouptuity.grouptuity.data.UIViewModel
 import kotlinx.coroutines.flow.combine
 import java.text.NumberFormat
 
-class DinersViewModel(application: Application): AndroidViewModel(application) {
-    private val repository = Repository.getInstance(application)
+class DinersViewModel(application: Application): UIViewModel(application) {
     private val formatter = NumberFormat.getCurrencyInstance()
 
     // Diners paired with their individual subtotals as currency strings

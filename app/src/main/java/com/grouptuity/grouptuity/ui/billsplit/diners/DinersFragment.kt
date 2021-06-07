@@ -26,10 +26,13 @@ import kotlinx.coroutines.withContext
 
 
 class DinersFragment : Fragment() {
-
     companion object {
+        @JvmStatic
         fun newInstance() = DinersFragment()
     }
+
+    // TODO snackbar note when removing diner
+    // TODO Removing diner causes subtotal updates before removal completes -> merge into single dataset
 
     private var binding by setNullOnDestroy<FragDinersBinding>()
     private lateinit var dinersViewModel: DinersViewModel
@@ -184,8 +187,6 @@ class DinersRecyclerViewAdapter(private val context: Context,
     }
 
     suspend fun updateDataSet(newDataSet: List<Pair<Diner, String>>) {
-        val adapter = this
-
         val diffResult = DiffUtil.calculateDiff(object: DiffUtil.Callback() {
             override fun getOldListSize() = mDataSet.size
 
@@ -205,9 +206,10 @@ class DinersRecyclerViewAdapter(private val context: Context,
             }
         })
 
+        val adapter = this
         withContext(Dispatchers.Main) {
-            adapter.notifyItemChanged(mDataSet.size - 1) // clears BottomOffset from old last item
-            adapter.notifyItemChanged(mDataSet.size - 2) // needed to add BottomOffset in case last item is removed
+            adapter.notifyItemChanged(mDataSet.size - 1) // Clears BottomOffset from old last item
+            adapter.notifyItemChanged(mDataSet.size - 2) // Needed to add BottomOffset in case last item is removed
 
             mDataSet = newDataSet
             diffResult.dispatchUpdatesTo(adapter)

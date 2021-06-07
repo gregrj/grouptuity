@@ -1,5 +1,6 @@
 package com.grouptuity.grouptuity.ui.billsplit.itementry
 
+import android.animation.Animator
 import android.animation.ArgbEvaluator
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
@@ -13,6 +14,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
+import android.view.animation.AccelerateDecelerateInterpolator
+import android.widget.FrameLayout
 import android.widget.ImageView
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.widget.SearchView
@@ -28,7 +31,9 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.*
 import androidx.transition.Transition
+import androidx.transition.TransitionValues
 import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.transition.Hold
 import com.grouptuity.grouptuity.AppViewModel
 import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.Diner
@@ -37,6 +42,7 @@ import com.grouptuity.grouptuity.databinding.FragItementryBinding
 import com.grouptuity.grouptuity.databinding.ListDinerBinding
 import com.grouptuity.grouptuity.ui.custom.RecyclerViewListener
 import com.grouptuity.grouptuity.ui.custom.setNullOnDestroy
+import com.grouptuity.grouptuity.ui.custom.transitions.CardViewExpandTransition
 import com.grouptuity.grouptuity.ui.custom.transitions.CircularRevealTransition
 import com.grouptuity.grouptuity.ui.custom.transitions.Revealable
 import com.grouptuity.grouptuity.ui.custom.transitions.RevealableImpl
@@ -141,7 +147,7 @@ class ItemEntryFragment: Fragment(), Revealable by RevealableImpl() {
             bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
             binding.priceTextview.setOnClickListener { itemEntryViewModel.openCalculator() }
 
-            // TODO setupReEditTransitions(view) including transition listener
+            setupReEditTransitions(view)
         }
 
         postponeEnterTransition()
@@ -428,6 +434,45 @@ class ItemEntryFragment: Fragment(), Revealable by RevealableImpl() {
         searchView.isIconified = true
         itemEntryViewModel.stopNameEdit()
     }
+
+    private fun setupReEditTransitions(view: View) {
+        binding.itemEntryContainer.transitionName = "container" + args.editedItem!!.id
+
+        val PROP_PRICE_HEIGHT = "com.grouptuity.grouptuity:CardViewExpandTransition:price_height"
+        val PROP_PRICE_WIDTH = "com.grouptuity.grouptuity:CardViewExpandTransition:price_width"
+        val PROP_IMAGE_MARGIN = "com.grouptuity.grouptuity:CardViewExpandTransition:price_margin"
+
+        sharedElementEnterTransition = CardViewExpandTransition(binding.itemEntryContainer.transitionName, binding.revealedLayout.id, true)
+            .setOnTransitionProgressCallback { _: Transition, sceneRoot: ViewGroup, _: View, animator: ValueAnimator ->
+                sceneRoot.findViewById<FrameLayout>(R.id.revealed_layout)?.apply {
+                    val progress = AccelerateDecelerateInterpolator().getInterpolation(animator.animatedFraction)
+                    this.alpha = progress
+                }
+            }
+            .addListener(object : Transition.TransitionListener {
+                override fun onTransitionStart(transition: Transition) { itemEntryViewModel.notifyTransitionStarted() }
+                override fun onTransitionEnd(transition: Transition) { itemEntryViewModel.notifyTransitionFinished() }
+                override fun onTransitionCancel(transition: Transition) {}
+                override fun onTransitionPause(transition: Transition) {}
+                override fun onTransitionResume(transition: Transition) {}
+            })
+
+        sharedElementReturnTransition = CardViewExpandTransition(binding.itemEntryContainer.transitionName, binding.revealedLayout.id, false)
+            .setOnTransitionProgressCallback { _: Transition, _: ViewGroup, _: View, animator: ValueAnimator ->
+                binding.revealedLayout.apply {
+                    val progress = AccelerateDecelerateInterpolator().getInterpolation(animator.animatedFraction)
+                    this.alpha = 1f - progress
+                }
+            }
+
+        // Return transition is needed to prevent next fragment from appearing immediately
+        returnTransition = Hold().apply {
+            duration = 0L
+            addTarget(view)
+        }
+
+        postponeEnterTransition()
+    }
 }
 
 
@@ -480,8 +525,6 @@ private class ItemEntryDinerSelectionRecyclerViewAdapter(val context: Context, v
         val newDinerData = dinerData ?: mDinerData
         val newSelections = selections ?: mSelections
 
-        val adapter = this
-
         val diffResult = DiffUtil.calculateDiff(object: DiffUtil.Callback() {
             override fun getOldListSize() = mDinerData.size
 
@@ -499,6 +542,7 @@ private class ItemEntryDinerSelectionRecyclerViewAdapter(val context: Context, v
             }
         })
 
+        val adapter = this
         withContext(Dispatchers.Main) {
             mDinerData = newDinerData
             mSelections = newSelections

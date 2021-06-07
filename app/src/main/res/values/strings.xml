@@ -61,6 +61,10 @@
     <string name="addressbook_snackbar_unhidden">Contacts unhidden</string>
     <string name="addressbook_listitem_hidden">(contact hidden)</string>
 
+    <string name="items_add_items_hint">Add all items\non the bill</string>
+    <string name="items_no_diners_warning">No diners assigned</string>
+    <string name="items_shared_by_everyone">Shared by everyone</string>
+
     <string name="itementry_clear_selections">Clear</string>
     <string name="itementry_select_all">Everyone</string>
     <string name="itementry_toolbar_edit_name">Edit item name</string>
