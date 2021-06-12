@@ -113,12 +113,14 @@ class Repository(context: Context) {
 
         // TODO consistency validation
 
+
+
         BillCalculation(currentBill, billDiners, billItems, billDebts, billDiscounts, billPayments, currentRestaurant)
     }.stateIn(CoroutineScope(Dispatchers.Default),
         SharingStarted.Eagerly,
         BillCalculation(
             bill=Bill(0L, "", 0L, 0.0, true,0.0, tipAsPercent = true, isTaxTipped = false, discountsReduceTip = false),
-            restaurant = Diner(0L, 0L, Contact.restaurant, PaymentPreferences())
+            restaurant = Diner(0L, 0L, Contact.restaurant)
         )
     )
 

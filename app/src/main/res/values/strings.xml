@@ -83,6 +83,16 @@
         <item quantity="other">%d selected (everyone)</item>
     </plurals>
 
+    <string name="taxtip_add_discount_button">Add</string>
+    <string name="taxtip_edit_discounts_button">Edit Discounts</string>
+    <string name="taxtip_subtotal">Subtotal</string>
+    <string name="taxtip_discount">Discounts</string>
+    <string name="taxtip_after_discounts">Including Discounts</string>
+    <string name="taxtip_tax">Tax</string>
+    <string name="taxtip_after_tax">Including Tax</string>
+    <string name="taxtip_tip">Tip</string>
+    <string name="taxtip_total">Total</string>
+
     <string name="settings_toolbar_title">Settings</string>
 
     <string name="ok">OK</string>

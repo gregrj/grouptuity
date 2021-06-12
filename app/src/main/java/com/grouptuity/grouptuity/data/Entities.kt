@@ -161,14 +161,14 @@ data class Bill(@PrimaryKey(autoGenerate = true) val id: Long,
 data class Diner(@PrimaryKey(autoGenerate = true) val id: Long,
                  val billId: Long,
                  @Embedded(prefix = "contact_") val contact: Contact,
-                 var paymentPreferences: PaymentPreferences = PaymentPreferences(emptyMap()),
-                 @Ignore val items: List<Long> = emptyList(),
-                 @Ignore val debtsOwed: List<Long> = emptyList(),
-                 @Ignore val debtsHeld: List<Long> = emptyList(),
-                 @Ignore val discountsReceived: List<Long> = emptyList(),
-                 @Ignore val discountsPurchased: List<Long> = emptyList(),
-                 @Ignore val paymentsSent: List<Long> = emptyList(),
-                 @Ignore val paymentsReceived: List<Long> = emptyList()): Parcelable {
+                 var paymentPreferences: PaymentPreferences = PaymentPreferences(),
+                 @Ignore val items: List<Long>,
+                 @Ignore val debtsOwed: List<Long>,
+                 @Ignore val debtsHeld: List<Long>,
+                 @Ignore val discountsReceived: List<Long>,
+                 @Ignore val discountsPurchased: List<Long>,
+                 @Ignore val paymentsSent: List<Long>,
+                 @Ignore val paymentsReceived: List<Long>): Parcelable {
 
     @Ignore
     val lookupKey = contact.lookupKey
@@ -180,6 +180,8 @@ data class Diner(@PrimaryKey(autoGenerate = true) val id: Long,
     val photoUri = contact.photoUri
 
     fun getInitials() = nameToInitials(name)
+
+    constructor(id: Long, billId: Long, contact: Contact): this(id, billId, contact, PaymentPreferences(), emptyList(), emptyList(), emptyList(), emptyList(), emptyList(), emptyList(), emptyList())
 
     fun withLists(newItems: List<Long>?=null, newDebtsOwed: List<Long>?=null,
                   newDebtsHeld: List<Long>?=null, newDiscountsReceived: List<Long>?=null,
