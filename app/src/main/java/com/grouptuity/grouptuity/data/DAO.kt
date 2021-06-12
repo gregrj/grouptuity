@@ -352,8 +352,8 @@ interface DiscountDao: BaseDao<Discount> {
         _getItemsForDiscount(discountId).distinctUntilChanged(),
         _getRecipientsForDiscount(discountId).distinctUntilChanged(),
         _getPurchasersForDiscount(discountId).distinctUntilChanged()) { discount, items, recipients, purchasers ->
-        discount?.withLists(items, recipients, purchasers)
-    }.filterNotNull()
+            discount?.withLists(items, recipients, purchasers)
+        }.filterNotNull()
 
     fun getDiscountsOnBill(billId: Long): Flow<Array<Discount>> = _getDiscountIdsOnBill(billId).distinctUntilChanged()
         .transformLatest { discountIds ->

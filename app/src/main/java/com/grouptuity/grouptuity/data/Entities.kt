@@ -42,15 +42,16 @@ enum class PaymentMethod(val acceptedByRestaurant: Boolean, val peerToPeer: Bool
 }
 
 
-class PaymentPreferences(private val preferenceMap: Map<Long, PaymentMethod>) {
+class PaymentPreferences(private val preferenceMap: Map<Long, Pair<PaymentMethod, Long?>>) {
     constructor(): this(emptyMap())
 
-    fun forRecipient(id: Long): PaymentMethod? = preferenceMap[id]
+    fun forRecipient(id: Long): Pair<PaymentMethod, Long?>? = preferenceMap[id]
 
     fun toJson(): String {
         val obj = JSONObject()
         obj.put("payeeIds", JSONArray(preferenceMap.keys))
-        obj.put("methods", JSONArray(preferenceMap.values.map { it.name }))
+        obj.put("methods", JSONArray(preferenceMap.values.map { it.first.name }))
+        obj.put("surrogates", JSONArray(preferenceMap.values.map { it.second }))
 
         return obj.toString()
     }
@@ -60,14 +61,18 @@ class PaymentPreferences(private val preferenceMap: Map<Long, PaymentMethod>) {
             val obj = JSONObject(json)
             val payeeIds = obj.getJSONArray("payeeIds")
             val methods = obj.getJSONArray("methods")
+            val surrogates = obj.getJSONArray("surrogates")
 
             if (payeeIds.length() == 0) {
                 return PaymentPreferences(emptyMap())
             }
 
-            val newMap = mutableMapOf<Long, PaymentMethod>()
+            val newMap = mutableMapOf<Long, Pair<PaymentMethod, Long?>>()
             for (i in 0..payeeIds.length()) {
-                newMap[payeeIds[i] as Long] = PaymentMethod.valueOf(methods[i] as String)
+                newMap[payeeIds[i] as Long] = Pair(
+                    PaymentMethod.valueOf(methods[i] as String),
+                    surrogates[i] as Long,
+                )
             }
 
             return PaymentPreferences(newMap)
@@ -145,8 +150,8 @@ data class Bill(@PrimaryKey(autoGenerate = true) val id: Long,
                 val taxAsPercent: Boolean,
                 val tip: Double,
                 val tipAsPercent: Boolean,
-                val isTaxTipped: Boolean?,
-                val discountsReduceTip: Boolean?)
+                val isTaxTipped: Boolean,
+                val discountsReduceTip: Boolean)
 
 
 @Entity(tableName = "diner_table",
@@ -156,14 +161,14 @@ data class Bill(@PrimaryKey(autoGenerate = true) val id: Long,
 data class Diner(@PrimaryKey(autoGenerate = true) val id: Long,
                  val billId: Long,
                  @Embedded(prefix = "contact_") val contact: Contact,
-                 var paymentPreferences: PaymentPreferences,
-                 @Ignore val items: List<Long>,
-                 @Ignore val debtsOwed: List<Long>,
-                 @Ignore val debtsHeld: List<Long>,
-                 @Ignore val discountsReceived: List<Long>,
-                 @Ignore val discountsPurchased: List<Long>,
-                 @Ignore val paymentsSent: List<Long>,
-                 @Ignore val paymentsReceived: List<Long>): Parcelable {
+                 var paymentPreferences: PaymentPreferences = PaymentPreferences(emptyMap()),
+                 @Ignore val items: List<Long> = emptyList(),
+                 @Ignore val debtsOwed: List<Long> = emptyList(),
+                 @Ignore val debtsHeld: List<Long> = emptyList(),
+                 @Ignore val discountsReceived: List<Long> = emptyList(),
+                 @Ignore val discountsPurchased: List<Long> = emptyList(),
+                 @Ignore val paymentsSent: List<Long> = emptyList(),
+                 @Ignore val paymentsReceived: List<Long> = emptyList()): Parcelable {
 
     @Ignore
     val lookupKey = contact.lookupKey
@@ -173,8 +178,6 @@ data class Diner(@PrimaryKey(autoGenerate = true) val id: Long,
 
     @Ignore
     val photoUri = contact.photoUri
-
-    constructor(id: Long, billId: Long, contact: Contact): this(id, billId, contact, PaymentPreferences(), emptyList(), emptyList(), emptyList(), emptyList(), emptyList(), emptyList(), emptyList())
 
     fun getInitials() = nameToInitials(name)
 
