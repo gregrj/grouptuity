@@ -16,7 +16,7 @@ import com.grouptuity.grouptuity.ui.billsplit.diners.DinersFragment
 import com.grouptuity.grouptuity.ui.billsplit.items.ItemsFragment
 import com.grouptuity.grouptuity.ui.billsplit.payments.PaymentsFragment
 import com.grouptuity.grouptuity.ui.billsplit.taxtip.TaxTipFragment
-import com.grouptuity.grouptuity.ui.custom.setNullOnDestroy
+import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
 import com.grouptuity.grouptuity.ui.custom.transitions.CircularRevealTransition
 
 

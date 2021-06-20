@@ -2,16 +2,13 @@ package com.grouptuity.grouptuity.ui.billsplit.itementry
 
 import android.app.Application
 import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.asFlow
 import androidx.lifecycle.asLiveData
-import com.grouptuity.grouptuity.Event
 import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.launch
 import java.text.NumberFormat
 
 class ItemEntryViewModel(app: Application): UIViewModel(app) {
@@ -37,12 +34,9 @@ class ItemEntryViewModel(app: Application): UIViewModel(app) {
     // UI State
     private var creatingNewItem = true
     private val pauseDinerRefresh: MutableStateFlow<Boolean> = MutableStateFlow(true)
-    private val closeFragmentEventMutable = MutableLiveData<Event<Boolean>>()
-    private val _editingName = MutableStateFlow(false)
-    val editingName: StateFlow<Boolean> = _editingName
+    private val editingName = MutableStateFlow(false)
 
     // Live Data Output
-    val closeFragmentEvent: LiveData<Event<Boolean>> = closeFragmentEventMutable
     val dinerData: LiveData<List<Pair<Diner, String>>> = combineTransform(repository.diners, repository.dinerSubtotals, pauseDinerRefresh) { diners, subtotals, pause ->
         if(!pause) {
             // Diners paired with their individual subtotals as currency strings
@@ -55,7 +49,7 @@ class ItemEntryViewModel(app: Application): UIViewModel(app) {
         nameInput ?: getApplication<Application>().resources.getString(R.string.itementry_toolbar_item_number) + (items.size + 1)
     }.withOutputSwitch(isOutputFlowing).asLiveData()
     val selections: LiveData<Set<Long>> = _selections.withOutputSwitch(isOutputFlowing).asLiveData()
-    val toolBarState: LiveData<ToolBarState> = combine(calculator.numberPadVisible, _editingName, itemName.asFlow(), selectionCount, areAllDinersSelected) {
+    val toolBarState: LiveData<ToolBarState> = combine(calculator.isNumberPadVisible, editingName, itemName.asFlow(), selectionCount, areAllDinersSelected) {
             calcVisible, editing, name, count, allSelected ->
         if(!calcVisible && count > 0) {
             // Selecting diners and has at least one selection
@@ -75,10 +69,10 @@ class ItemEntryViewModel(app: Application): UIViewModel(app) {
         }
     }.withOutputSwitch(isOutputFlowing).asLiveData()
     val selectAllButtonDisabled: LiveData<Boolean> = areAllDinersSelected.withOutputSwitch(isOutputFlowing).asLiveData()
-    val editNameShimVisible: LiveData<Boolean> = _editingName.withOutputSwitch(isOutputFlowing).asLiveData()
+    val editNameShimVisible: LiveData<Boolean> = editingName.withOutputSwitch(isOutputFlowing).asLiveData()
 
     val formattedPrice: LiveData<String> = calculator.displayValue.withOutputSwitch(isOutputFlowing).asLiveData()
-    val numberPadVisible: LiveData<Boolean> = calculator.numberPadVisible.withOutputSwitch(isOutputFlowing).asLiveData()
+    val numberPadVisible: LiveData<Boolean> = calculator.isNumberPadVisible.withOutputSwitch(isOutputFlowing).asLiveData()
     val priceBackspaceButtonVisible: LiveData<Boolean> = calculator.backspaceButtonVisible.withOutputSwitch(isOutputFlowing).asLiveData()
     val priceEditButtonVisible: LiveData<Boolean> = calculator.editButtonVisible.withOutputSwitch(isOutputFlowing).asLiveData()
     val priceZeroButtonEnabled: LiveData<Boolean> = calculator.zeroButtonEnabled.withOutputSwitch(isOutputFlowing).asLiveData()
@@ -98,7 +92,7 @@ class ItemEntryViewModel(app: Application): UIViewModel(app) {
         unFreezeOutput()
 
         selectionSet.clear()
-        _editingName.value = false
+        editingName.value = false
 
         if(item == null) {
             // New item
@@ -110,7 +104,7 @@ class ItemEntryViewModel(app: Application): UIViewModel(app) {
             // Editing existing item
             creatingNewItem = false
             pauseDinerRefresh.value = false
-            calculator.initialize(item.price.toString(), false, showNumberPad = false)
+            calculator.initialize(item.price, false, showNumberPad = false)
             itemNameInput.value = item.name
             selectionSet.addAll(item.diners)
             hasUntouchedPriorSelections = selectionSet.isNotEmpty()
@@ -119,19 +113,20 @@ class ItemEntryViewModel(app: Application): UIViewModel(app) {
         _selections.value = selectionSet.toSet()
     }
 
-    fun handleOnBackPressed() {
+    fun handleOnBackPressed(): Boolean? {
         when {
-            isInputLocked.value -> { return }
+            isInputLocked.value -> { }
             numberPadVisible.value == true -> {
                 when {
-                    _editingName.value -> { stopNameEdit() }
+                    editingName.value -> { stopNameEdit() }
                     calculator.tryRevertToLastValue() -> {  }
-                    else -> { closeFragmentEventMutable.value = Event(false) }
+                    else -> { return false }
                 }
             }
-            hasUntouchedPriorSelections || selectionSet.isEmpty() -> { closeFragmentEventMutable.value = Event(false) }
+            hasUntouchedPriorSelections || selectionSet.isEmpty() -> { return false }
             else -> { clearDinerSelections() }
         }
+        return null
     }
 
     fun openCalculator() {
@@ -144,10 +139,10 @@ class ItemEntryViewModel(app: Application): UIViewModel(app) {
     fun resetPrice() = calculator.clearValue()
     fun acceptPrice() = calculator.tryAcceptValue()
 
-    fun startNameEdit() { _editingName.value = true }
+    fun startNameEdit() { editingName.value = true }
     fun stopNameEdit() {
-        if(_editingName.value)
-            _editingName.value = false
+        if(editingName.value)
+            editingName.value = false
     }
 
     fun acceptItemNameInput(name: String) {

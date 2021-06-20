@@ -23,4 +23,8 @@
         <attr name="useInitialsPlaceholder" format="boolean"/>
         <attr name="selectable" format="boolean"/>
     </declare-styleable>
+
+    <declare-styleable name="RadioButton">
+        <attr name="state_color" format="boolean"/>
+    </declare-styleable>
 </resources>

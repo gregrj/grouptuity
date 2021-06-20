@@ -1,17 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<com.google.android.material.card.MaterialCardView
+<LinearLayout
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:id="@+id/card_background"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginTop="16dp"
-    android:layout_marginStart="12dp"
-    android:layout_marginEnd="16dp"
-    app:cardElevation="2dp"
-    app:cardCornerRadius="4dp"
-    android:foreground="?android:attr/selectableItemBackground"
-    android:clickable="true">
+    android:gravity="center_vertical"
+    android:orientation="horizontal"
+    android:foreground="?attr/selectableItemBackground"
+    android:background="?attr/colorBackground">
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:layout_width="match_parent"
@@ -39,7 +35,7 @@
             app:layout_constraintTop_toTopOf="parent"
             app:layout_constraintBottom_toTopOf="@+id/second_row"
             app:layout_constraintStart_toEndOf="@+id/item_price"
-            app:layout_constraintEnd_toStartOf="@+id/remove"
+            app:layout_constraintEnd_toEndOf="parent"
             android:maxLines="1"
             android:ellipsize="end"
             style="@android:style/TextAppearance.Large" />
@@ -50,7 +46,7 @@
             android:layout_height="wrap_content"
             app:layout_constraintTop_toBottomOf="@+id/name"
             app:layout_constraintStart_toStartOf="@+id/name"
-            app:layout_constraintEnd_toStartOf="@+id/remove"
+            app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintBottom_toBottomOf="parent"
             android:orientation="horizontal">
 
@@ -67,19 +63,7 @@
                 android:gravity="center_vertical"
                 android:text=""
                 android:maxLines="1"
-                android:textColor="?attr/colorOnSurface"
                 style="@android:style/TextAppearance.Small" />
         </LinearLayout>
-
-        <ImageButton
-            android:id="@+id/remove"
-            android:layout_width="@dimen/contact_photo_size"
-            android:layout_height="@dimen/contact_photo_size"
-            app:layout_constraintTop_toTopOf="parent"
-            app:layout_constraintBottom_toBottomOf="parent"
-            app:layout_constraintEnd_toEndOf="parent"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            app:tint="?attr/colorOnSurfaceMediumEmphasis"
-            android:src="@drawable/ic_close"/>
     </androidx.constraintlayout.widget.ConstraintLayout>
-</com.google.android.material.card.MaterialCardView>
+</LinearLayout>

@@ -1,0 +1,112 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:theme="@style/Theme.Grouptuity.Secondary">
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="?attr/colorBackground"
+        android:elevation="4dp">
+
+        <TextView
+            android:id="@+id/price_textview"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingTop="16dp"
+            android:paddingBottom="8dp"
+            android:paddingStart="52dp"
+            android:paddingEnd="52dp"
+            android:gravity="center"
+            android:textSize="40sp"
+            android:maxLines="1"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            style="@android:style/TextAppearance.Material.Large"/>
+
+        <ImageButton
+            android:id="@+id/button_backspace"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:scaleType="fitXY"
+            android:layout_gravity="end|center_vertical"
+            android:layout_marginEnd="16dp"
+            app:tint="?attr/colorOnBackgroundLowEmphasis"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_backspace"/>
+
+        <ImageView
+            android:id="@+id/button_edit"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_gravity="end|center_vertical"
+            android:layout_marginEnd="16dp"
+            app:tint="?attr/colorOnBackgroundLowEmphasis"
+            android:src="@drawable/ic_edit"
+            android:visibility="gone"/>
+    </FrameLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:orientation="vertical"
+        android:background="?attr/colorBackground"
+        android:elevation="4dp">
+
+        <com.google.android.material.button.MaterialButtonToggleGroup
+            android:id="@+id/basis_toggle_buttons"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:padding="8dp"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toTopOf="@+id/button_7"
+            android:gravity="center"
+            app:singleSelection="true">
+
+            <com.grouptuity.grouptuity.ui.custom.views.MaterialRadioButton
+                android:id="@+id/button_items"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:text="@string/discountentry_button_on_items"
+                app:icon="@drawable/ic_item"
+                app:iconGravity="start"
+                style="?attr/materialButtonOutlinedStyle"
+                android:backgroundTint="@color/secondary_radio_button_background_colors"
+                android:textColor="@color/secondary_radio_button_foreground_colors"
+                app:iconTint="@color/secondary_radio_button_foreground_colors"
+                app:strokeColor="@color/secondary_radio_button_stroke_colors"
+                app:rippleColor="?attr/colorSecondaryHighlight"/>
+
+            <com.grouptuity.grouptuity.ui.custom.views.MaterialRadioButton
+                android:id="@+id/button_diners"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:text="@string/discountentry_button_for_diners"
+                app:icon="@drawable/ic_diners"
+                android:drawableTint="?attr/colorOnSecondary"
+                app:iconGravity="start"
+                style="?attr/materialButtonOutlinedStyle"
+                android:backgroundTint="@color/secondary_radio_button_background_colors"
+                android:textColor="@color/secondary_radio_button_foreground_colors"
+                app:iconTint="@color/secondary_radio_button_foreground_colors"
+                app:strokeColor="@color/secondary_radio_button_stroke_colors"
+                app:rippleColor="?attr/colorSecondaryHighlight"/>
+        </com.google.android.material.button.MaterialButtonToggleGroup>
+
+        <androidx.viewpager2.widget.ViewPager2
+            android:id="@+id/view_pager"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"/>
+    </LinearLayout>
+</LinearLayout>

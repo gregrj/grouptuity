@@ -1,5 +1,6 @@
 package com.grouptuity.grouptuity.data
 
+import android.util.Log
 import androidx.lifecycle.MutableLiveData
 import com.grouptuity.grouptuity.Event
 import kotlinx.coroutines.CoroutineScope
@@ -21,8 +22,8 @@ class CalculatorData(
         private val decimalSymbol get() = (DecimalFormat.getInstance() as DecimalFormat).decimalFormatSymbols.decimalSeparator
     }
 
-    private val isNumberPadVisible = MutableStateFlow(false)
-    private val isInPercent = MutableStateFlow(false)
+    val isNumberPadVisible = MutableStateFlow(false)
+    val isInPercent = MutableStateFlow(false)
     private val isZeroAcceptable: StateFlow<Boolean> = isInPercent.mapLatest {
         if(it) percentZeroAcceptable else currencyZeroAcceptable
     }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, currencyZeroAcceptable)
@@ -38,7 +39,7 @@ class CalculatorData(
 
     var editedValue: Boolean? = null // null == not set, false == prior value unchanged, true == new value set
         private set
-    val rawInputIsBlank: Flow<Boolean> = rawInputValue.mapLatest { it == null }
+    val rawInputIsBlank: StateFlow<Boolean> = rawInputValue.mapLatest { it == null }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, true)
     val numericalValue: StateFlow<Double?> = rawInputValue.mapLatest {
         when(it) {
             null, "." -> { null }
@@ -130,8 +131,6 @@ class CalculatorData(
         }
     }
 
-    val numberPadVisible: Flow<Boolean> = isNumberPadVisible
-    val inPercent: Flow<Boolean> = isInPercent
     val editButtonVisible: Flow<Boolean> = isNumberPadVisible.mapLatest { !it }
     val backspaceButtonVisible: Flow<Boolean> = combine(isNumberPadVisible, rawInputValue) { visible, rawValue -> visible && rawValue != null }
     val zeroButtonEnabled: Flow<Boolean> = combine(rawInputValue, maxDecimalsAllowed, maxIntegersAllowed) { rawValue, maxDecimals, maxIntegers ->
@@ -163,10 +162,20 @@ class CalculatorData(
     private val _acceptEvents = MutableStateFlow<Event<String>?>(null)
     val acceptEvents: Flow<Event<String>> = _acceptEvents.filterNotNull()
 
-    fun initialize(newRawInputValue: String?, inPercent: Boolean, showNumberPad: Boolean = false) {
-        editedValue = if(newRawInputValue == null) null else false
-        _lastCompletedRawValue.value = newRawInputValue
-        rawInputValue.value = newRawInputValue
+    fun initialize(newRawInputValue: Double?, inPercent: Boolean, showNumberPad: Boolean = false) {
+        // Invalidate any unconsumed events
+        _acceptEvents.value?.consume()
+
+        if (newRawInputValue == null) {
+            editedValue = null
+            _lastCompletedRawValue.value = null
+            rawInputValue.value = null
+
+        } else {
+            editedValue = false
+            _lastCompletedRawValue.value = newRawInputValue.toString()
+            rawInputValue.value = newRawInputValue.toString()
+        }
 
         isInPercent.value = inPercent
 

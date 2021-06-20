@@ -1,0 +1,186 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.grouptuity.grouptuity.ui.custom.views.LockableFrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/root_layout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:theme="@style/Theme.Grouptuity.Secondary">
+
+    <ImageView
+        android:id="@+id/covered_fragment"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        tools:ignore="ContentDescription" />
+
+    <View
+        android:id="@+id/scrim"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#000000"
+        android:alpha="0"/>
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/container"
+        android:transitionName="discountsContainerTransitionName"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:cardCornerRadius="0dp"
+        app:cardElevation="0dp">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/edit_discounts_button"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:gravity="center"
+            android:text="@string/taxtip_edit_discounts_button"
+            android:textSize="18sp"
+            android:textColor="?attr/colorOnSecondary"
+            app:backgroundTint="?attr/colorSecondary"
+            app:strokeColor="?attr/colorSecondary"
+            app:rippleColor="?attr/colorSecondaryHighlight"
+            android:visibility="gone"
+            style="@style/Widget.MaterialComponents.Button.UnelevatedButton"/>
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/add_discount_button"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:gravity="center"
+            android:text="@string/taxtip_add_discount_button"
+            android:textSize="18sp"
+            android:textColor="?attr/colorSecondary"
+            app:backgroundTint="?attr/colorBackground"
+            app:strokeColor="?attr/colorSecondary"
+            app:rippleColor="?attr/colorSecondaryHighlight"
+            android:visibility="gone"
+            style="@style/Widget.MaterialComponents.Button.OutlinedButton"/>
+
+        <ImageView
+            android:id="@+id/inner_covered_fragment"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:visibility="gone"
+            tools:ignore="ContentDescription" />
+
+        <FrameLayout
+            android:id="@+id/revealed_layout"
+            android:transitionName="revealedLayoutTransitionName"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <androidx.coordinatorlayout.widget.CoordinatorLayout
+                android:id="@+id/coordinator_layout"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:theme="@style/AppThemeSecondaryEditTextActionView">
+
+                <com.google.android.material.appbar.AppBarLayout
+                    android:id="@+id/appbar_layout"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content">
+
+                    <View
+                        android:id="@+id/status_bar_background_view"
+                        android:layout_width="match_parent"
+                        android:layout_height="@dimen/status_bar_height"
+                        android:background="?attr/colorSecondaryVariant"/>
+
+                    <androidx.appcompat.widget.Toolbar
+                        android:id="@+id/toolbar"
+                        android:layout_width="match_parent"
+                        android:layout_height="?attr/actionBarSize"
+                        style="@style/Widget.MaterialComponents.Toolbar.Primary">
+                    </androidx.appcompat.widget.Toolbar>
+
+                    <com.google.android.material.tabs.TabLayout
+                        android:id="@+id/tab_layout"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:elevation="4dp"
+                        app:tabGravity="fill"
+                        app:tabMode="fixed"
+                        android:background="?attr/colorSecondary"
+                        app:tabTextColor="?attr/colorOnBackground"
+                        app:tabIndicatorColor="?attr/colorOnSecondary"
+                        app:tabSelectedTextColor="?attr/colorOnSecondary"
+                        android:visibility="gone"/>
+                </com.google.android.material.appbar.AppBarLayout>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    android:orientation="vertical"
+                    app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+                    <androidx.coordinatorlayout.widget.CoordinatorLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="0dp"
+                        android:layout_weight="1">
+
+                        <androidx.coordinatorlayout.widget.CoordinatorLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent">
+
+                            <TextView
+                                android:id="@+id/price_placeholder"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:paddingTop="16dp"
+                                android:paddingBottom="8dp"
+                                android:paddingStart="52dp"
+                                android:paddingEnd="52dp"
+                                android:gravity="center"
+                                android:textSize="40sp"
+                                android:maxLines="1"
+                                android:background="?attr/colorBackground"
+                                style="@android:style/TextAppearance.Material.Large"/>
+
+                            <androidx.viewpager2.widget.ViewPager2
+                                android:id="@+id/view_pager"
+                                android:layout_width="match_parent"
+                                android:layout_height="match_parent"/>
+
+                            <com.google.android.material.floatingactionbutton.FloatingActionButton
+                                android:id="@+id/fab"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_gravity="end|bottom"
+                                android:layout_margin="@dimen/fab_margin"
+                                android:src="@drawable/ic_arrow_forward"
+                                android:visibility="invisible"
+                                app:layout_behavior="com.google.android.material.behavior.HideBottomViewOnScrollBehavior"
+                                android:contentDescription="TODO" />
+                        </androidx.coordinatorlayout.widget.CoordinatorLayout>
+
+                        <include
+                            android:id="@+id/priceNumberPad"
+                            layout="@layout/calculator"
+                            android:elevation="4dp"/>
+
+                        <include
+                            android:id="@+id/costNumberPad"
+                            layout="@layout/calculator"
+                            android:elevation="4dp"/>
+                    </androidx.coordinatorlayout.widget.CoordinatorLayout>
+                </LinearLayout>
+            </androidx.coordinatorlayout.widget.CoordinatorLayout>
+
+            <View
+                android:id="@+id/fade_view"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="?attr/colorSecondary"/>
+        </FrameLayout>
+    </com.google.android.material.card.MaterialCardView>
+
+    <View
+        android:id="@+id/touch_interceptor"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
+</com.grouptuity.grouptuity.ui.custom.views.LockableFrameLayout>

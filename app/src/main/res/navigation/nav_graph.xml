@@ -19,6 +19,8 @@
         <action android:id="@+id/action_billSplitFragment_to_simpleCalcFragment" app:destination="@id/simpleCalcFragment" />
         <action android:id="@+id/action_billSplitFragment_to_addressBookFragment" app:destination="@id/addressBookFragment" />
         <action android:id="@+id/action_billSplit_to_itemEntry" app:destination="@id/itemEntryFragment"/>
+        <action android:id="@+id/createFirstDiscount" app:destination="@id/discountEntryFragment"/>
+        <action android:id="@+id/manageDiscounts" app:destination="@id/discountsFragment"/>
     </nav_fragment>
 
     <nav_fragment
@@ -50,6 +52,32 @@
             android:name="edited_item"
             app:nullable="true"
             app:argType="com.grouptuity.grouptuity.data.Item"/>
+        <argument
+            android:name="origin_params"
+            app:nullable="true"
+            app:argType="com.grouptuity.grouptuity.ui.custom.transitions.CircularRevealTransition$OriginParams"/>
+    </nav_fragment>
+
+    <nav_fragment
+        android:id="@+id/discountsFragment"
+        android:name="com.grouptuity.grouptuity.ui.billsplit.discounts.DiscountsFragment"
+        android:label="DiscountsFragment">
+        <argument
+            android:name="newDiscount"
+            app:nullable="true"
+            app:argType="com.grouptuity.grouptuity.data.Discount"/>
+
+        <action android:id="@+id/edit_discount" app:destination="@id/discountEntryFragment"/>
+    </nav_fragment>
+
+    <nav_fragment
+        android:id="@+id/discountEntryFragment"
+        android:name="com.grouptuity.grouptuity.ui.billsplit.discountentry.DiscountEntryFragment"
+        android:label="DiscountEntryFragment">
+        <argument
+            android:name="edited_discount"
+            app:nullable="true"
+            app:argType="com.grouptuity.grouptuity.data.Discount"/>
         <argument
             android:name="origin_params"
             app:nullable="true"

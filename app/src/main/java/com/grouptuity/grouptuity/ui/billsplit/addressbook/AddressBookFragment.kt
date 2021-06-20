@@ -36,8 +36,8 @@ import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.Contact
 import com.grouptuity.grouptuity.databinding.FragAddressBookBinding
 import com.grouptuity.grouptuity.databinding.FragAddressBookListitemBinding
-import com.grouptuity.grouptuity.ui.custom.RecyclerViewListener
-import com.grouptuity.grouptuity.ui.custom.setNullOnDestroy
+import com.grouptuity.grouptuity.ui.custom.views.RecyclerViewListener
+import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
 import com.grouptuity.grouptuity.ui.custom.transitions.CircularRevealTransition
 import com.grouptuity.grouptuity.ui.custom.transitions.Revealable
 import com.grouptuity.grouptuity.ui.custom.transitions.RevealableImpl
@@ -93,7 +93,13 @@ class AddressBookFragment: Fragment(), Revealable by RevealableImpl() {
         binding.rootLayout.attachLock(addressBookViewModel.isInputLocked)
 
         // Intercept back pressed events to allow fragment-specific behaviors
-        backPressedCallback = object: OnBackPressedCallback(true) { override fun handleOnBackPressed() { addressBookViewModel.handleOnBackPressed() } }
+        backPressedCallback = object: OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                when(val addSelectionsToBill = addressBookViewModel.handleOnBackPressed()) {
+                    true, false -> closeFragment(addSelectionsToBill)
+                }
+            }
+        }
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, backPressedCallback)
 
         binding.coveredFragment.setImageBitmap(coveredFragmentBitmap)
@@ -177,8 +183,6 @@ class AddressBookFragment: Fragment(), Revealable by RevealableImpl() {
                 closeFragment(true)
             }
         }
-
-        addressBookViewModel.closeFragmentEvent.observe(viewLifecycleOwner) { it.consume()?.apply { closeFragment(this) } }
     }
 
     override fun onResume() {
@@ -210,6 +214,7 @@ class AddressBookFragment: Fragment(), Revealable by RevealableImpl() {
             resources.getInteger(R.integer.frag_transition_duration).toLong(),
             false)
 
+        // Close fragment using default onBackPressed behavior
         requireActivity().onBackPressed()
     }
 
@@ -378,7 +383,8 @@ class AddressBookFragment: Fragment(), Revealable by RevealableImpl() {
     }
 
     private fun setupContactList() {
-        recyclerAdapter = AddressBookRecyclerViewAdapter(requireContext(), object : RecyclerViewListener {
+        recyclerAdapter = AddressBookRecyclerViewAdapter(requireContext(), object :
+            RecyclerViewListener {
             override fun onClick(view: View) { addressBookViewModel.toggleContactSelection(view.tag as Contact) }
 
             override fun onLongClick(view: View): Boolean { return false }

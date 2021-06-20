@@ -8,6 +8,7 @@ import com.grouptuity.grouptuity.data.Repository
 class BillSplitViewModel(application: Application): AndroidViewModel(application) {
     private val repository = Repository.getInstance(getApplication())
 
+    // TODO unify these to prevent staggered updates
     val dinerCount = repository.numberOfDiners.asLiveData()
     val itemCount = repository.numberOfItems.asLiveData()
 }

@@ -30,7 +30,6 @@ class AddressBookViewModel(app: Application): UIViewModel(app) {
 
     private val searchQuery = MutableStateFlow<String?>(null)
 
-    private val closeFragmentEventMutable = MutableLiveData<Event<Boolean>>()
     private val acquireReadContactsPermissionEventMutable = MutableLiveData<Event<Int>>()
     private val hasAttemptedReadDeviceContact = MutableStateFlow(false)
     private val refreshingDeviceContacts = MutableStateFlow(false)
@@ -94,7 +93,6 @@ class AddressBookViewModel(app: Application): UIViewModel(app) {
     }.flowOn(Dispatchers.Main).withOutputSwitch(hasAttemptedReadDeviceContact)
 
     // Live Data Output
-    val closeFragmentEvent: LiveData<Event<Boolean>> = closeFragmentEventMutable
     val animateListUpdates: LiveData<Boolean> = searchQuery.mapLatest { it == null }.withOutputSwitch(isOutputFlowing).asLiveData()
     val showRefreshAnimation: LiveData<Boolean> = refreshingDeviceContacts.withOutputSwitch(isOutputFlowing).asLiveData()
     val showHiddenContacts: LiveData<Boolean> = _showHiddenContacts.withOutputSwitch(isOutputFlowing).asLiveData()
@@ -151,15 +149,19 @@ class AddressBookViewModel(app: Application): UIViewModel(app) {
         searchQuery.value = null
         deselectAllContacts()
         refreshingDeviceContacts.value = false
+
+        // Invalidate any unconsumed events
+        acquireReadContactsPermissionEventMutable.value?.consume()
     }
 
-    fun handleOnBackPressed() {
+    fun handleOnBackPressed(): Boolean? {
         when {
-            isInputLocked.value -> { return }
+            isInputLocked.value -> { }
             searchQuery.value != null -> { stopSearch() }
             _selections.value.isNotEmpty() -> { deselectAllContacts() }
-            else -> { closeFragmentEventMutable.value = Event(false) }
+            else -> { return false }
         }
+        return null
     }
 
     fun updateSearchQuery(query: String?) { if(searchQuery.value != null) { searchQuery.value = query ?: "" } }

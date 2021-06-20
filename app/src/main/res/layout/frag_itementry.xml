@@ -101,7 +101,8 @@
                             android:layout_height="36dp"
                             android:layout_gravity="end|center_vertical"
                             android:layout_marginEnd="16dp"
-                            android:src="?attr/selectableItemBackgroundBorderless"
+                            app:tint="?attr/colorOnBackgroundLowEmphasis"
+                            android:src="@drawable/ic_edit"
                             android:visibility="gone"/>
                     </FrameLayout>
 

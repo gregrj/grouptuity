@@ -11,7 +11,7 @@ import androidx.preference.PreferenceFragmentCompat
 import com.grouptuity.grouptuity.AppViewModel
 import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.databinding.FragSettingsHolderBinding
-import com.grouptuity.grouptuity.ui.custom.setNullOnDestroy
+import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
 
 class SettingsHolderFragment: Fragment() {
     private var binding by setNullOnDestroy<FragSettingsHolderBinding>()

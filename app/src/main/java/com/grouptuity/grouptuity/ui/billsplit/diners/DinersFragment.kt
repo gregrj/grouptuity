@@ -17,9 +17,9 @@ import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.Diner
 import com.grouptuity.grouptuity.databinding.FragDinersBinding
 import com.grouptuity.grouptuity.databinding.FragDinersListitemBinding
-import com.grouptuity.grouptuity.ui.custom.RecyclerViewBottomOffset
-import com.grouptuity.grouptuity.ui.custom.RecyclerViewListener
-import com.grouptuity.grouptuity.ui.custom.setNullOnDestroy
+import com.grouptuity.grouptuity.ui.custom.views.RecyclerViewBottomOffset
+import com.grouptuity.grouptuity.ui.custom.views.RecyclerViewListener
+import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -47,7 +47,8 @@ class DinersFragment : Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        val recyclerAdapter = DinersRecyclerViewAdapter(requireContext(), dinersViewModel, object: RecyclerViewListener {
+        val recyclerAdapter = DinersRecyclerViewAdapter(requireContext(), dinersViewModel, object:
+            RecyclerViewListener {
             override fun onClick(view: View) {
                 suppressAutoScroll = true // Retain scroll position when returning to this fragment
 
@@ -129,7 +130,8 @@ class DinersFragment : Fragment() {
 
 class DinersRecyclerViewAdapter(private val context: Context,
                                 private val dinersViewModel: DinersViewModel,
-                                private val listener: RecyclerViewListener): RecyclerView.Adapter<DinersRecyclerViewAdapter.ViewHolder>() {
+                                private val listener: RecyclerViewListener
+): RecyclerView.Adapter<DinersRecyclerViewAdapter.ViewHolder>() {
 
     private var mDataSet = emptyList<Pair<Diner,String>>()
 

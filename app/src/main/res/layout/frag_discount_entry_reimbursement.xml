@@ -1,0 +1,54 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:theme="@style/Theme.Grouptuity.Secondary">
+
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="?attr/colorBackground">
+
+        <TextView
+            android:id="@+id/price_textview"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:paddingTop="16dp"
+            android:paddingBottom="8dp"
+            android:paddingStart="52dp"
+            android:paddingEnd="52dp"
+            android:gravity="center"
+            android:textSize="40sp"
+            android:maxLines="1"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            style="@android:style/TextAppearance.Material.Large"/>
+
+        <ImageButton
+            android:id="@+id/button_backspace"
+            android:layout_width="32dp"
+            android:layout_height="32dp"
+            android:scaleType="fitXY"
+            android:layout_gravity="end|center_vertical"
+            android:layout_marginEnd="16dp"
+            app:tint="?attr/colorOnBackgroundLowEmphasis"
+            android:background="?attr/selectableItemBackgroundBorderless"
+            android:src="@drawable/ic_backspace"/>
+
+        <ImageView
+            android:id="@+id/button_edit"
+            android:layout_width="36dp"
+            android:layout_height="36dp"
+            android:layout_gravity="end|center_vertical"
+            android:layout_marginEnd="16dp"
+            app:tint="?attr/colorOnBackgroundLowEmphasis"
+            android:src="@drawable/ic_edit"
+            android:visibility="gone"/>
+    </FrameLayout>
+
+    <include
+        android:id="@+id/selections"
+        layout="@layout/frag_discount_entry_list"/>
+</LinearLayout>

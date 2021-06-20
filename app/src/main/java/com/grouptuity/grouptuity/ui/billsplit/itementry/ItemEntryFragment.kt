@@ -1,47 +1,36 @@
 package com.grouptuity.grouptuity.ui.billsplit.itementry
 
-import android.animation.Animator
 import android.animation.ArgbEvaluator
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.app.SearchManager
 import android.content.Context
-import android.content.res.ColorStateList
 import android.os.Bundle
-import android.util.Log
 import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.WindowManager
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.FrameLayout
 import android.widget.ImageView
 import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.widget.SearchView
-import androidx.core.content.ContextCompat
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.doOnPreDraw
 import androidx.fragment.app.Fragment
-import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.asLiveData
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.*
 import androidx.transition.Transition
-import androidx.transition.TransitionValues
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.transition.Hold
 import com.grouptuity.grouptuity.AppViewModel
 import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.Diner
-import com.grouptuity.grouptuity.data.withOutputSwitch
 import com.grouptuity.grouptuity.databinding.FragItementryBinding
 import com.grouptuity.grouptuity.databinding.ListDinerBinding
-import com.grouptuity.grouptuity.ui.custom.RecyclerViewListener
-import com.grouptuity.grouptuity.ui.custom.setNullOnDestroy
+import com.grouptuity.grouptuity.ui.custom.views.RecyclerViewListener
+import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
 import com.grouptuity.grouptuity.ui.custom.transitions.CardViewExpandTransition
 import com.grouptuity.grouptuity.ui.custom.transitions.CircularRevealTransition
 import com.grouptuity.grouptuity.ui.custom.transitions.Revealable
@@ -53,8 +42,8 @@ import kotlinx.coroutines.withContext
 
 // TODO ripple effect on long press clear
 // TODO disable interactions when transitions are running
-// TODO title bar is switching text when navigating back due to toolbar being attached
 // TODO finish item name editor -> issues with back press and keyboard dismiss; block calculator inputs
+// TODO exit transition to new item rather than circular reveal
 
 
 class ItemEntryFragment: Fragment(), Revealable by RevealableImpl() {
@@ -83,7 +72,13 @@ class ItemEntryFragment: Fragment(), Revealable by RevealableImpl() {
         binding.rootLayout.attachLock(itemEntryViewModel.isInputLocked)
 
         // Intercept back pressed events to allow fragment-specific behaviors
-        backPressedCallback = object: OnBackPressedCallback(true) { override fun handleOnBackPressed() { itemEntryViewModel.handleOnBackPressed() } }
+        backPressedCallback = object: OnBackPressedCallback(true) {
+            override fun handleOnBackPressed() {
+                when(val addItemToBill = itemEntryViewModel.handleOnBackPressed()) {
+                    true, false -> closeFragment(addItemToBill)
+                }
+            }
+        }
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, backPressedCallback)
 
         /* Need a way to discriminate between user dismissal of keyboard and system dismissal from starting voice search
@@ -141,7 +136,6 @@ class ItemEntryFragment: Fragment(), Revealable by RevealableImpl() {
             })
         } else {
             // Editing existing item
-            binding.coveredFragment.setImageBitmap(coveredFragmentBitmap)
             binding.fadeView.visibility = View.GONE
 
             bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
@@ -166,8 +160,6 @@ class ItemEntryFragment: Fragment(), Revealable by RevealableImpl() {
                 } //TODO move logic
             }
         }
-
-        itemEntryViewModel.closeFragmentEvent.observe(viewLifecycleOwner) { it.consume()?.apply { closeFragment(this) } }
     }
 
     override fun onResume() {
@@ -178,15 +170,15 @@ class ItemEntryFragment: Fragment(), Revealable by RevealableImpl() {
         itemEntryViewModel.unFreezeOutput()
     }
 
-    private fun closeFragment(addSelectionsToBill: Boolean) {
+    private fun closeFragment(addItemToBill: Boolean) {
         // Prevent callback from intercepting back pressed events
         backPressedCallback.isEnabled = false
 
         // Freeze UI in place as the fragment closes
         itemEntryViewModel.freezeOutput()
 
-        // Add selected diners to bill and close the fragment
-        if(addSelectionsToBill) {
+        // Add item to bill
+        if(addItemToBill) {
             itemEntryViewModel.addItemToBill()
         }
 
@@ -203,6 +195,7 @@ class ItemEntryFragment: Fragment(), Revealable by RevealableImpl() {
             // TODO
         }
 
+        // Close fragment using default onBackPressed behavior
         requireActivity().onBackPressed()
     }
 
@@ -470,6 +463,8 @@ class ItemEntryFragment: Fragment(), Revealable by RevealableImpl() {
             duration = 0L
             addTarget(view)
         }
+
+        binding.coveredFragment.setImageBitmap(coveredFragmentBitmap)
 
         postponeEnterTransition()
     }

@@ -41,6 +41,7 @@ abstract class UIViewModel(app: Application): AndroidViewModel(app) {
             locks.any { it }
         }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, true)
     }
+    fun unLockInput() { inputLocks.forEach { if(it is MutableStateFlow) it.value = false } }
 
     fun freezeOutput() { _isOutputFlowing.value = false }
     fun unFreezeOutput() { _isOutputFlowing.value = true }
@@ -74,19 +75,49 @@ class Repository(context: Context) {
     val taxIsTipped: StateFlow<Boolean> = getPreferenceFlow(TAX_IS_TIPPED_KEY, false)
     val discountsReduceTip: StateFlow<Boolean> = getPreferenceFlow(DISCOUNTS_REDUCE_TIP_KEY, false)
 
-    // App-level Data
+    // App-level data
     val bills = billDao.getSavedBills()
     val appContacts = contactDao.getSavedContacts()
 
     // Bill entity lists
-    val loadedBill = loadedBillId.transformLatest{ emitAll(billDao.getBill(it)) }.flowOn(Dispatchers.IO).filterNotNull()
-    val diners = loadedBill.transformLatest{ emitAll(dinerDao.getDinersOnBill(it.id)) }.flowOn(Dispatchers.IO)
-    val items = loadedBill.transformLatest{ emitAll(itemDao.getItemsOnBill(it.id)) }.flowOn(Dispatchers.IO)
-    val debts = loadedBill.transformLatest{ emitAll(debtDao.getDebtsOnBill(it.id)) }.flowOn(Dispatchers.IO)
-    val discounts = loadedBill.transformLatest{ emitAll(discountDao.getDiscountsOnBill(it.id)) }.flowOn(Dispatchers.IO)
-    val payments = loadedBill.transformLatest{ emitAll(paymentDao.getPaymentsOnBill(it.id)) }.flowOn(Dispatchers.IO)
-    val restaurant = loadedBill.transformLatest{ emitAll(billDao.getRestaurantId(it.id)) }.transformLatest{ emitAll(dinerDao.getDiner(it)) }.flowOn(Dispatchers.IO)
-    val dinerContactLookupKeys = diners.mapLatest { it.map { diner -> diner.lookupKey } }
+    val loadedBill: Flow<Bill> = loadedBillId.transformLatest{ emitAll(billDao.getBill(it)) }.flowOn(Dispatchers.IO).filterNotNull()
+    val diners: Flow<Array<Diner>> = loadedBill.transformLatest{ emitAll(dinerDao.getDinersOnBill(it.id)) }.flowOn(Dispatchers.IO)
+    val items: Flow<Array<Item>> = loadedBill.transformLatest{ emitAll(itemDao.getItemsOnBill(it.id)) }.flowOn(Dispatchers.IO)
+    val debts: Flow<Array<Debt>> = loadedBill.transformLatest{ emitAll(debtDao.getDebtsOnBill(it.id)) }.flowOn(Dispatchers.IO)
+    val discounts: Flow<Array<Discount>> = loadedBill.transformLatest{ emitAll(discountDao.getDiscountsOnBill(it.id)) }.flowOn(Dispatchers.IO)
+    val payments: Flow<Array<Payment>> = loadedBill.transformLatest{ emitAll(paymentDao.getPaymentsOnBill(it.id)) }.flowOn(Dispatchers.IO)
+    val restaurant: Flow<Diner> = loadedBill.transformLatest{ emitAll(billDao.getRestaurantId(it.id)) }.transformLatest{ emitAll(dinerDao.getDiner(it)) }.flowOn(Dispatchers.IO)
+    val dinerContactLookupKeys: Flow<List<String>> = diners.mapLatest { it.map { diner -> diner.lookupKey } }
+
+    // Bill entity by ID getters
+    fun getDiner(dinerId: Flow<Long>): StateFlow<Diner?> = dinerId.transformLatest { id ->
+        if(id == 0L) {
+            emitAll(flow { emit(null) })
+        } else {
+            emitAll(dinerDao.getDiner(id).flowOn(Dispatchers.IO))
+        }
+    }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, null)
+    fun getItem(itemId: Flow<Long>): StateFlow<Item?> = itemId.transformLatest { id ->
+        if(id == 0L) {
+            emitAll(flow { emit(null) })
+        } else {
+            emitAll(itemDao.getItem(id).flowOn(Dispatchers.IO))
+        }
+    }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, null)
+    fun getDebt(debtId: Flow<Long>): StateFlow<Debt?> = debtId.transformLatest { id ->
+        if(id == 0L) {
+            emitAll(flow { emit(null) })
+        } else {
+            emitAll(debtDao.getDebt(id).flowOn(Dispatchers.IO))
+        }
+    }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, null)
+    fun getDiscount(discountId: Flow<Long>): StateFlow<Discount?> = discountId.transformLatest { id ->
+        if(id == 0L) {
+            emitAll(flow { emit(null) })
+        } else {
+            emitAll(discountDao.getDiscount(id).flowOn(Dispatchers.IO))
+        }
+    }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, null)
 
     // Bill entity ID maps
     val dinerIdMap = diners.mapLatest { dinerArray -> dinerArray.map { Pair(it.id, it) }.toMap() }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, emptyMap())
@@ -112,8 +143,6 @@ class Repository(context: Context) {
         val currentRestaurant = it[6] as Diner
 
         // TODO consistency validation
-
-
 
         BillCalculation(currentBill, billDiners, billItems, billDebts, billDiscounts, billPayments, currentRestaurant)
     }.stateIn(CoroutineScope(Dispatchers.Default),

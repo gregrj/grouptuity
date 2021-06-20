@@ -1,5 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
+    <integer name="percent_max_decimals">3</integer>
+
     <integer name="viewprop_animation_duration">300</integer>
     <integer name="card_flip_time_full">300</integer>
     <integer name="frag_transition_duration">300</integer>

@@ -1,5 +1,7 @@
 package com.grouptuity.grouptuity.data
 
+import android.util.Log
+import java.lang.Exception
 import java.text.NumberFormat
 import kotlin.math.max
 import kotlin.math.pow
@@ -345,7 +347,11 @@ class BillCalculation(private val bill: Bill,
         val transactionList = transactionMap.consolidate().dropBelowMinimum(0.9 * 10.0.pow(-numDecimals)).toList()
 
         transactionList.forEach {
-            payments[it.first]!!.add(Payment(0L, billId = bill.id, it.third, PaymentMethod.CASH.name, false, it.first, it.second))
+            try{
+                payments[it.first]!!.add(Payment(0L, billId = bill.id, it.third, PaymentMethod.CASH.name, false, it.first, it.second)) } catch (e: Exception) {
+                Log.e("transcat", it.toString())
+                Log.e("map entry is null", (payments[it.first] == null).toString())
+            }
         }
 
 //        val targetNetCashFlows = transactionMap.netCashFlows

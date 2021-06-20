@@ -1,4 +1,4 @@
-package com.grouptuity.grouptuity.ui.custom
+package com.grouptuity.grouptuity.ui.custom.views
 
 import android.graphics.Rect
 import android.view.View

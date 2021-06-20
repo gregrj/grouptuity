@@ -6,9 +6,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import com.grouptuity.grouptuity.MainActivity
-import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.databinding.FragSimpleCalcBinding
-import com.grouptuity.grouptuity.ui.custom.setNullOnDestroy
+import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
 
 /**
  * A simple [Fragment] subclass.

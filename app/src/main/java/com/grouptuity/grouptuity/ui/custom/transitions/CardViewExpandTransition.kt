@@ -3,6 +3,7 @@ package com.grouptuity.grouptuity.ui.custom.transitions
 import android.animation.Animator
 import android.animation.ValueAnimator
 import android.graphics.Color
+import android.util.Log
 import android.util.TypedValue
 import android.view.View
 import android.view.ViewGroup
@@ -43,6 +44,7 @@ class CardViewExpandTransition(private val containerTransitionName: String,
     fun setOnTransitionEndCallback(callback: (Transition, ViewGroup, View, View) -> Unit) = this.apply { onTransitionEndCallback = callback }
 
     override fun captureStartValues(transitionValues: TransitionValues) {
+        Log.e("captureStartValues", transitionValues.view.height.toString())
         when(transitionValues.view.transitionName) {
             containerTransitionName -> {
                 duration = transitionValues.view.resources.getInteger(R.integer.frag_transition_duration).toLong()
@@ -53,6 +55,8 @@ class CardViewExpandTransition(private val containerTransitionName: String,
                 transitionValues.view.getLocationOnScreen(location)
                 transitionValues.values[PROP_CONTAINER_X] = location[0]
                 transitionValues.values[PROP_CONTAINER_Y] = location[1]
+
+
             }
             in elements -> {
                 elements[transitionValues.view.transitionName]?.captureStartValues(this, transitionValues)
@@ -61,6 +65,7 @@ class CardViewExpandTransition(private val containerTransitionName: String,
     }
 
     override fun captureEndValues(transitionValues: TransitionValues) {
+        Log.e("captureEndValues", transitionValues.view.height.toString())
         when(transitionValues.view.transitionName) {
             containerTransitionName -> {
                 transitionValues.values[PROP_CONTAINER_HEIGHT] = transitionValues.view.height
@@ -84,6 +89,8 @@ class CardViewExpandTransition(private val containerTransitionName: String,
 
         val startView = startValues.view
         val endView = endValues.view
+
+        Log.e("Creating animator for transition", if(expanding) "expanding" else "contracting")
 
         return when (endView.transitionName) {
             containerTransitionName -> {

@@ -4,15 +4,20 @@
       <w>addressbook</w>
       <w>billsplit</w>
       <w>bottomsheet</w>
+      <w>deemphasized</w>
+      <w>discountentry</w>
       <w>favorited</w>
       <w>grouptuity</w>
       <w>itementry</w>
       <w>listitem</w>
+      <w>reimbursee</w>
+      <w>reimbursees</w>
       <w>snackbar</w>
       <w>taxtip</w>
       <w>unfavorite</w>
       <w>unfavorited</w>
       <w>unhide</w>
+      <w>viewprop</w>
     </words>
   </dictionary>
 </component>

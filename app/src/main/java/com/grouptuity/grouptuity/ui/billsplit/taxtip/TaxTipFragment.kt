@@ -7,9 +7,12 @@ import android.view.View
 import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
+import androidx.navigation.fragment.FragmentNavigatorExtras
+import androidx.navigation.fragment.findNavController
 import com.google.android.material.transition.Hold
 import com.grouptuity.grouptuity.databinding.FragTaxTipBinding
-import com.grouptuity.grouptuity.ui.custom.setNullOnDestroy
+import com.grouptuity.grouptuity.ui.billsplit.BillSplitFragmentDirections
+import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
 import java.text.NumberFormat
 
 
@@ -61,12 +64,12 @@ class TaxTipFragment: Fragment() {
                 addTarget(requireParentFragment().requireView())
             }
 
-//            findNavController().navigate(BillSplitFragmentDirections.editFirstDiscount(editedDiscount = null, originParams = null),
-//                FragmentNavigatorExtras(
-//                    binding.addDiscountsContainer to "discountsContainerTransitionName",
-//                    binding.addDiscountButton to "discountButtonTransitionName"
-//                )
-//            )
+            findNavController().navigate(BillSplitFragmentDirections.createFirstDiscount(editedDiscount = null, originParams = null),
+                FragmentNavigatorExtras(
+                    binding.addDiscountsContainer to "discountsContainerTransitionName",
+                    binding.addDiscountButton to "discountButtonTransitionName"
+                )
+            )
         }
 
         binding.editDiscountsButton.setOnClickListener {
@@ -76,13 +79,13 @@ class TaxTipFragment: Fragment() {
                 addTarget(requireParentFragment().requireView())
             }
 
-//            findNavController().navigate(
-//                BillSplitFragmentDirections.manageDiscounts(null),
-//                FragmentNavigatorExtras(
-//                    binding.editDiscountsContainer to "discountsContainerTransitionName",
-//                    binding.editDiscountsButton to "discountButtonTransitionName"
-//                )
-//            )
+            findNavController().navigate(
+                BillSplitFragmentDirections.manageDiscounts(null),
+                FragmentNavigatorExtras(
+                    binding.editDiscountsContainer to "discountsContainerTransitionName",
+                    binding.editDiscountsButton to "discountButtonTransitionName"
+                )
+            )
         }
 
         taxTipViewModel.hasNoDiscounts.observe(viewLifecycleOwner) {
