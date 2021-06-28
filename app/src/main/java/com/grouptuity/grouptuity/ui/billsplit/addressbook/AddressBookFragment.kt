@@ -58,7 +58,7 @@ import kotlinx.coroutines.withContext
 // TODO fade view pops up during orientation change
 // TODO intercept user interaction during transitions
 // TODO fix voice search
-// TODO cross talk with item entry searchview. Old search appears in other fragment
+// TODO cross talk with item entry searchView. Old search appears in other fragment
 
 
 const val READ_CONTACTS_RATIONALE_KEY = "read_contacts_rationale_key"
@@ -434,7 +434,7 @@ class AddressBookFragment: Fragment(), Revealable by RevealableImpl() {
                 }
         }
         addressBookViewModel.selections.observe(viewLifecycleOwner) {
-            lifecycleScope.launch { recyclerAdapter.updateDataSet(selections = it.keys) }
+            lifecycleScope.launch { recyclerAdapter.updateDataSet(selections = it) }
                 .invokeOnCompletion {
                     Handler(Looper.getMainLooper()).post {
                         if (pendingRewind) {

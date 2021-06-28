@@ -2,44 +2,34 @@ package com.grouptuity.grouptuity.ui.billsplit.addressbook
 
 import android.Manifest
 import android.app.Application
-import android.provider.ContactsContract
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.asLiveData
-import androidx.lifecycle.viewModelScope
 import com.grouptuity.grouptuity.Event
 import com.grouptuity.grouptuity.R
-import com.grouptuity.grouptuity.data.Contact
-import com.grouptuity.grouptuity.data.UIViewModel
-import com.grouptuity.grouptuity.data.withOutputSwitch
+import com.grouptuity.grouptuity.data.*
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.launch
-import java.util.Locale
+import java.util.*
 
 class AddressBookViewModel(app: Application): UIViewModel(app) {
 
-    private val appSavedContacts = repository.appContacts
-    private val deviceContacts = MutableStateFlow<List<Contact>>(emptyList())
-    private val _showHiddenContacts = MutableStateFlow(false)
-    private val excludedNames = getApplication<Application>().resources.getStringArray(R.array.addressbook_excluded_names)
+    // TODO selected contact subsequently hidden. Need to discard selection
 
-    private val selectionsMap = mutableMapOf<String, Contact>()
-    private val _selections = MutableStateFlow(selectionsMap.toMap())
+    private val addressBook = AddressBook.getInstance(app)
+
+    private val _showHiddenContacts = MutableStateFlow(false)
+
+    private val mSelections = mutableSetOf<String>()
+    private val _selections = MutableStateFlow(mSelections.toSet())
 
     private val searchQuery = MutableStateFlow<String?>(null)
 
-    private val acquireReadContactsPermissionEventMutable = MutableLiveData<Event<Int>>()
-    private val hasAttemptedReadDeviceContact = MutableStateFlow(false)
-    private val refreshingDeviceContacts = MutableStateFlow(false)
-
     private val _displayedContacts = combine(
-        appSavedContacts,
-        deviceContacts,
-        repository.dinerContactLookupKeys,
+        addressBook.allContacts,
+        repository.diners,
         _showHiddenContacts,
-        searchQuery) { contactsApp, contactsDevice, lookupKeys, showHidden, query ->
+        searchQuery) { allContacts, diners, showHidden, query ->
 
         if (query != null && query.isBlank()) {
             // Search is active, but a valid query has not been entered so display no contacts
@@ -49,60 +39,48 @@ class AddressBookViewModel(app: Application): UIViewModel(app) {
         val combinedContacts = mutableListOf<Contact>()
 
         // Do not display contacts already assigned to the bill as diners
-        val excludeList = lookupKeys.toMutableSet().also {
-            it.add(Contact.restaurant.lookupKey) // also avoid showing restaurant as a contact
-        }
+        val excludeList = diners.map { it.lookupKey }.toMutableSet()
 
         // Add contacts saved in app database
         if (showHidden) {
-            contactsApp.forEach {
-                if (!excludeList.contains(it.lookupKey)) {
-                    combinedContacts.add(it)
-                    excludeList.add(it.lookupKey) // to avoid duplicate addition later
+            allContacts.forEach {
+                if (!excludeList.contains(it.key)) {
+                    combinedContacts.add(it.value)
+                    excludeList.add(it.key) // to avoid duplicate addition later
                 }
             }
         }
         else {
-            contactsApp.forEach {
-                if(!excludeList.contains(it.lookupKey)) {
-                    if(it.visibility != Contact.HIDDEN) {
-                        combinedContacts.add(it)
+            allContacts.forEach {
+                if(!excludeList.contains(it.key)) {
+                    if(it.value.visibility != Contact.HIDDEN) {
+                        combinedContacts.add(it.value)
                     }
-                    excludeList.add(it.lookupKey) // to avoid duplicate addition later
+                    excludeList.add(it.key) // to avoid duplicate addition later
                 }
             }
         }
-
-        // Add contacts from device address book
-        contactsDevice.forEach {
-            if(!excludeList.contains(it.lookupKey)) {
-                combinedContacts.add(it)
-            }
-            else {
-                // TODO update latest changes to contact data (name, photo, etc.)
-            }
-        }
-
-        //TODO Refresh selections when contact selected but contact no longer appears in displayed contacts
 
         if (query != null) {
             sortContactsByQuery(combinedContacts, query)
         } else {
             sortContactsByName(combinedContacts)
         }
-    }.flowOn(Dispatchers.Main).withOutputSwitch(hasAttemptedReadDeviceContact)
+    }.flowOn(Dispatchers.Main)
+
+    private val acquireReadContactsPermissionEventMutable = MutableLiveData<Event<Int>>()
 
     // Live Data Output
     val animateListUpdates: LiveData<Boolean> = searchQuery.mapLatest { it == null }.withOutputSwitch(isOutputFlowing).asLiveData()
-    val showRefreshAnimation: LiveData<Boolean> = refreshingDeviceContacts.withOutputSwitch(isOutputFlowing).asLiveData()
+    val showRefreshAnimation: LiveData<Boolean> = addressBook.refreshingDeviceContacts.withOutputSwitch(isOutputFlowing).asLiveData()
     val showHiddenContacts: LiveData<Boolean> = _showHiddenContacts.withOutputSwitch(isOutputFlowing).asLiveData()
     val acquireReadContactsPermissionEvent: LiveData<Event<Int>> = acquireReadContactsPermissionEventMutable
     val displayedContacts = _displayedContacts.withOutputSwitch(isOutputFlowing).asLiveData()
-    val selections: LiveData<Map<String, Contact>> = _selections.mapLatest {
+    val selections: LiveData<Set<String>> = _selections.mapLatest {
         stopSearch()
         it
     }.withOutputSwitch(isOutputFlowing).asLiveData()
-    val toolBarState: LiveData<ToolBarState> = combine(_selections, searchQuery) { selectedContacts, query ->
+    val toolBarState: LiveData<ToolBarState> = combine(_selections, searchQuery, addressBook.allContacts) { selectedContacts, query, allContacts ->
         val isSearching = query != null
 
         if(selectedContacts.isEmpty()) {
@@ -122,8 +100,12 @@ class AddressBookViewModel(app: Application): UIViewModel(app) {
                 searchInactive = !isSearching,
                 tertiaryBackground = !isSearching,
                 hideVisibilityButtons = isSearching,
-                showAsUnfavorite = selectedContacts.isNotEmpty() && selectedContacts.all { it.value.visibility == Contact.FAVORITE },
-                showAsUnhide = selectedContacts.isNotEmpty() && selectedContacts.all { it.value.visibility == Contact.HIDDEN },
+                showAsUnfavorite = selectedContacts.isNotEmpty() && selectedContacts.all {
+                    allContacts[it]?.visibility == Contact.FAVORITE
+                },
+                showAsUnhide = selectedContacts.isNotEmpty() && selectedContacts.all {
+                    allContacts[it]?.visibility == Contact.HIDDEN
+                },
                 showOtherButtons = false)
         }
     }.distinctUntilChanged().withOutputSwitch(isOutputFlowing).asLiveData()
@@ -139,7 +121,7 @@ class AddressBookViewModel(app: Application): UIViewModel(app) {
         super.notifyTransitionFinished()
 
         // When transition finishes, read the device contacts if they have yet to be read
-        if(!hasAttemptedReadDeviceContact.value) {
+        if(addressBook.readDeviceContactPending.value) {
             requestContactsRefresh()
         }
     }
@@ -148,7 +130,6 @@ class AddressBookViewModel(app: Application): UIViewModel(app) {
         unFreezeOutput()
         searchQuery.value = null
         deselectAllContacts()
-        refreshingDeviceContacts.value = false
 
         // Invalidate any unconsumed events
         acquireReadContactsPermissionEventMutable.value?.consume()
@@ -172,170 +153,137 @@ class AddressBookViewModel(app: Application): UIViewModel(app) {
         }
     }
 
-    fun isContactSelected(contact: Contact) = selectionsMap.contains(contact.lookupKey)
+    fun isContactSelected(contact: Contact) = mSelections.contains(contact.lookupKey)
     fun toggleContactSelection(contact: Contact) {
         if (isContactSelected(contact)) {
-            selectionsMap.remove(contact.lookupKey)
+            mSelections.remove(contact.lookupKey)
         } else {
-            selectionsMap[contact.lookupKey] = contact
+            mSelections.add(contact.lookupKey)
         }
-        _selections.value = selectionsMap.toMap()
+        _selections.value = mSelections.toSet()
     }
     private fun deselectAllContacts() {
-        selectionsMap.clear()
-        _selections.value = selectionsMap.toMap()
+        mSelections.clear()
+        _selections.value = mSelections.toSet()
     }
 
     fun favoriteSelectedContacts(): (() -> Unit)? {
-        if (selectionsMap.isEmpty())
+        if (mSelections.isEmpty())
             return null
 
-        val selectedContacts = selectionsMap.values.toList()
+        val originallyVisible = mutableListOf<String>()
+        val originallyHidden = mutableListOf<String>()
 
-        val job = repository.saveContacts(selectedContacts.map{ it.withVisibility(Contact.FAVORITE) })
+        addressBook.allContacts.value.also { allContacts ->
+            mSelections.forEach { lookupKey ->
+                when (allContacts[lookupKey]?.visibility) {
+                    Contact.VISIBLE -> originallyVisible.add(lookupKey)
+                    Contact.HIDDEN -> originallyHidden.add(lookupKey)
+                }
+            }
+        }
 
-        // Update selectionsMap to be consistent with new visibilities
-        selectionsMap.putAll(selectedContacts.map { Pair(it.lookupKey, it.withVisibility(Contact.FAVORITE)) })
-        _selections.value = selectionsMap.toMap()
+        val job = addressBook.favoriteContacts(mSelections)
 
+        // Function for reverting this action
         return {
             job.invokeOnCompletion {
-                repository.saveContacts(selectedContacts)
-                selectionsMap.putAll(selectedContacts.map { Pair(it.lookupKey, it) })
-                _selections.value = selectionsMap.toMap()
+                addressBook.unfavoriteContacts(originallyVisible)
+                addressBook.hideContacts(originallyHidden)
             }
         }
     }
     fun unfavoriteSelectedContacts(): (() -> Unit)? {
-        if (selectionsMap.isEmpty())
+        if (mSelections.isEmpty())
             return null
 
-        val selectedContacts = selectionsMap.values.toList()
-
-        val job = repository.saveContacts(selectedContacts.map{ it.withVisibility(Contact.VISIBLE) })
-
-        // Update selectionsMap to be consistent with new visibilities
-        selectionsMap.putAll(selectedContacts.map { Pair(it.lookupKey, it.withVisibility(Contact.VISIBLE)) })
-        _selections.value = selectionsMap.toMap()
-
-        return {
-            job.invokeOnCompletion {
-                repository.saveContacts(selectedContacts)
-                selectionsMap.putAll(selectedContacts.map { Pair(it.lookupKey, it) })
-                _selections.value = selectionsMap.toMap()
+        val originallyFavorited = addressBook.allContacts.value.let { allContacts ->
+            mSelections.mapNotNull { lookupKey ->
+                if (allContacts[lookupKey]?.visibility == Contact.FAVORITE) {
+                    lookupKey
+                } else {
+                    null
+                }
             }
         }
+
+        val job = addressBook.unfavoriteContacts(originallyFavorited)
+
+        // Function for reverting this action
+        return { job.invokeOnCompletion { addressBook.favoriteContacts(originallyFavorited) } }
     }
-    fun unfavoriteFavoriteContacts() = repository.unfavoriteFavoriteContacts()
+    fun unfavoriteFavoriteContacts() = addressBook.unfavoriteFavoriteContacts()
 
     fun hideSelectedContacts(): (() -> Unit)? {
-        if (selectionsMap.isEmpty())
+        if (mSelections.isEmpty())
             return null
 
-        val selectedContacts = selectionsMap.values.toList()
+        val originallyVisible = mutableListOf<String>()
+        val originallyFavorited = mutableListOf<String>()
 
-        val job = repository.saveContacts(selectedContacts.map{ it.withVisibility(Contact.HIDDEN) })
-
-        if(!_showHiddenContacts.value) {
-            deselectAllContacts()
-        } else {
-            // Update selectionsMap to be consistent with new visibilities
-            selectionsMap.putAll(selectedContacts.map { Pair(it.lookupKey, it.withVisibility(Contact.HIDDEN)) })
-            _selections.value = selectionsMap.toMap()
+        addressBook.allContacts.value.also { allContacts ->
+            mSelections.forEach { lookupKey ->
+                when (allContacts[lookupKey]?.visibility) {
+                    Contact.VISIBLE -> originallyVisible.add(lookupKey)
+                    Contact.FAVORITE -> originallyFavorited.add(lookupKey)
+                }
+            }
         }
 
+        val job = addressBook.hideContacts(mSelections)
+
+        // Function for reverting this action
         return {
             job.invokeOnCompletion {
-                selectionsMap.putAll(selectedContacts.map { Pair(it.lookupKey, it) })
-                _selections.value = selectionsMap.toMap()
-                repository.saveContacts(selectedContacts) // Restores original visibility flags
+                addressBook.unhideContacts(originallyVisible)
+                addressBook.favoriteContacts(originallyFavorited)
             }
         }
     }
     fun unhideSelectedContacts(): (() -> Unit)? {
-        if (selectionsMap.isEmpty())
+        if (mSelections.isEmpty())
             return null
 
-        val selectedContacts = selectionsMap.values.toList()
-
-        val job = repository.saveContacts(selectedContacts.map{ it.withVisibility(Contact.VISIBLE) })
-
-        // Update selectionsMap to be consistent with new visibilities
-        selectionsMap.putAll(selectedContacts.map { Pair(it.lookupKey, it.withVisibility(Contact.VISIBLE)) })
-        _selections.value = selectionsMap.toMap()
-
-        return {
-            job.invokeOnCompletion {
-                repository.saveContacts(selectedContacts)
-                selectionsMap.putAll(selectedContacts.map { Pair(it.lookupKey, it) })
-                _selections.value = selectionsMap.toMap()
+        val originallyHidden = addressBook.allContacts.value.let { allContacts ->
+            mSelections.mapNotNull { lookupKey ->
+                if (allContacts[lookupKey]?.visibility == Contact.HIDDEN) {
+                    lookupKey
+                } else {
+                    null
+                }
             }
         }
+
+        val job = addressBook.unhideContacts(originallyHidden)
+
+        // Function for reverting this action
+        return { job.invokeOnCompletion { addressBook.hideContacts(originallyHidden) } }
     }
-    fun unhideHiddenContacts() = repository.unhideHiddenContacts()
+    fun unhideHiddenContacts() = addressBook.unhideHiddenContacts()
 
     fun toggleShowHiddenContacts() { _showHiddenContacts.value = !_showHiddenContacts.value }
 
     fun requestContactsRefresh(acquirePermissionsIfNeeded: Boolean = true) {
-        refreshingDeviceContacts.value = true
-
         when {
             isPermissionGranted(Manifest.permission.READ_CONTACTS) -> {
-                viewModelScope.launch(Dispatchers.IO) {
-
-                    // TODO clear Search
-
-                    delay(300L) // Slight delay to give SwipeRefreshLayout time to animate to indicate refresh is taking place
-
-                    val contactsCursor = getApplication<Application>().contentResolver.query(
-                        ContactsContract.Contacts.CONTENT_URI,
-                        arrayOf(ContactsContract.Contacts._ID,
-                            ContactsContract.Contacts.LOOKUP_KEY,
-                            ContactsContract.Contacts.DISPLAY_NAME_PRIMARY,
-                            ContactsContract.Contacts.PHOTO_URI),null,null,null)
-
-                    val contacts = ArrayList<Contact>()
-
-                    contactsCursor?.run {
-                        while(moveToNext())
-                        {
-                            val name = getString(2)
-
-                            if(name.isNullOrBlank() || excludedNames.contains(name))
-                                continue
-
-                            contacts.add(Contact(getString(1),
-                                name.trim(),
-                                getString(3),
-                                Contact.VISIBLE))
-                        }
-                        contactsCursor.close()
-                    }
-
-                    deviceContacts.value = contacts
-                }.invokeOnCompletion {
-                    refreshingDeviceContacts.value = false
-                    hasAttemptedReadDeviceContact.value = true
-                }
-                return
+                addressBook.refreshDeviceContacts(getApplication())
             }
             acquirePermissionsIfNeeded -> {
                 acquireReadContactsPermissionEventMutable.value = Event(R.integer.permission_read_contacts_addressbook)
-                return
             }
             else -> {
-                deviceContacts.value = emptyList()
-                refreshingDeviceContacts.value = false
-                hasAttemptedReadDeviceContact.value = true
-                return
+                addressBook.bypassRefreshDeviceContacts()
             }
         }
     }
 
     fun addSelectedContactsToBill() {
-        selections.value?.values?.apply {
-            repository.createDinersForContacts(this)
-        }
+        repository.addContactsAsDiners(addressBook.allContacts.value.let { allContacts ->
+            mSelections.mapNotNull { lookupKey ->
+                allContacts[lookupKey]
+            }
+        })
+
         deselectAllContacts()
     }
 
@@ -373,8 +321,8 @@ private fun computeMatchScore(contact: Contact, searchString: String): Double {
     contactNames[0] = contact.name
 
     val maxScore = contactNames.mapIndexed { nameIndex, name ->
-        val searchChars = searchString.toLowerCase(Locale.getDefault()).toCharArray()
-        val contactChars = name.toLowerCase(Locale.getDefault()).toCharArray()
+        val searchChars = searchString.lowercase(Locale.getDefault()).toCharArray()
+        val contactChars = name.lowercase(Locale.getDefault()).toCharArray()
 
         var score = 0.0
         for(charIndex in searchChars.indices) {

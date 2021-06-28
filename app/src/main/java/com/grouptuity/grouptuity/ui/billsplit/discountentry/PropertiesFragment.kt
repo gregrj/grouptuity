@@ -239,12 +239,24 @@ internal class DinersListFragment: Fragment() {
                 it.consume()?.also {
                     if(!observing) {
                         observing = true
-                        discountEntryViewModel.diners.observe(viewLifecycleOwner, { diners -> lifecycleScope.launch { dinerRecyclerAdapter.updateDataSet(diners = diners) }})
-                        discountEntryViewModel.dinerSelections.observe(viewLifecycleOwner, { selections -> lifecycleScope.launch { dinerRecyclerAdapter.updateDataSet(selections = selections) }})
-                        discountEntryViewModel.dinerSubtotals.observe(viewLifecycleOwner, { subtotals -> lifecycleScope.launch { dinerRecyclerAdapter.updateDataSet(subtotals = subtotals) }})
-                        discountEntryViewModel.discountRecipientShares.observe(viewLifecycleOwner, { shares -> lifecycleScope.launch { dinerRecyclerAdapter.updateDataSet(discountShares = shares) }})
-                        discountEntryViewModel.discountedDinerSubtotals.observe(viewLifecycleOwner, { discountedSubtotals -> lifecycleScope.launch { dinerRecyclerAdapter.updateDataSet(discountedSubtotals = discountedSubtotals) }})
-                        discountEntryViewModel.unusedDiscounts.observe(viewLifecycleOwner, { unusedDiscounts -> lifecycleScope.launch { dinerRecyclerAdapter.updateDataSet(unusedDiscounts = unusedDiscounts) }})
+                        discountEntryViewModel.diners.observe(viewLifecycleOwner) { diners ->
+                            lifecycleScope.launch { dinerRecyclerAdapter.updateDataSet(diners = diners) }
+                        }
+                        discountEntryViewModel.dinerSelections.observe(viewLifecycleOwner) { selections ->
+                            lifecycleScope.launch { dinerRecyclerAdapter.updateDataSet(selections = selections) }
+                        }
+                        discountEntryViewModel.dinerSubtotals.observe(viewLifecycleOwner) { subtotals ->
+                            lifecycleScope.launch { dinerRecyclerAdapter.updateDataSet(subtotals = subtotals) }
+                        }
+                        discountEntryViewModel.discountRecipientShares.observe(viewLifecycleOwner) { shares ->
+                            lifecycleScope.launch { dinerRecyclerAdapter.updateDataSet(discountShares = shares) }
+                        }
+                        discountEntryViewModel.discountedDinerSubtotals.observe(viewLifecycleOwner) { discountedSubtotals ->
+                            lifecycleScope.launch { dinerRecyclerAdapter.updateDataSet(discountedSubtotals = discountedSubtotals) }
+                        }
+                        discountEntryViewModel.unusedDiscounts.observe(viewLifecycleOwner) { unusedDiscounts ->
+                            lifecycleScope.launch { dinerRecyclerAdapter.updateDataSet(unusedDiscounts = unusedDiscounts) }
+                        }
                     }
                 }
             }
@@ -256,12 +268,12 @@ internal class DinersListFragment: Fragment() {
         val listener: RecyclerViewListener):
         RecyclerView.Adapter<DinerSelectionRecyclerViewAdapter.ViewHolder>() {
 
-        private var mDinerList: Array<Diner>? = null
-        private var mSelections: Set<Long>? = null
-        private var mSubtotals: Map<Long, String>? = null
-        private var mDiscountShares: Map<Long, String>? = null
-        private var mDiscountedSubtotals: Map<Long, String>? = null
-        private var mUnusedDiscounts: Map<Long, String?>? = null
+        private var mDinerList: List<Diner>? = null
+        private var mSelections: Set<Diner>? = null
+        private var mSubtotals: Map<Diner, String>? = null
+        private var mDiscountShares: Map<Diner, String>? = null
+        private var mDiscountedSubtotals: Map<Diner, String>? = null
+        private var mUnusedDiscounts: Map<Diner, String?>? = null
 
         val colorBackground = TypedValue().also { requireContext().theme.resolveAttribute(R.attr.colorBackground, it, true) }.data
         val colorBackgroundVariant = TypedValue().also { requireContext().theme.resolveAttribute(R.attr.colorBackgroundVariant, it, true) }.data
@@ -284,7 +296,7 @@ internal class DinersListFragment: Fragment() {
             holder.apply {
                 itemView.tag = newDiner // store updated data
 
-                val isSelected = mSelections!!.contains(newDiner.id)
+                val isSelected = mSelections!!.contains(newDiner)
 
                 viewBinding.contactIcon.setContact(newDiner.contact, isSelected)
 
@@ -295,26 +307,26 @@ internal class DinersListFragment: Fragment() {
 
                     viewBinding.message.setTypeface(viewBinding.message.typeface, Typeface.BOLD)
                     viewBinding.message.text = when {
-                        newDiner.items.isEmpty() -> context.resources.getString(R.string.discountentry_fordiners_unused, mDiscountShares!![newDiner.id])
-                        mUnusedDiscounts!![newDiner.id] == null -> context.resources.getString(R.string.discountentry_fordiners_fullyused, mDiscountedSubtotals!![newDiner.id], mDiscountShares!![newDiner.id])
+                        newDiner.itemIds.isEmpty() -> context.resources.getString(R.string.discountentry_fordiners_unused, mDiscountShares!![newDiner])
+                        mUnusedDiscounts!![newDiner] == null -> context.resources.getString(R.string.discountentry_fordiners_fullyused, mDiscountedSubtotals!![newDiner], mDiscountShares!![newDiner])
                         else -> {
-                            context.resources.getString(R.string.discountentry_fordiners_partiallyused, mDiscountedSubtotals!![newDiner.id], mDiscountShares!![newDiner.id])
+                            context.resources.getString(R.string.discountentry_fordiners_partiallyused, mDiscountedSubtotals!![newDiner], mDiscountShares!![newDiner])
                         }
                     }
                 } else {
                     itemView.setBackgroundColor(colorBackground)
 
                     viewBinding.message.setTypeface(Typeface.create(viewBinding.message.typeface, Typeface.NORMAL), Typeface.NORMAL)
-                    viewBinding.message.text = when(newDiner.items.size) {
+                    viewBinding.message.text = when(newDiner.itemIds.size) {
                         0 -> {
                             context.resources.getString(R.string.discountentry_fordiners_zeroitems)
                         }
                         else -> {
                             context.resources.getQuantityString(
                                 R.plurals.discountentry_fordiners_items_with_subtotal,
-                                newDiner.items.size,
-                                newDiner.items.size,
-                                mSubtotals!![newDiner.id])
+                                newDiner.itemIds.size,
+                                newDiner.itemIds.size,
+                                mSubtotals!![newDiner])
                         }
                     }
                 }
@@ -322,14 +334,14 @@ internal class DinersListFragment: Fragment() {
         }
 
         suspend fun updateDataSet(
-            diners: Array<Diner>?=null,
-            selections: Set<Long>?=null,
-            subtotals: Map<Long, String>?=null,
-            discountShares: Map<Long, String>?=null,
-            discountedSubtotals: Map<Long, String>?=null,
-            unusedDiscounts: Map<Long, String?>?=null) {
+            diners: List<Diner>?=null,
+            selections: Set<Diner>?=null,
+            subtotals: Map<Diner, String>?=null,
+            discountShares: Map<Diner, String>?=null,
+            discountedSubtotals: Map<Diner, String>?=null,
+            unusedDiscounts: Map<Diner, String?>?=null) {
 
-            val newDiners = diners?.also { if(mDinerList == null) mDinerList = emptyArray() } ?: mDinerList
+            val newDiners = diners?.also { if(mDinerList == null) mDinerList = emptyList() } ?: mDinerList
             val newSelections = selections?.also { if(mSelections == null) mSelections = emptySet() } ?: mSelections
             val newSubtotals = subtotals?.also { if(mSubtotals == null) mSubtotals = emptyMap() } ?: mSubtotals
             val newDiscountShares = discountShares?.also { if(mDiscountShares == null) mDiscountShares = emptyMap() } ?: mDiscountShares
@@ -358,11 +370,11 @@ internal class DinersListFragment: Fragment() {
                     val oldDiner = mDinerList!![oldPosition]
 
                     return newDiner.id == oldDiner.id &&
-                            newSelections.contains(newDiner.id) == mSelections!!.contains(oldDiner.id) &&
-                            newSubtotals[newDiner.id] == mSubtotals!![oldDiner.id] &&
-                            newDiscountShares[newDiner.id] == mDiscountShares!![oldDiner.id] &&
-                            newDiscountedSubtotals[newDiner.id] == mDiscountedSubtotals!![oldDiner.id] &&
-                            newUnusedDiscounts[newDiner.id] == mUnusedDiscounts!![oldDiner.id]
+                            newSelections.contains(newDiner) == mSelections!!.contains(oldDiner) &&
+                            newSubtotals[newDiner] == mSubtotals!![oldDiner] &&
+                            newDiscountShares[newDiner] == mDiscountShares!![oldDiner] &&
+                            newDiscountedSubtotals[newDiner] == mDiscountedSubtotals!![oldDiner] &&
+                            newUnusedDiscounts[newDiner] == mUnusedDiscounts!![oldDiner]
                 }
             })
 
@@ -452,9 +464,15 @@ internal class ItemsListFragment: Fragment() {
                 it.consume()?.also{
                     if(!observing) {
                         observing = true
-                        discountEntryViewModel.items.observe(viewLifecycleOwner, { items -> lifecycleScope.launch { itemRecyclerAdapter.updateDataSet(items = items) } })
-                        discountEntryViewModel.itemSelections.observe(viewLifecycleOwner, { selections -> lifecycleScope.launch { itemRecyclerAdapter.updateDataSet(selections = selections) } })
-                        discountEntryViewModel.dinerIdMap.observe(viewLifecycleOwner, { dinerIdMap -> lifecycleScope.launch { itemRecyclerAdapter.updateDataSet(dinerIdMap = dinerIdMap) } })
+                        discountEntryViewModel.items.observe(viewLifecycleOwner) { items ->
+                            lifecycleScope.launch { itemRecyclerAdapter.updateDataSet(items = items) }
+                        }
+                        discountEntryViewModel.itemSelections.observe(viewLifecycleOwner) { selections ->
+                            lifecycleScope.launch { itemRecyclerAdapter.updateDataSet(selections = selections) }
+                        }
+                        discountEntryViewModel.numberOfDiners.observe(viewLifecycleOwner) { numDiners ->
+                            lifecycleScope.launch { itemRecyclerAdapter.updateDataSet(numberOfDiners = numDiners) }
+                        }
                     }
                 }
             }
@@ -466,10 +484,9 @@ internal class ItemsListFragment: Fragment() {
         val listener: RecyclerViewListener):
         RecyclerView.Adapter<ItemSelectionRecyclerViewAdapter.ViewHolder>() {
 
-        private var mItemList = emptyArray<Item>()
-        private var mSelections = emptySet<Long>()
-        private var mDinerIdMap = emptyMap<Long, Diner>()
-        private var numberOfDiners = 0
+        private var mItemList = emptyList<Item>()
+        private var mSelections = emptySet<Item>()
+        private var mNumberOfDiners = 0
 
         val colorPrimary = TypedValue().also { requireContext().theme.resolveAttribute(R.attr.colorPrimary, it, true) }.data
         val colorOnBackground = TypedValue().also { requireContext().theme.resolveAttribute(R.attr.colorOnBackground, it, true) }.data
@@ -502,18 +519,18 @@ internal class ItemsListFragment: Fragment() {
 
                 viewBinding.dinerIcons.removeAllViews()
 
-                when(newItem.diners.size) {
+                when(newItem.dinerIds.size) {
                     0 -> {
                         viewBinding.dinerSummary.setText(R.string.discountentry_foritems_no_diners_warning)
                         viewBinding.dinerSummary.setTextColor(colorPrimary)
                     }
-                    numberOfDiners -> {
+                    mNumberOfDiners -> {
                         viewBinding.dinerSummary.setText(R.string.discountentry_foritems_shared_by_everyone)
                         viewBinding.dinerSummary.setTextColor(colorOnBackground)
                     }
                     else -> {
                         viewBinding.dinerSummary.text = ""
-                        newItem.diners.forEach {
+                        newItem.diners.forEach { diner ->
                             val icon = ContactIcon(context)
                             icon.setSelectable(false)
 
@@ -522,24 +539,22 @@ internal class ItemsListFragment: Fragment() {
                             params.marginEnd = (2 * context.resources.displayMetrics.density).toInt()
                             icon.layoutParams = params
 
-                            mDinerIdMap[it]?.apply {
-                                icon.setContact(this.contact, false)
-                                viewBinding.dinerIcons.addView(icon)
-                            }
+                            icon.setContact(diner.contact, false)
+                            viewBinding.dinerIcons.addView(icon)
                         }
                     }
                 }
 
-                val isSelected = mSelections.contains(newItem.id)
+                val isSelected = mSelections.contains(newItem)
 
                 itemView.setBackgroundColor(if(isSelected) colorBackgroundVariant else colorBackground)
             }
         }
 
-        suspend fun updateDataSet(items: Array<Item>?=null, dinerIdMap: Map<Long, Diner>?=null, selections: Set<Long>?=null) {
+        suspend fun updateDataSet(items: List<Item>?=null, selections: Set<Item>?=null, numberOfDiners: Int? = null) {
             val newItems = items ?: mItemList
-            val newDinerIdMap = dinerIdMap ?: mDinerIdMap
             val newSelections = selections ?: mSelections
+            val newNumberOfDiners = numberOfDiners ?: mNumberOfDiners
 
             val adapter = this
 
@@ -554,15 +569,14 @@ internal class ItemsListFragment: Fragment() {
                     val newItem = newItems[newPosition]
                     val oldItem = mItemList[oldPosition]
 
-                    return newItem.id == oldItem.id && newSelections.contains(newItem.id) == mSelections.contains(oldItem.id)
+                    return newItem.id == oldItem.id && newSelections.contains(newItem) == mSelections.contains(oldItem)
                 }
             })
 
             withContext(Dispatchers.Main) {
                 mItemList = newItems
-                mDinerIdMap = newDinerIdMap
-                numberOfDiners = mDinerIdMap.size
                 mSelections = newSelections
+                mNumberOfDiners = newNumberOfDiners
 
                 diffResult.dispatchUpdatesTo(adapter)
                 binding.list.doOnPreDraw { binding.swipeRefreshLayout.isRefreshing = false }

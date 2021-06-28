@@ -157,8 +157,8 @@ class DiscountsFragment: Fragment(), Revealable by RevealableImpl() {
         }
 
         discountsViewModel.discounts.observe(viewLifecycleOwner) { lifecycleScope.launch { recyclerAdapter.updateDataSet(discounts = it) } }
-        discountsViewModel.dinerIdMap.observe(viewLifecycleOwner) { lifecycleScope.launch { recyclerAdapter.updateDataSet(dinerIdMap = it) } }
-        discountsViewModel.itemIdMap.observe(viewLifecycleOwner) { lifecycleScope.launch { recyclerAdapter.updateDataSet(itemIdMap = it) } }
+        discountsViewModel.diners.observe(viewLifecycleOwner) { lifecycleScope.launch { recyclerAdapter.updateDataSet(diners = it) } }
+        discountsViewModel.items.observe(viewLifecycleOwner) { lifecycleScope.launch { recyclerAdapter.updateDataSet(items = it) } }
     }
 
     private fun closeFragment() {
@@ -324,16 +324,14 @@ class DiscountsFragment: Fragment(), Revealable by RevealableImpl() {
     private inner class DiscountRecyclerViewAdapter(
         private val context: Context,
         private val discountViewModel: DiscountsViewModel,
-        private val listener: RecyclerViewListener):
-        RecyclerView.Adapter<DiscountRecyclerViewAdapter.ViewHolder>() {
+        private val listener: RecyclerViewListener): RecyclerView.Adapter<DiscountRecyclerViewAdapter.ViewHolder>() {
 
-        private var mDiscountList = emptyArray<Discount>()
-        private var mDinerIdMap = emptyMap<Long, Diner>()
-        private var mItemIdMap = emptyMap<Long, Item>()
+        private var mDiscountList = emptyList<Discount>()
+        private var mDiners = emptyList< Diner>()
+        private var mItems = emptyList<Item>()
         private var mMaxDiners = Integer.MAX_VALUE
         private var mMaxItems = Integer.MAX_VALUE
         private val percentMaxDecimals = context.resources.getInteger(R.integer.percent_max_decimals)
-
 
         inner class ViewHolder(val viewBinding: FragDiscountsListitemBinding): RecyclerView.ViewHolder(viewBinding.root) {
             init {
@@ -363,49 +361,48 @@ class DiscountsFragment: Fragment(), Revealable by RevealableImpl() {
                     if(newDiscount.asPercent) {
                         val percentValue = NumberFormat.getPercentInstance().also { it.maximumFractionDigits = percentMaxDecimals }.format(0.01*newDiscount.value)
                         when(newDiscount.items.size) {
-                            1 -> {
-                                (mItemIdMap[newDiscount.items[0]])?.name?.let { context.resources.getString(R.string.discounts_onitems_percent_single, percentValue, it) } ?:
-                                context.resources.getQuantityString(R.plurals.discounts_onitems_percent_multiple, 1, 1, percentValue)
-                            }
+                            1 -> { newDiscount.items[0].name.let { context.resources.getString(R.string.discounts_onitems_percent_single, percentValue, it) } }
                             mMaxItems -> { context.resources.getString(R.string.discounts_onitems_percent_all, percentValue) }
                             else -> {
-                                context.resources.getQuantityString(R.plurals.discounts_onitems_percent_multiple, newDiscount.items.size, newDiscount.items.size, percentValue)
+                                context.resources.getQuantityString(
+                                    R.plurals.discounts_onitems_percent_multiple,
+                                    newDiscount.itemIds.size,
+                                    newDiscount.itemIds.size,
+                                    percentValue)
                             }
                         }
                     } else {
-                        when(newDiscount.items.size) {
-                            1 -> {
-                                (mItemIdMap[newDiscount.items[0]])?.name?.let { context.resources.getString(R.string.discounts_onitems_currency_single, it) } ?:
-                                context.resources.getQuantityString(R.plurals.discounts_onitems_currency_multiple, 1, 1)
-                            }
+                        when(newDiscount.itemIds.size) {
+                            1 -> { newDiscount.items[0].name.let { context.resources.getString(R.string.discounts_onitems_currency_single, it) } }
                             mMaxItems -> { context.resources.getString(R.string.discounts_onitems_currency_all) }
                             else -> {
-                                context.resources.getQuantityString(R.plurals.discounts_onitems_currency_multiple, newDiscount.items.size, newDiscount.items.size)
+                                context.resources.getQuantityString(R.plurals.discounts_onitems_currency_multiple, newDiscount.itemIds.size, newDiscount.itemIds.size)
                             }
                         }
                     }
                 } else {
                     if(newDiscount.asPercent) {
                         val percentValue = NumberFormat.getPercentInstance().also { it.maximumFractionDigits = percentMaxDecimals }.format(0.01*newDiscount.value)
-                        when(newDiscount.recipients.size) {
-                            1 -> {
-                                (mDinerIdMap[newDiscount.recipients[0]])?.name?.let { context.resources.getString(R.string.discounts_fordiners_percent_single, percentValue, it) } ?:
-                                context.resources.getQuantityString(R.plurals.discounts_fordiners_percent_multiple, 1, 1, percentValue)
-                            }
+                        when(newDiscount.recipientIds.size) {
+                            1 -> { newDiscount.recipients[0].name.let { context.resources.getString(R.string.discounts_fordiners_percent_single, percentValue, it) } }
                             mMaxDiners -> { context.resources.getString(R.string.discounts_fordiners_percent_all, percentValue) }
                             else -> {
-                                context.resources.getQuantityString(R.plurals.discounts_fordiners_percent_multiple, newDiscount.recipients.size, newDiscount.recipients.size, percentValue)
+                                context.resources.getQuantityString(
+                                    R.plurals.discounts_fordiners_percent_multiple,
+                                    newDiscount.recipientIds.size,
+                                    newDiscount.recipientIds.size,
+                                    percentValue)
                             }
                         }
                     } else {
-                        when(newDiscount.recipients.size) {
-                            1 -> {
-                                (mDinerIdMap[newDiscount.recipients[0]])?.name?.let { context.resources.getString(R.string.discounts_fordiners_currency_single, it) } ?:
-                                context.resources.getQuantityString(R.plurals.discounts_fordiners_currency_multiple, 1, 1)
-                            }
+                        when(newDiscount.recipientIds.size) {
+                            1 -> { newDiscount.recipients[0].name.let { context.resources.getString(R.string.discounts_fordiners_currency_single, it) } }
                             mMaxDiners -> { context.resources.getString(R.string.discounts_fordiners_currency_all) }
                             else -> {
-                                context.resources.getQuantityString(R.plurals.discounts_fordiners_currency_multiple, newDiscount.recipients.size, newDiscount.recipients.size)
+                                context.resources.getQuantityString(
+                                    R.plurals.discounts_fordiners_currency_multiple,
+                                    newDiscount.recipientIds.size,
+                                    newDiscount.recipientIds.size)
                             }
                         }
                     }
@@ -416,14 +413,15 @@ class DiscountsFragment: Fragment(), Revealable by RevealableImpl() {
                 } else {
                     val costString = NumberFormat.getCurrencyInstance().format(newDiscount.cost)
                     viewBinding.reimbursementSummary.visibility = View.VISIBLE
-                    viewBinding.reimbursementSummary.text = when(newDiscount.purchasers.size) {
-                        1 -> {
-                            (mDinerIdMap[newDiscount.purchasers[0]])?.name?.let { context.resources.getString(R.string.discounts_reimbursement_single, costString, it) } ?:
-                            context.resources.getQuantityString(R.plurals.discounts_reimbursement_multiple, 1, 1, costString)
-                        }
+                    viewBinding.reimbursementSummary.text = when(newDiscount.purchaserIds.size) {
+                        1 -> { newDiscount.purchasers[0].name.let { context.resources.getString(R.string.discounts_reimbursement_single, costString, it) } }
                         mMaxDiners -> { context.resources.getString(R.string.discounts_reimbursement_all, costString) }
                         else -> {
-                            context.resources.getQuantityString(R.plurals.discounts_reimbursement_multiple, newDiscount.purchasers.size, newDiscount.purchasers.size, costString)
+                            context.resources.getQuantityString(
+                                R.plurals.discounts_reimbursement_multiple,
+                                newDiscount.purchaserIds.size,
+                                newDiscount.purchaserIds.size,
+                                costString)
                         }
                     }
                 }
@@ -436,10 +434,10 @@ class DiscountsFragment: Fragment(), Revealable by RevealableImpl() {
             }
         }
 
-        suspend fun updateDataSet(discounts: Array<Discount>? = null, dinerIdMap: Map<Long, Diner>? = null, itemIdMap: Map<Long, Item>? = null) {
+        suspend fun updateDataSet(discounts: List<Discount>? = null, diners: List<Diner>? = null, items: List<Item>? = null) {
             val newDiscounts = discounts ?: mDiscountList
-            val newDinerIdMap = dinerIdMap ?: mDinerIdMap
-            val newItemIdMap = itemIdMap ?: mItemIdMap
+            val newDiners = diners ?: mDiners
+            val newItems = items ?: mItems
 
             val adapter = this
 
@@ -458,10 +456,10 @@ class DiscountsFragment: Fragment(), Revealable by RevealableImpl() {
                             newDiscount.value == oldDiscount.value &&
                             newDiscount.asPercent == oldDiscount.asPercent &&
                             newDiscount.onItems == oldDiscount.onItems &&
-                            newDiscount.items == oldDiscount.items &&
-                            newDiscount.recipients == oldDiscount.recipients &&
+                            newDiscount.itemIds == oldDiscount.itemIds &&
+                            newDiscount.recipientIds == oldDiscount.recipientIds &&
                             newDiscount.cost == oldDiscount.cost &&
-                            newDiscount.purchasers == oldDiscount.purchasers
+                            newDiscount.purchaserIds == oldDiscount.purchaserIds
                 }
             })
 
@@ -470,10 +468,10 @@ class DiscountsFragment: Fragment(), Revealable by RevealableImpl() {
                 adapter.notifyItemChanged(mDiscountList.size - 2) // Needed to add BottomOffset in case last item is removed
 
                 mDiscountList = newDiscounts
-                mDinerIdMap = newDinerIdMap
-                mMaxDiners = mDinerIdMap.size
-                mItemIdMap = newItemIdMap
-                mMaxItems = mItemIdMap.size
+                mDiners = newDiners
+                mMaxDiners = mDiners.size
+                mItems = newItems
+                mMaxItems = mItems.size
 
                 diffResult.dispatchUpdatesTo(adapter)
             }

@@ -24,8 +24,8 @@ class ItemEntryViewModel(app: Application): UIViewModel(app) {
     val hasItemNameInput get() = itemNameInput.value != null
 
     // Diner selection
-    private val diners: StateFlow<Array<Diner>> = repository.diners.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, emptyArray())
-    private val selectionSet = mutableSetOf<Long>()
+    private val diners: StateFlow<List<Diner>> = repository.diners.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, emptyList())
+    private val selectionSet = mutableSetOf<Diner>()
     private val _selections = MutableStateFlow(selectionSet.toSet())
     private val selectionCount: Flow<Int> = _selections.mapLatest { it.size }
     private val areAllDinersSelected: Flow<Boolean> = combine(selectionCount, repository.diners) { selectionCount, diners -> selectionCount == diners.size }
@@ -37,18 +37,18 @@ class ItemEntryViewModel(app: Application): UIViewModel(app) {
     private val editingName = MutableStateFlow(false)
 
     // Live Data Output
-    val dinerData: LiveData<List<Pair<Diner, String>>> = combineTransform(repository.diners, repository.dinerSubtotals, pauseDinerRefresh) { diners, subtotals, pause ->
+    val dinerData: LiveData<List<Pair<Diner, String>>> = combineTransform(repository.diners, repository.individualSubtotals, pauseDinerRefresh) { diners, subtotals, pause ->
         if(!pause) {
             // Diners paired with their individual subtotals as currency strings
             emit(diners.map { diner ->
-                diner to formatter.format(subtotals.getOrDefault(diner.id, 0.0))
+                diner to formatter.format(subtotals.getOrDefault(diner, 0.0))
             })
         }
     }.withOutputSwitch(isOutputFlowing).asLiveData()
     val itemName: LiveData<String> = repository.items.combine(itemNameInput) { items, nameInput ->
         nameInput ?: getApplication<Application>().resources.getString(R.string.itementry_toolbar_item_number) + (items.size + 1)
     }.withOutputSwitch(isOutputFlowing).asLiveData()
-    val selections: LiveData<Set<Long>> = _selections.withOutputSwitch(isOutputFlowing).asLiveData()
+    val selections: LiveData<Set<Diner>> = _selections.withOutputSwitch(isOutputFlowing).asLiveData()
     val toolBarState: LiveData<ToolBarState> = combine(calculator.isNumberPadVisible, editingName, itemName.asFlow(), selectionCount, areAllDinersSelected) {
             calcVisible, editing, name, count, allSelected ->
         if(!calcVisible && count > 0) {
@@ -150,14 +150,14 @@ class ItemEntryViewModel(app: Application): UIViewModel(app) {
         stopNameEdit()
     }
 
-    fun isDinerSelected(diner: Diner) = selectionSet.contains(diner.id)
+    fun isDinerSelected(diner: Diner) = selectionSet.contains(diner)
     fun toggleDinerSelection(diner: Diner) {
         hasUntouchedPriorSelections = false
 
         if(isDinerSelected(diner)) {
-            selectionSet.remove(diner.id)
+            selectionSet.remove(diner)
         } else {
-            selectionSet.add(diner.id)
+            selectionSet.add(diner)
         }
         _selections.value = selectionSet.toSet()
     }
@@ -166,7 +166,7 @@ class ItemEntryViewModel(app: Application): UIViewModel(app) {
 
         diners.value.apply {
             selectionSet.clear()
-            selectionSet.addAll(this.map { it.id })
+            selectionSet.addAll(this)
             _selections.value = selectionSet.toSet()
         }
     }
@@ -180,9 +180,9 @@ class ItemEntryViewModel(app: Application): UIViewModel(app) {
         //TODO handle re-editing existing items
         selections.value?.apply {
             val price = calculator.numericalValue.value ?: 0.0
-            val itemDiners = diners.value.filter { diner -> this.contains(diner.id) }
+            val itemDiners = diners.value.filter { diner -> this.contains(diner) }
 
-            repository.createItem(price, itemName.value ?: "Item", itemDiners)
+            repository.addItem(price, itemName.value ?: "Item", itemDiners)
         }
     }
 }

@@ -121,24 +121,21 @@ class ItemsFragment : Fragment() {
         }
 
         itemsViewModel.items.observe(viewLifecycleOwner) { items ->
-            lifecycleScope.launch { recyclerAdapter.updateDataSet(newItems=items) }
+            lifecycleScope.launch { recyclerAdapter.updateDataSet(items=items) }
             binding.addItemsHint.visibility = if (items.isEmpty()) View.VISIBLE else View.GONE
         }
 
-        itemsViewModel.dinerIdMap.observe(viewLifecycleOwner) { dinerIds ->
-            lifecycleScope.launch { recyclerAdapter.updateDataSet(newDinerIdMap=dinerIds) }
+        itemsViewModel.numberOfDiners.observe(viewLifecycleOwner) { count ->
+            lifecycleScope.launch { recyclerAdapter.updateDataSet(numberOfDiners = count) }
         }
     }
-
 }
 
 private class ItemRecyclerViewAdapter(private val context: Context,
                                       private val itemViewModel: ItemsViewModel,
-                                      private val listener: RecyclerViewListener
-): RecyclerView.Adapter<ItemRecyclerViewAdapter.ViewHolder>() {
-    private var mItems = emptyArray<Item>()
-    private var mDinerIdMap = emptyMap<Long, Diner>()
-    private var numberOfDiners = 0
+                                      private val listener: RecyclerViewListener): RecyclerView.Adapter<ItemRecyclerViewAdapter.ViewHolder>() {
+    private var mItems = emptyList<Item>()
+    private var mNumberOfDiners = 0
 
     private val errorTextColor = TypedValue().also { context.theme.resolveAttribute(R.attr.colorPrimary, it, true) }.data
     private val normalTextColor = TypedValue().also { context.theme.resolveAttribute(R.attr.colorOnSurface, it, true) }.data
@@ -172,13 +169,13 @@ private class ItemRecyclerViewAdapter(private val context: Context,
                     viewBinding.dinerSummary.setText(R.string.items_no_diners_warning)
                     viewBinding.dinerSummary.setTextColor(errorTextColor)
                 }
-                numberOfDiners -> {
+                mNumberOfDiners -> {
                     viewBinding.dinerSummary.setText(R.string.items_shared_by_everyone)
                     viewBinding.dinerSummary.setTextColor(normalTextColor)
                 }
                 else -> {
                     viewBinding.dinerSummary.text = ""
-                    newItem.diners.forEach {
+                    newItem.diners.forEach { diner ->
                         val icon = ContactIcon(context)
                         icon.setSelectable(false)
 
@@ -187,10 +184,8 @@ private class ItemRecyclerViewAdapter(private val context: Context,
                         params.marginEnd = (2 * context.resources.displayMetrics.density).toInt()
                         icon.layoutParams = params
 
-                        mDinerIdMap[it]?.apply {
-                            icon.setContact(this.contact, false)
-                            viewBinding.dinerIcons.addView(icon)
-                        }
+                        icon.setContact(diner.contact, false)
+                        viewBinding.dinerIcons.addView(icon)
                     }
                 }
             }
@@ -204,35 +199,34 @@ private class ItemRecyclerViewAdapter(private val context: Context,
         }
     }
 
-    suspend fun updateDataSet(newItems: Array<Item>?=null, newDinerIdMap: Map<Long, Diner>?=null) {
-        val items = newItems ?: mItems
+    suspend fun updateDataSet(items: List<Item>?=null, numberOfDiners: Int?=null) {
+        val newItems = items ?: mItems
 
         val diffResult = DiffUtil.calculateDiff(object: DiffUtil.Callback() {
             override fun getOldListSize() = mItems.size
 
-            override fun getNewListSize() = items.size
+            override fun getNewListSize() = newItems.size
 
-            override fun areItemsTheSame(oldPosition: Int, newPosition: Int) = items[newPosition].id == mItems[oldPosition].id
+            override fun areItemsTheSame(oldPosition: Int, newPosition: Int) = newItems[newPosition].id == mItems[oldPosition].id
 
             override fun areContentsTheSame(oldPosition: Int, newPosition: Int): Boolean {
-                val newItem = items[newPosition]
+                val newItem = newItems[newPosition]
                 val oldItem = mItems[oldPosition]
 
                 return newItem.id == oldItem.id &&
                         newItem.name == oldItem.name &&
                         newItem.price == oldItem.price &&
-                        newItem.diners == oldItem.diners
+                        newItem.dinerIds == oldItem.dinerIds
             }
         })
 
         val adapter = this
         withContext(Dispatchers.Main) {
-            adapter.notifyItemChanged(items.size - 1) // Clears BottomOffset from old last item
-            adapter.notifyItemChanged(items.size - 2) // Needed to add BottomOffset in case last item is removed
+            adapter.notifyItemChanged(newItems.size - 1) // Clears BottomOffset from old last item
+            adapter.notifyItemChanged(newItems.size - 2) // Needed to add BottomOffset in case last item is removed
 
-            mItems = items
-            mDinerIdMap = newDinerIdMap ?: mDinerIdMap
-            numberOfDiners = mDinerIdMap.size
+            mItems = newItems
+            mNumberOfDiners = numberOfDiners ?: mNumberOfDiners
             diffResult.dispatchUpdatesTo(adapter)
         }
     }

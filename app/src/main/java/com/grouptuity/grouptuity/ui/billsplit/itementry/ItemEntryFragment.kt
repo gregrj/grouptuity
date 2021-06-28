@@ -59,7 +59,6 @@ class ItemEntryFragment: Fragment(), Revealable by RevealableImpl() {
         appViewModel = ViewModelProvider(requireActivity()).get(AppViewModel::class.java)
         itemEntryViewModel = ViewModelProvider(requireActivity()).get(ItemEntryViewModel::class.java)
         itemEntryViewModel.initializeForItem(args.editedItem)
-
         binding = FragItementryBinding.inflate(inflater, container, false)
         return binding.root
     }
@@ -473,7 +472,7 @@ class ItemEntryFragment: Fragment(), Revealable by RevealableImpl() {
 
 private class ItemEntryDinerSelectionRecyclerViewAdapter(val context: Context, val listener: RecyclerViewListener): RecyclerView.Adapter<ItemEntryDinerSelectionRecyclerViewAdapter.ViewHolder>() {
     private var mDinerData = emptyList<Pair<Diner, String>>()
-    private var mSelections = emptySet<Long>()
+    private var mSelections = emptySet<Diner>()
 
     private val backgroundColor = TypedValue().also { context.theme.resolveAttribute(R.attr.colorBackground, it, true) }.data
     private val backgroundColorVariant = TypedValue().also { context.theme.resolveAttribute(R.attr.colorBackgroundVariant, it, true) }.data
@@ -496,7 +495,7 @@ private class ItemEntryDinerSelectionRecyclerViewAdapter(val context: Context, v
         holder.apply {
             itemView.tag = newDiner // store updated data
 
-            val isSelected = mSelections.contains(newDiner.id)
+            val isSelected = mSelections.contains(newDiner)
 
             viewBinding.contactIcon.setContact(newDiner.contact, isSelected)
 
@@ -504,19 +503,19 @@ private class ItemEntryDinerSelectionRecyclerViewAdapter(val context: Context, v
 
             itemView.setBackgroundColor(if(isSelected) backgroundColorVariant else backgroundColor)
 
-            if(newDiner.items.isEmpty()) {
+            if(newDiner.itemIds.isEmpty()) {
                 viewBinding.message.text = context.resources.getString(R.string.itementry_zero_items)
             } else {
                 viewBinding.message.text = context.resources.getQuantityString(
                     R.plurals.itementry_num_items_with_subtotal,
-                    newDiner.items.size,
-                    newDiner.items.size,
+                    newDiner.itemIds.size,
+                    newDiner.itemIds.size,
                     dinerSubtotal)
             }
         }
     }
 
-    suspend fun updateDataSet(dinerData: List<Pair<Diner, String>>?=null, selections: Set<Long>?=null) {
+    suspend fun updateDataSet(dinerData: List<Pair<Diner, String>>?=null, selections: Set<Diner>?=null) {
         val newDinerData = dinerData ?: mDinerData
         val newSelections = selections ?: mSelections
 
@@ -532,7 +531,7 @@ private class ItemEntryDinerSelectionRecyclerViewAdapter(val context: Context, v
                 val (oldDiner, oldDinerSubtotal) = mDinerData[oldPosition]
 
                 return newDiner.id == oldDiner.id &&
-                        newSelections.contains(newDiner.id) == mSelections.contains(oldDiner.id) &&
+                        newSelections.contains(newDiner) == mSelections.contains(oldDiner) &&
                         newDinerSubtotal == oldDinerSubtotal
             }
         })

@@ -3,19 +3,22 @@ package com.grouptuity.grouptuity.data
 import android.app.Application
 import android.content.Context
 import android.content.pm.PackageManager
+import android.provider.ContactsContract
 import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.*
-import androidx.room.Database
-import androidx.room.Room
-import androidx.room.RoomDatabase
-import androidx.room.TypeConverters
+import androidx.room.*
+import com.grouptuity.grouptuity.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
+import java.text.DateFormat
+import java.text.SimpleDateFormat
+import java.util.*
+import kotlin.math.max
 
 
 fun <T> Flow<T>.withOutputSwitch(switch: Flow<Boolean>): Flow<T> { return combineTransform(switch) { data, enabled -> if(enabled) emit(data) } }
@@ -54,205 +57,6 @@ abstract class UIViewModel(app: Application): AndroidViewModel(app) {
 
 
 class Repository(context: Context) {
-    private val database = AppDatabase.getDatabase(context)
-    private val preferenceDataStore = context.preferenceDataStore
-
-    // Data Access Objects
-    private val billDao = database.billDao()
-    private val dinerDao = database.dinerDao()
-    private val itemDao = database.itemDao()
-    private val debtDao = database.debtDao()
-    private val discountDao = database.discountDao()
-    private val paymentDao = database.paymentDao()
-    private val contactDao = database.contactDao()
-
-    // Preferences
-    private val loadedBillId: StateFlow<Long> = getPreferenceFlow(LOADED_BILL_ID_KEY, 0L, -1L)
-    val userName: StateFlow<String> = getPreferenceFlow(USER_NAME_KEY, "You") //TODO parameterize
-    val userPhotoUri: StateFlow<String> = getPreferenceFlow(USER_PHOTO_URI_KEY, "")
-    val defaultTaxPercent: StateFlow<Double> = getPreferenceFlow(TAX_PERCENT_KEY, 7.25)
-    val defaultTipPercent: StateFlow<Double> = getPreferenceFlow(TIP_PERCENT_KEY, 15.0)
-    val taxIsTipped: StateFlow<Boolean> = getPreferenceFlow(TAX_IS_TIPPED_KEY, false)
-    val discountsReduceTip: StateFlow<Boolean> = getPreferenceFlow(DISCOUNTS_REDUCE_TIP_KEY, false)
-
-    // App-level data
-    val bills = billDao.getSavedBills()
-    val appContacts = contactDao.getSavedContacts()
-
-    // Bill entity lists
-    val loadedBill: Flow<Bill> = loadedBillId.transformLatest{ emitAll(billDao.getBill(it)) }.flowOn(Dispatchers.IO).filterNotNull()
-    val diners: Flow<Array<Diner>> = loadedBill.transformLatest{ emitAll(dinerDao.getDinersOnBill(it.id)) }.flowOn(Dispatchers.IO)
-    val items: Flow<Array<Item>> = loadedBill.transformLatest{ emitAll(itemDao.getItemsOnBill(it.id)) }.flowOn(Dispatchers.IO)
-    val debts: Flow<Array<Debt>> = loadedBill.transformLatest{ emitAll(debtDao.getDebtsOnBill(it.id)) }.flowOn(Dispatchers.IO)
-    val discounts: Flow<Array<Discount>> = loadedBill.transformLatest{ emitAll(discountDao.getDiscountsOnBill(it.id)) }.flowOn(Dispatchers.IO)
-    val payments: Flow<Array<Payment>> = loadedBill.transformLatest{ emitAll(paymentDao.getPaymentsOnBill(it.id)) }.flowOn(Dispatchers.IO)
-    val restaurant: Flow<Diner> = loadedBill.transformLatest{ emitAll(billDao.getRestaurantId(it.id)) }.transformLatest{ emitAll(dinerDao.getDiner(it)) }.flowOn(Dispatchers.IO)
-    val dinerContactLookupKeys: Flow<List<String>> = diners.mapLatest { it.map { diner -> diner.lookupKey } }
-
-    // Bill entity by ID getters
-    fun getDiner(dinerId: Flow<Long>): StateFlow<Diner?> = dinerId.transformLatest { id ->
-        if(id == 0L) {
-            emitAll(flow { emit(null) })
-        } else {
-            emitAll(dinerDao.getDiner(id).flowOn(Dispatchers.IO))
-        }
-    }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, null)
-    fun getItem(itemId: Flow<Long>): StateFlow<Item?> = itemId.transformLatest { id ->
-        if(id == 0L) {
-            emitAll(flow { emit(null) })
-        } else {
-            emitAll(itemDao.getItem(id).flowOn(Dispatchers.IO))
-        }
-    }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, null)
-    fun getDebt(debtId: Flow<Long>): StateFlow<Debt?> = debtId.transformLatest { id ->
-        if(id == 0L) {
-            emitAll(flow { emit(null) })
-        } else {
-            emitAll(debtDao.getDebt(id).flowOn(Dispatchers.IO))
-        }
-    }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, null)
-    fun getDiscount(discountId: Flow<Long>): StateFlow<Discount?> = discountId.transformLatest { id ->
-        if(id == 0L) {
-            emitAll(flow { emit(null) })
-        } else {
-            emitAll(discountDao.getDiscount(id).flowOn(Dispatchers.IO))
-        }
-    }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, null)
-
-    // Bill entity ID maps
-    val dinerIdMap = diners.mapLatest { dinerArray -> dinerArray.map { Pair(it.id, it) }.toMap() }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, emptyMap())
-    val itemIdMap = items.mapLatest { itemArray -> itemArray.map { Pair(it.id, it) }.toMap() }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, emptyMap())
-    val debtIdMap = debts.mapLatest { debtArray -> debtArray.map { Pair(it.id, it) }.toMap() }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, emptyMap())
-    val discountIdMap = discounts.mapLatest { discountArray -> discountArray.map { Pair(it.id, it) }.toMap() }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, emptyMap())
-    val paymentIdMap = payments.mapLatest { paymentArray -> paymentArray.map { Pair(it.id, it) }.toMap() }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, emptyMap())
-
-    // Bill entity counts
-    val numberOfDiners = diners.mapLatest { it.size }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, 0)
-    val numberOfItems = items.mapLatest { it.size }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, 0)
-    val numberOfDebts = debts.mapLatest { it.size }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, 0)
-    val numberOfDiscounts = discounts.mapLatest { it.size }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, 0)
-    val numberOfPayments = payments.mapLatest { it.size }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, 0)
-
-    private val billCalculation: Flow<BillCalculation> = combine(loadedBill, dinerIdMap, itemIdMap, debtIdMap, discountIdMap, paymentIdMap, restaurant) {
-        val currentBill = it[0] as Bill
-        val billDiners = it[1] as Map<Long, Diner>
-        val billItems = it[2] as Map<Long, Item>
-        val billDebts = it[3] as Map<Long, Debt>
-        val billDiscounts = it[4] as Map<Long, Discount>
-        val billPayments = it[5] as Map<Long, Payment>
-        val currentRestaurant = it[6] as Diner
-
-        // TODO consistency validation
-
-        BillCalculation(currentBill, billDiners, billItems, billDebts, billDiscounts, billPayments, currentRestaurant)
-    }.stateIn(CoroutineScope(Dispatchers.Default),
-        SharingStarted.Eagerly,
-        BillCalculation(
-            bill=Bill(0L, "", 0L, 0.0, true,0.0, tipAsPercent = true, isTaxTipped = false, discountsReduceTip = false),
-            restaurant = Diner(0L, 0L, Contact.restaurant)
-        )
-    )
-
-    // Bill results
-    val dinerSubtotals: Flow<Map<Long, Double>> = billCalculation.mapLatest { it.individualSubtotals }
-    val groupSubtotal: Flow<Double> = billCalculation.mapLatest { it.groupSubtotal }
-    val groupDiscountAmount: Flow<Double> = billCalculation.mapLatest { it.groupDiscountTotal }
-    val groupSubtotalWithDiscounts: Flow<Double> = billCalculation.mapLatest { it.groupSubtotalWithDiscounts }
-    val taxPercent: Flow<Double> = billCalculation.mapLatest { it.groupTaxPercent }
-    val groupTaxAmount: Flow<Double> = billCalculation.mapLatest { it.groupTaxValue }
-    val groupSubtotalWithDiscountsAndTax: Flow<Double> = billCalculation.mapLatest { it.groupSubtotalWithDiscountsAndTax }
-    val tipPercent: Flow<Double> = billCalculation.mapLatest { it.groupTipPercent }
-    val groupTipAmount: Flow<Double> = billCalculation.mapLatest { it.groupTipValue }
-    val groupTotal: Flow<Double> = billCalculation.mapLatest { it.groupTotal }
-
-
-    init {
-        combine(userName, userPhotoUri) { userName, userPhotoUri ->
-            Contact.updateSelfContactData(userName, userPhotoUri)
-            //TODO database.contactDao().save(Contact.self)
-        }
-
-        ProcessLifecycleOwner.get().lifecycleScope.launchWhenResumed {
-            loadedBillId.collect {
-                if (it == 0L) {
-                    //TODO check if old bill is expired
-                    createAndLoadNewBill()
-                }
-            }
-        }
-    }
-
-    private fun <T> getPreferenceFlow(key: Preferences.Key<T>, defaultValue: T, initialValue: T? = null): StateFlow<T> =
-        preferenceDataStore.data.mapLatest { preferences ->
-            preferences[key] ?: defaultValue
-        }.stateIn(CoroutineScope(Dispatchers.IO), SharingStarted.Eagerly, initialValue ?: defaultValue)
-    private fun <T> setPreferenceValue(key: Preferences.Key<T>, newValue: T) =
-        CoroutineScope(Dispatchers.IO).launch {
-            preferenceDataStore.edit { preferences -> preferences[key] = newValue }
-        }
-
-    // Bill Functions
-    fun loadBill(billId: Long) = setPreferenceValue(LOADED_BILL_ID_KEY, billId)
-    fun createAndLoadNewBill() = CoroutineScope(Dispatchers.IO).launch {
-        // TODO assign title and date to new bill
-        loadBill(billDao.save(Bill(0L,
-                "New Bill",
-                0L,
-                defaultTaxPercent.value,
-                true,
-                defaultTipPercent.value,
-                true,
-                taxIsTipped.value,
-                discountsReduceTip.value), addSelf = false))
-    }
-    fun deleteBill(bill: Bill) = CoroutineScope(Dispatchers.IO).launch { billDao.delete(bill) }
-
-    // Contact Functions
-    fun saveContact(contact: Contact) = CoroutineScope(Dispatchers.IO).launch { contactDao.save(contact) }
-    fun saveContacts(contacts: List<Contact>) = CoroutineScope(Dispatchers.IO).launch { contactDao.save(contacts) }
-    fun removeContact(contact: Contact) = CoroutineScope(Dispatchers.IO).launch { contactDao.delete(contact) }
-    fun hasContact(lookupKey: String): Boolean = contactDao.hasLookupKey(lookupKey)
-    fun unfavoriteFavoriteContacts() = CoroutineScope(Dispatchers.IO).launch { contactDao.unfavoriteAllFavorites() }
-    fun unhideHiddenContacts() = CoroutineScope(Dispatchers.IO).launch { contactDao.unhideAllHidden() }
-
-    // Diner Functions
-    fun createDinerForSelf() = CoroutineScope(Dispatchers.IO).launch { billDao.addDinerToBill(Diner(0L, loadedBillId.value, Contact.self)) }
-    fun createDinersForContacts(dinerContacts: Collection<Contact>, billId: Long? = null) = CoroutineScope(Dispatchers.IO).launch {
-        (billId ?: loadedBillId.value).let { billId ->
-            dinerDao.save(dinerContacts.map { Diner(0L, billId, it) }) //TODO pull payment preference from contact
-        }
-    }
-    fun deleteDiner(diner: Diner) = CoroutineScope(Dispatchers.IO).launch { dinerDao.delete(diner) }
-
-    // Item Functions
-    fun getItemsForDiner(dinerId: Long) = itemDao.getItemsForDiner(dinerId).flowOn(Dispatchers.IO)
-    fun createItem(price: Double, name: String, diners: Collection<Diner>) = CoroutineScope(Dispatchers.IO).launch {
-        itemDao.save(Item(0, loadedBillId.value, price, name, diners.map { it.id }, emptyList()))
-    }
-    fun deleteItem(item: Item) = CoroutineScope(Dispatchers.IO).launch { itemDao.delete(item) }
-
-    // Debt Functions
-    suspend fun createDebt(amount: Double, debtors: Collection<Diner> = emptyList(), creditors: Collection<Diner> = emptyList()) = CoroutineScope(Dispatchers.IO).launch {
-        debtDao.save(Debt(0, loadedBillId.value, amount, debtors.map { it.id }, creditors.map { it.id }))
-    }
-    fun deleteDebt(debt: Debt) = CoroutineScope(Dispatchers.IO).launch { debtDao.delete(debt) }
-    fun getDebtsOwedByDiner(dinerId: Long) = debtDao.getDebtsOwedByDiner(dinerId).flowOn(Dispatchers.IO)
-    fun getDebtsHeldByDiner(dinerId: Long) = debtDao.getDebtsHeldByDiner(dinerId).flowOn(Dispatchers.IO)
-
-    // Discount Functions
-    suspend fun createDinerDiscount(discountId: Long, asPercent: Boolean, value: Double, cost: Double?, recipients: List<Long> = emptyList(), purchasers: List<Long> = emptyList()) =
-        discountDao.save(Discount(discountId, loadedBillId.value, asPercent, false, value, cost, emptyList(), recipients, purchasers))
-    suspend fun createItemDiscount(discountId: Long, asPercent: Boolean, value: Double, cost: Double?, items: List<Long> = emptyList(), purchasers: List<Long> = emptyList()) =
-        discountDao.save(Discount(discountId, loadedBillId.value, asPercent, true, value, cost, items, emptyList(), purchasers))
-    fun deleteDiscount(discount: Discount) = CoroutineScope(Dispatchers.IO).launch { discountDao.delete(discount) }
-
-    fun getDiscountsReceivedByDiner(dinerId: Long) = discountDao.getDiscountsReceivedByDiner(dinerId).flowOn(Dispatchers.IO)
-    fun getDiscountsPurchasedByDiner(dinerId: Long) = discountDao.getDiscountsPurchasedByDiner(dinerId).flowOn(Dispatchers.IO)
-
-    // Payment Functions
-    fun getPaymentsSentByDiner(dinerId: Long) = paymentDao.getPaymentsSentByDiner(dinerId).flowOn(Dispatchers.IO)
-    fun getPaymentsReceivedByDiner(dinerId: Long) = paymentDao.getPaymentsReceivedByDiner(dinerId).flowOn(Dispatchers.IO)
-
     companion object {
         @Volatile
         private var INSTANCE: Repository? = null
@@ -266,7 +70,7 @@ class Repository(context: Context) {
         }
 
         // Preference Keys
-        val LOADED_BILL_ID_KEY = longPreferencesKey("loaded_bill_id")
+        val LOADED_BILL_ID_KEY = stringPreferencesKey("loaded_bill_id")
         val USER_NAME_KEY = stringPreferencesKey("user_name")
         val USER_PHOTO_URI_KEY = stringPreferencesKey("user_photo_uri")
         val TAX_PERCENT_KEY = doublePreferencesKey("default_tax_percent")
@@ -274,7 +78,493 @@ class Repository(context: Context) {
         val TAX_IS_TIPPED_KEY = booleanPreferencesKey("default_tax_is_tipped")
         val DISCOUNTS_REDUCE_TIP_KEY = booleanPreferencesKey("default_discounts_reduce_tip")
     }
+
+    private val database = AppDatabase.getDatabase(context)
+    private val preferenceDataStore = context.preferenceDataStore
+
+    // Preferences
+    private val loadedBillId: StateFlow<String> = getPreferenceFlow(LOADED_BILL_ID_KEY, "", "pending")
+    val userName: StateFlow<String> = getPreferenceFlow(USER_NAME_KEY, "You") //TODO parameterize
+    val userPhotoUri: StateFlow<String> = getPreferenceFlow(USER_PHOTO_URI_KEY, "")
+    val defaultTaxPercent: StateFlow<Double> = getPreferenceFlow(TAX_PERCENT_KEY, 7.25)
+    val defaultTipPercent: StateFlow<Double> = getPreferenceFlow(TIP_PERCENT_KEY, 15.0)
+    val taxIsTipped: StateFlow<Boolean> = getPreferenceFlow(TAX_IS_TIPPED_KEY, false)
+    val discountsReduceTip: StateFlow<Boolean> = getPreferenceFlow(DISCOUNTS_REDUCE_TIP_KEY, false)
+
+    // App-level data
+    val bills = database.getSavedBills()
+    val selfContact = combine(userName, userPhotoUri) { userName, userPhotoUri ->
+        Contact.updateSelfContactData(userName, userPhotoUri)
+        //TODO database.contactDao().save(Contact.self)
+        Contact.self
+    }.stateIn(CoroutineScope(Dispatchers.Unconfined), SharingStarted.Eagerly, Contact.self)
+
+
+    // Private backing fields for bill-specific entity flows
+    private var mBill = Bill("", "", 0L, 0.0, true, 0.0, tipAsPercent = true, isTaxTipped = false, discountsReduceTip = false)
+    private var mRestaurant = Diner("", "", Contact.restaurant, PaymentPreferences())
+    private var mDiners = mutableListOf<Diner>()
+    private var mItems = mutableListOf<Item>()
+    private var mDebts = mutableListOf<Debt>()
+    private var mDiscounts = mutableListOf<Discount>()
+    private var mPayments = mutableListOf<Payment>()
+    private val _bill = MutableStateFlow(mBill)
+    private val _restaurant = MutableStateFlow(mRestaurant)
+    private val _diners = MutableStateFlow(mDiners)
+    private val _items = MutableStateFlow(mItems)
+    private val _debts = MutableStateFlow(mDebts)
+    private val _discounts = MutableStateFlow(mDiscounts)
+    private val _payments = MutableStateFlow(mPayments)
+
+    // Bill entities
+    val bill: Flow<Bill> = _bill
+    val restaurant: Flow<Diner> = _restaurant
+    val diners: Flow<List<Diner>> = _diners
+    val items: Flow<List<Item>> = _items
+    val debts: Flow<List<Debt>> = _debts
+    val discounts: Flow<List<Discount>> = _discounts
+    val payments: Flow<List<Payment>> = _payments
+
+    // Bill entity counts
+    val numberOfDiners = _diners.mapLatest { it.size }
+    val numberOfItems = _items.mapLatest { it.size }
+    val numberOfDebts = _debts.mapLatest { it.size }
+    val numberOfDiscounts = _discounts.mapLatest { it.size }
+    val numberOfPayments = _payments.mapLatest { it.size }
+
+    // Group bill calculation results
+    private val _groupSubtotal = MutableStateFlow(0.0)
+    private val _groupDiscountAmount = MutableStateFlow(0.0)
+    private val _groupSubtotalWithDiscounts = MutableStateFlow(0.0)
+    private val _taxPercent = MutableStateFlow(0.0)
+    private val _groupTaxAmount = MutableStateFlow(0.0)
+    private val _groupSubtotalWithDiscountsAndTax = MutableStateFlow(0.0)
+    private val _tipPercent = MutableStateFlow(0.0)
+    private val _groupTipAmount = MutableStateFlow(0.0)
+    private val _groupTotal = MutableStateFlow(0.0)
+    val groupSubtotal: Flow<Double> = _groupSubtotal
+    val groupDiscountAmount: Flow<Double> = _groupDiscountAmount
+    val groupSubtotalWithDiscounts: Flow<Double> = _groupSubtotalWithDiscounts
+    val taxPercent: Flow<Double> = _taxPercent
+    val groupTaxAmount: Flow<Double> = _groupTaxAmount
+    val groupSubtotalWithDiscountsAndTax: Flow<Double> = _groupSubtotalWithDiscountsAndTax
+    val tipPercent: Flow<Double> = _tipPercent
+    val groupTipAmount: Flow<Double> = _groupTipAmount
+    val groupTotal: Flow<Double> = _groupTotal
+
+    // Individual bill calculation results
+    private val _individualSubtotals = MutableStateFlow(emptyMap<Diner, Double>())
+    private val _individualDiscountShares = MutableStateFlow(emptyMap<Diner, Map<Discount, Double>>())
+    private val _individualDiscountTotals = MutableStateFlow(emptyMap<Diner, Double>())
+    private val _individualExcessDiscountsReleased = MutableStateFlow(emptyMap<Diner, Double>())
+    private val _individualExcessDiscountsAcquired = MutableStateFlow(emptyMap<Diner, Double>())
+    private val _individualSubtotalsWithDiscounts = MutableStateFlow(emptyMap<Diner, Double>())
+    private val _individualReimbursementDebts = MutableStateFlow(emptyMap<Diner, Map<Discount, Double>>())
+    private val _individualReimbursementCredits = MutableStateFlow(emptyMap<Diner, Map<Discount, Double>>())
+    private val _individualDebtOwed = MutableStateFlow(emptyMap<Diner, Map<Debt, Double>>())
+    private val _individualDebtHeld = MutableStateFlow(emptyMap<Diner, Map<Debt, Double>>())
+    private val _individualTax = MutableStateFlow(emptyMap<Diner, Double>())
+    private val _individualSubtotalWithDiscountsAndTax = MutableStateFlow(emptyMap<Diner, Double>())
+    private val _individualTip = MutableStateFlow(emptyMap<Diner, Double>())
+    private val _individualTotal = MutableStateFlow(emptyMap<Diner, Double>())
+    val individualSubtotals: Flow<Map<Diner, Double>> = _individualSubtotals
+    val individualDiscountShares: Flow<Map<Diner, Map<Discount, Double>>> = _individualDiscountShares
+    val individualDiscountTotals: Flow<Map<Diner, Double>> = _individualDiscountTotals
+    val individualExcessDiscountsReleased: Flow<Map<Diner, Double>> = _individualExcessDiscountsReleased
+    val individualExcessDiscountsAcquired: Flow<Map<Diner, Double>> = _individualExcessDiscountsAcquired
+    val individualSubtotalsWithDiscounts: Flow<Map<Diner, Double>> = _individualSubtotalsWithDiscounts
+    val individualReimbursementDebts: Flow<Map<Diner, Map<Discount, Double>>> = _individualReimbursementDebts
+    val individualReimbursementCredits: Flow<Map<Diner, Map<Discount, Double>>> = _individualReimbursementCredits
+    val individualDebtOwed: Flow<Map<Diner, Map<Debt, Double>>> = _individualDebtOwed
+    val individualDebtHeld: Flow<Map<Diner, Map<Debt, Double>>> = _individualDebtHeld
+    val individualTax: Flow<Map<Diner, Double>> = _individualTax
+    val individualSubtotalWithDiscountsAndTax: Flow<Map<Diner, Double>> = _individualSubtotalWithDiscountsAndTax
+    val individualTip: Flow<Map<Diner, Double>> = _individualTip
+    val individualTotal: Flow<Map<Diner, Double>> = _individualTotal
+
+    private fun <T> getPreferenceFlow(key: Preferences.Key<T>, defaultValue: T, initialValue: T? = null): StateFlow<T> = preferenceDataStore.data.mapLatest { preferences ->
+        preferences[key] ?: defaultValue
+    }.stateIn(CoroutineScope(Dispatchers.IO), SharingStarted.Eagerly, initialValue ?: defaultValue)
+    private fun <T> setPreferenceValue(key: Preferences.Key<T>, newValue: T) = CoroutineScope(Dispatchers.IO).launch {
+        preferenceDataStore.edit { preferences -> preferences[key] = newValue }
+    }
+
+    private fun newUUID() = UUID.randomUUID().toString()
+
+    private fun commitBill() = CoroutineScope(Dispatchers.Main).launch {
+        val billCalculation = BillCalculation(mBill, mRestaurant, mDiners, mItems, mDebts, mDiscounts, mPayments)
+
+        _bill.value = mBill
+        _diners.value = mDiners
+        _items.value = mItems
+        _debts.value = mDebts
+        _discounts.value = mDiscounts
+        _payments.value = mPayments
+
+        _groupSubtotal.value = billCalculation.groupSubtotal
+        _groupDiscountAmount.value = billCalculation.groupDiscountAmount
+        _groupSubtotalWithDiscounts.value = billCalculation.groupSubtotalWithDiscounts
+        _taxPercent.value = billCalculation.groupTaxPercent
+        _groupTaxAmount.value = billCalculation.groupTaxAmount
+        _groupSubtotalWithDiscountsAndTax.value = billCalculation.groupSubtotalWithDiscountsAndTax
+        _tipPercent.value = billCalculation.groupTipPercent
+        _groupTipAmount.value = billCalculation.groupTipAmount
+        _groupTotal.value = billCalculation.groupTotal
+
+        _individualSubtotals.value = billCalculation.individualSubtotals
+        _individualDiscountShares.value = billCalculation.individualDiscountShares
+        _individualDiscountTotals.value = billCalculation.individualDiscountTotals
+        _individualExcessDiscountsReleased.value = billCalculation.individualExcessDiscountsReleased
+        _individualExcessDiscountsAcquired.value = billCalculation.individualExcessDiscountsAcquired
+        _individualSubtotalsWithDiscounts.value = billCalculation.individualSubtotalsWithDiscounts
+        _individualReimbursementDebts.value = billCalculation.individualReimbursementDebts
+        _individualReimbursementCredits.value = billCalculation.individualReimbursementCredits
+        _individualDebtOwed.value = billCalculation.individualDebtOwed
+        _individualDebtHeld.value = billCalculation.individualDebtHeld
+        _individualTax.value = billCalculation.individualTax
+        _individualSubtotalWithDiscountsAndTax.value = billCalculation.individualSubtotalWithDiscountsAndTax
+        _individualTip.value = billCalculation.individualTip
+        _individualTotal.value = billCalculation.individualTotal
+    }
+
+    // Bill Functions
+    fun createAndLoadNewBill() {
+        val timestamp = System.currentTimeMillis()
+
+        val newBill = Bill(
+            newUUID(),
+            "Bill from " + SimpleDateFormat.getDateTimeInstance(DateFormat.DEFAULT, DateFormat.SHORT).format(Date(timestamp)),
+            timestamp,
+            defaultTaxPercent.value,
+            true,
+            defaultTipPercent.value,
+            true,
+            taxIsTipped.value,
+            discountsReduceTip.value)
+
+        val restaurant = Diner(newUUID(), newBill.id, Contact.restaurant)
+
+        // Commit updated objects to UI
+        mBill = newBill
+        mRestaurant = restaurant
+        mDiners = mutableListOf()
+        mItems = mutableListOf()
+        mDebts = mutableListOf()
+        mDiscounts = mutableListOf()
+        mPayments = mutableListOf()
+        commitBill()
+
+        // Write updates to the database
+        database.saveBill(newBill).invokeOnCompletion { setPreferenceValue(LOADED_BILL_ID_KEY, newBill.id) }
+        database.saveDiner(restaurant)
+    }
+    fun loadSavedBill(billId: String) = CoroutineScope(Dispatchers.IO).launch {
+        database.loadBill(billId)?.also { payload ->
+            withContext(Dispatchers.Main) {
+                mBill = payload.bill
+                mRestaurant = payload.restaurant
+                mDiners = payload.diners
+                mItems = payload.items
+                mDebts = payload.debts
+                mDiscounts = payload.discounts
+                mPayments = payload.payments
+
+                commitBill()
+            }
+
+            // Save ID of newly loaded bill so it will reload automatically on app relaunch
+            setPreferenceValue(LOADED_BILL_ID_KEY, payload.bill.id)
+        }
+    }
+    fun deleteBill(bill: Bill) {
+        if(bill == mBill) {
+            // Load a new bill if the current one is being deleted
+            createAndLoadNewBill()
+        }
+
+        database.deleteBill(bill)
+    }
+
+    // Diner Functions
+    fun addSelfAsDiner(includeWithEveryone: Boolean = true) {
+        val selfDiner = Diner(newUUID(), mBill.id, Contact.self)
+
+        Log.e("bill addSelfAsDiner", mBill.id)
+
+        if (includeWithEveryone) {
+            // TODO
+        }
+
+        mDiners.add(selfDiner)
+        commitBill()
+
+        database.saveDiner(selfDiner)
+        //TODO commit updates for other entities affected by includeWithEveryone
+    }
+    fun addContactsAsDiners(dinerContacts: Collection<Contact>, includeWithEveryone: Boolean = true) {
+
+        val diners: List<Diner> = if (includeWithEveryone) {
+            dinerContacts.map { contact ->
+                Log.e("bill addContac", contact.lookupKey)
+                Diner(newUUID(), mBill.id, contact).also {
+                    // TODO
+                }
+            }
+        } else {
+            dinerContacts.map { contact -> Diner(newUUID(), mBill.id, contact) }
+        }
+
+        mDiners.addAll(diners)
+        commitBill()
+
+        database.saveDiners(diners)
+        //TODO commit updates for other entities affected by includeWithEveryone
+    }
+    fun removeDiner(diner: Diner) {
+        mDiners.remove(diner)
+        diner.items.forEach { it.removeDiner(diner) }
+        diner.debtsOwed.forEach { it.removeDebtor(diner) }
+        diner.debtsHeld.forEach { it.removeCreditor(diner) }
+        diner.discountsReceived.forEach { it.removeRecipient(diner) }
+        diner.discountsPurchased.forEach { it.removePurchaser(diner) }
+        diner.paymentsSent.forEach { mPayments.remove(it) }
+        diner.paymentsReceived.forEach { mPayments.remove(it) }
+
+        commitBill()
+
+        database.deleteDiner(diner)
+        // TODO warn if any entities are without diners
+    }
+
+    // Item Functions
+    fun addItem(price: Double, name: String, diners: Collection<Diner>) {
+        val item = Item(newUUID(), mBill.id, price, name)
+        diners.forEach { diner ->
+            item.addDiner(diner)
+            diner.addItem(item)
+        }
+
+        mItems.add(item)
+        commitBill()
+
+        database.saveItem(item)
+    }
+//    fun editItem(item: Item, newPrice: Double? = null,) {
+//        item.price = 3 // TODO
+//    }
+    fun removeItem(item: Item) {
+        mItems.remove(item)
+        item.diners.forEach { it.removeItem(item) }
+        item.discounts.forEach { it.removeItem(item) }
+
+        commitBill()
+
+        database.deleteItem(item)
+        // TODO warn if any item discounts are without items
+    }
+
+    // Debt Functions
+    fun addDebt(amount: Double, debtors: Collection<Diner>, creditors: Collection<Diner>) {
+        val debt = Debt(newUUID(), mBill.id, amount)
+        debtors.forEach { debtor ->
+            debt.addDebtor(debtor)
+            debtor.addOwedDebt(debt)
+        }
+        creditors.forEach { creditor ->
+            debt.addCreditor(creditor)
+            creditor.addHeldDebt(debt)
+        }
+
+        mDebts.add(debt)
+        commitBill()
+
+        database.saveDebt(debt)
+    }
+    fun removeDebt(debt: Debt) {
+        mDebts.remove(debt)
+        debt.debtors.forEach { it.removeOwedDebt(debt) }
+        debt.creditors.forEach { it.removeHeldDebt(debt) }
+
+        commitBill()
+
+        database.deleteDebt(debt)
+    }
+
+    // Discount Functions
+    private fun addDiscount(asPercent: Boolean, onItems: Boolean, value: Double, cost: Double?, items: List<Item>?, recipients: List<Diner>?, purchasers: List<Diner>) {
+        val discount = Discount(newUUID(), mBill.id, asPercent, onItems, value, cost)
+        items?.forEach { item ->
+            discount.addItem(item)
+            item.addDiscount(discount)
+        }
+        recipients?.forEach { recipient ->
+            discount.addRecipient(recipient)
+            recipient.addReceivedDiscount(discount)
+        }
+        purchasers.forEach { purchaser ->
+            discount.addPurchaser(purchaser)
+            purchaser.addPurchasedDiscount(discount)
+        }
+
+        mDiscounts.add(discount)
+        commitBill()
+
+        database.saveDiscount(discount)
+    }
+    fun addDinerPercentDiscount(percent: Double, cost: Double?, recipients: List<Diner>, purchasers: List<Diner>) =
+        addDiscount(asPercent = true, onItems = false, percent, cost, null, recipients, purchasers)
+    fun addDinerValueDiscount(value: Double, cost: Double?, recipients: List<Diner>, purchasers: List<Diner>) =
+        addDiscount(asPercent = false, onItems = false, value, cost, null, recipients, purchasers)
+    fun addItemPercentDiscount(percent: Double, cost: Double?, items: List<Item>, purchasers: List<Diner>) =
+        addDiscount(asPercent = true, onItems = true, percent, cost, items, null, purchasers)
+    fun addItemValueDiscount(value: Double, cost: Double?, items: List<Item>, purchasers: List<Diner>) =
+        addDiscount(asPercent = false, onItems = true, value, cost, items, null, purchasers)
+    fun removeDiscount(discount: Discount) {
+        mDiscounts.remove(discount)
+        discount.items.forEach { it.removeDiscount(discount) }
+        discount.recipients.forEach { it.removeReceivedDiscount(discount) }
+        discount.purchasers.forEach { it.removePurchasedDiscount(discount) }
+
+        commitBill()
+
+        database.deleteDiscount(discount)
+    }
+
+    init {
+        ProcessLifecycleOwner.get().lifecycleScope.launchWhenResumed {
+            when(val billId = loadedBillId.value) {
+                "", "pending" -> createAndLoadNewBill()
+                mBill.id -> { /* Correct bill already loaded */ }
+                else -> {
+                    // TODO check if bill is expired
+                    loadSavedBill(billId)
+                }
+            }
+        }
+    }
 }
+
+
+class AddressBook(context: Context) {
+    companion object {
+        @Volatile
+        private var INSTANCE: AddressBook? = null
+
+        fun getInstance(context: Context): AddressBook {
+            return INSTANCE ?: synchronized(this) {
+                val instance = AddressBook(context)
+                INSTANCE = instance
+                instance
+            }
+        }
+    }
+
+    private val database = AppDatabase.getDatabase(context)
+
+    private val excludedNames = context.resources.getStringArray(R.array.addressbook_excluded_names)
+
+    private val _refreshingDeviceContacts = MutableStateFlow(false)
+    private val _readDeviceContactPending = MutableStateFlow(true)
+    val refreshingDeviceContacts = _refreshingDeviceContacts
+    val readDeviceContactPending = _readDeviceContactPending
+
+    private var appContacts = MutableStateFlow<Map<String, Contact>>(emptyMap())
+    private val deviceContacts = MutableStateFlow<Map<String, Contact>>(emptyMap())
+    val allContacts: StateFlow<Map<String, Contact>> = combineTransform(
+        appContacts,
+        deviceContacts,
+        _readDeviceContactPending) { fromApp, fromDevice, readPending ->
+
+        if(readPending)
+            return@combineTransform
+
+        val updatedAppContacts = mutableListOf<Contact>()
+
+        // Start with device contacts and supplement with saved app contacts
+        emit(fromDevice.toMutableMap().apply {
+            fromApp.forEach { (lookupKey, appContact) ->
+                this.merge(lookupKey, appContact) { oldContact, newContact ->
+                    if (oldContact.name != newContact.name ||
+                        oldContact.photoUri != newContact.photoUri) {
+                        newContact.withUpdatedExternalInfo(oldContact.name, newContact.name).also {
+                            updatedAppContacts.add(it)
+                        }
+                    } else {
+                        newContact
+                    }
+                }
+            }
+        })
+
+        database.saveContacts(updatedAppContacts)
+    }.stateIn(CoroutineScope(Dispatchers.Main), SharingStarted.WhileSubscribed(), emptyMap())
+
+    init {
+        CoroutineScope(Dispatchers.IO).launch {
+            appContacts.value = database.loadSavedContacts().associateBy { it.lookupKey }.toMutableMap()
+        }
+    }
+
+    fun saveContact(contact: Contact) = database.saveContact(contact)
+    fun removeContact(contact: Contact) = database.removeContact(contact)
+
+    fun favoriteContact(lookupKey: String) = CoroutineScope(Dispatchers.IO).launch { database.favoriteContact(lookupKey) }
+    fun favoriteContacts(lookupKeys: Collection<String>) = CoroutineScope(Dispatchers.IO).launch { database.favoriteContacts(lookupKeys) }
+    fun unfavoriteContact(lookupKey: String) = CoroutineScope(Dispatchers.IO).launch { database.resetContactVisibility(lookupKey) }
+    fun unfavoriteContacts(lookupKeys: Collection<String>) = CoroutineScope(Dispatchers.IO).launch { database.resetContactVisibilities(lookupKeys) }
+    fun unfavoriteFavoriteContacts() = CoroutineScope(Dispatchers.IO).launch { database.unfavoriteFavoriteContacts() }
+    fun hideContact(lookupKey: String) = CoroutineScope(Dispatchers.IO).launch { database.hideContact(lookupKey) }
+    fun hideContacts(lookupKeys: Collection<String>) = CoroutineScope(Dispatchers.IO).launch { database.hideContacts(lookupKeys) }
+    fun unhideContact(lookupKey: String) = CoroutineScope(Dispatchers.IO).launch { database.resetContactVisibility(lookupKey) }
+    fun unhideContacts(lookupKeys: Collection<String>) = CoroutineScope(Dispatchers.IO).launch { database.resetContactVisibilities(lookupKeys) }
+    fun unhideHiddenContacts() = CoroutineScope(Dispatchers.IO).launch { database.unhideHiddenContacts() }
+
+    fun refreshDeviceContacts(context: Context) = CoroutineScope(Dispatchers.IO).launch {
+        _refreshingDeviceContacts.value = true
+
+        val timestamp = System.currentTimeMillis()
+
+        val contacts = mutableMapOf<String, Contact>()
+
+        context.contentResolver.query(
+            ContactsContract.Contacts.CONTENT_URI,
+            arrayOf(ContactsContract.Contacts._ID,
+                    ContactsContract.Contacts.LOOKUP_KEY,
+                    ContactsContract.Contacts.DISPLAY_NAME_PRIMARY,
+                    ContactsContract.Contacts.PHOTO_URI),
+            null,
+            null,
+            null)?.apply {
+
+            while(moveToNext())
+            {
+                val name = getString(2)
+
+                if(name.isNullOrBlank() || excludedNames.contains(name))
+                    continue
+
+                contacts[getString(1)] = Contact(getString(1),
+                                                 name.trim(),
+                                                 getString(3),
+                                                 Contact.VISIBLE)
+            }
+        }?.close()
+
+        // Slight delay to give SwipeRefreshLayout time to animate to indicate refresh is taking place
+        delay(max(0L, 500L + timestamp - System.currentTimeMillis()))
+
+        deviceContacts.value = contacts
+
+        _refreshingDeviceContacts.value = false
+        _readDeviceContactPending.value = false
+    }
+    fun bypassRefreshDeviceContacts() {
+        deviceContacts.value = emptyMap()
+        _refreshingDeviceContacts.value = false
+        _readDeviceContactPending.value = false
+    }
+}
+
 
 @Database(entities = [Bill::class, Diner::class, Item::class, Debt::class, Discount::class,
     Payment::class, Contact::class, DinerItemJoin::class, DebtDebtorJoin::class,
@@ -282,7 +572,7 @@ class Repository(context: Context) {
     DiscountItemJoin::class, PaymentPayerJoin::class, PaymentPayeeJoin::class],
     exportSchema = false, version = 1)
 @TypeConverters(Converters::class)
-abstract class AppDatabase : RoomDatabase() {
+abstract class AppDatabase: RoomDatabase() {
     abstract fun billDao(): BillDao
     abstract fun dinerDao(): DinerDao
     abstract fun itemDao(): ItemDao
@@ -308,4 +598,77 @@ abstract class AppDatabase : RoomDatabase() {
             newDatabase.contactDao().save(Contact.self)
         }
     }
+
+    fun getSavedBills() = billDao().getSavedBills()
+
+    fun saveContact(contact: Contact) = CoroutineScope(Dispatchers.IO).launch { contactDao().save(contact) }
+    fun saveContacts(contacts: Collection<Contact>) = CoroutineScope(Dispatchers.IO).launch { contactDao().save(contacts) }
+    fun removeContact(contact: Contact) = CoroutineScope(Dispatchers.IO).launch { contactDao().delete(contact) }
+    suspend fun resetContactVisibility(lookupKey: String) = contactDao().resetVisibility(lookupKey)
+    suspend fun resetContactVisibilities(lookupKeys: Collection<String>) = contactDao().resetVisibility(lookupKeys)
+    suspend fun favoriteContact(lookupKey: String) = contactDao().favorite(lookupKey)
+    suspend fun favoriteContacts(lookupKeys: Collection<String>) = contactDao().favorite(lookupKeys)
+    suspend fun unfavoriteFavoriteContacts() = contactDao().unfavoriteAllFavorites()
+    suspend fun hideContact(lookupKey: String) = contactDao().hide(lookupKey)
+    suspend fun hideContacts(lookupKeys: Collection<String>) = contactDao().hide(lookupKeys)
+    suspend fun unhideHiddenContacts() = contactDao().unhideAllHidden()
+
+    fun deleteBill(bill: Bill) = CoroutineScope(Dispatchers.IO).launch { billDao().delete(bill) }
+    fun deleteDiner(diner: Diner) = CoroutineScope(Dispatchers.IO).launch { dinerDao().delete(diner) }
+    fun deleteItem(item: Item) = CoroutineScope(Dispatchers.IO).launch { itemDao().delete(item) }
+    fun deleteDebt(debt: Debt) = CoroutineScope(Dispatchers.IO).launch { debtDao().delete(debt) }
+    fun deleteDiscount(discount: Discount) = CoroutineScope(Dispatchers.IO).launch { discountDao().delete(discount) }
+    fun deletePayment(payment: Payment) = CoroutineScope(Dispatchers.IO).launch { paymentDao().delete(payment) }
+
+    fun deleteBills(bills: Collection<Bill>) = CoroutineScope(Dispatchers.IO).launch { billDao().delete(bills) }
+    fun deleteDiners(diners: Collection<Diner>) = CoroutineScope(Dispatchers.IO).launch { dinerDao().delete(diners) }
+    fun deleteItems(items: Collection<Item>) = CoroutineScope(Dispatchers.IO).launch { itemDao().delete(items) }
+    fun deleteDebts(debts: Collection<Debt>) = CoroutineScope(Dispatchers.IO).launch { debtDao().delete(debts) }
+    fun deleteDiscounts(discounts: Collection<Discount>) = CoroutineScope(Dispatchers.IO).launch { discountDao().delete(discounts) }
+    fun deletePayments(payments: Collection<Payment>) = CoroutineScope(Dispatchers.IO).launch { paymentDao().delete(payments) }
+
+    fun saveBill(bill: Bill) = CoroutineScope(Dispatchers.IO).launch { billDao().save(bill) }
+    fun saveDiner(diner: Diner) = CoroutineScope(Dispatchers.IO).launch { dinerDao().save(diner) }
+    fun saveDiners(diners: Collection<Diner>) = CoroutineScope(Dispatchers.IO).launch { dinerDao().save(diners) }
+    fun saveItem(item: Item) = CoroutineScope(Dispatchers.IO).launch { itemDao().save(item) }
+    fun saveItems(items: Collection<Item>) = CoroutineScope(Dispatchers.IO).launch { itemDao().save(items) }
+    fun saveDebt(debt: Debt) = CoroutineScope(Dispatchers.IO).launch { debtDao().save(debt) }
+    fun saveDiscount(discount: Discount) = CoroutineScope(Dispatchers.IO).launch { discountDao().save(discount) }
+    fun savePayment(payment: Payment) = CoroutineScope(Dispatchers.IO).launch { paymentDao().save(payment) }
+
+    suspend fun loadBill(billId: String): LoadBillPayload? {
+        val bill = billDao().getBill(billId) ?: return null
+        val restaurant = dinerDao().getRestaurantOnBill(billId) ?: return null
+        val dinerMap = dinerDao().getDinersOnBill(billId).associateBy { it.id }
+        val itemMap = itemDao().getItemsOnBill(billId).associateBy { it.id }
+        val debtMap = debtDao().getDebtsOnBill(billId).associateBy { it.id }
+        val discountMap = discountDao().getDiscountsOnBill(billId).associateBy { it.id }
+        val paymentMap = paymentDao().getPaymentsOnBill(billId).associateBy { it.id }
+
+        dinerMap.forEach { (_, diner) -> diner.populateEntityLists(itemMap, debtMap, discountMap, paymentMap) }
+        itemMap.forEach { (_, item) -> item.populateEntityLists(dinerMap, discountMap) }
+        debtMap.forEach { (_, debt) -> debt.populateEntityLists(dinerMap) }
+        discountMap.forEach { (_, discount) -> discount.populateEntityLists(dinerMap, itemMap) }
+        paymentMap.forEach { (_, payment) -> payment.populateEntities(dinerMap) }
+
+        return LoadBillPayload(
+            bill,
+            restaurant,
+            dinerMap.values.toMutableList(),
+            itemMap.values.toMutableList(),
+            debtMap.values.toMutableList(),
+            discountMap.values.toMutableList(),
+            paymentMap.values.toMutableList())
+    }
+
+    suspend fun loadSavedContacts() = contactDao().getSavedContacts()
 }
+
+
+data class LoadBillPayload(val bill: Bill,
+                           val restaurant: Diner,
+                           val diners: MutableList<Diner>,
+                           val items: MutableList<Item>,
+                           val debts: MutableList<Debt>,
+                           val discounts: MutableList<Discount>,
+                           val payments: MutableList<Payment>)

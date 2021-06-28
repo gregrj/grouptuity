@@ -5,7 +5,6 @@ import android.animation.ArgbEvaluator
 import android.animation.ValueAnimator
 import android.graphics.Color
 import android.os.Bundle
-import android.util.Log
 import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
@@ -104,7 +103,7 @@ class DiscountEntryFragment: Fragment(), Revealable by RevealableImpl() {
             // Editing existing discount
             binding.coveredFragment.setImageBitmap(coveredFragmentBitmap)
             binding.fadeView.visibility = View.GONE
-            binding.container.transitionName = "container" + discountEntryViewModel.loadedDiscountId.value
+            binding.container.transitionName = "container" + (discountEntryViewModel.loadedDiscount.value?.id ?: "")
 
             sharedElementEnterTransition = CardViewExpandTransition(binding.container.transitionName, binding.revealedLayout.id, true)
                 .setOnTransitionProgressCallback { _: Transition, sceneRoot: ViewGroup, _: View, animator: ValueAnimator ->
@@ -132,8 +131,6 @@ class DiscountEntryFragment: Fragment(), Revealable by RevealableImpl() {
         discountEntryViewModel.showUnsavedValidEditsAlertEvent.observe(viewLifecycleOwner) { it.consume()?.apply { showUnsavedValidEditsAlertEvent() } }
         discountEntryViewModel.showUnsavedInvalidEditsAlertEvent.observe(viewLifecycleOwner) { it.consume()?.apply { showUnsavedInvalidEditsAlertEvent() } }
         discountEntryViewModel.showIncompleteReimbursementAlertEvent.observe(viewLifecycleOwner) { it.consume()?.apply { showReimbursementNoSelectionsAlert() } }
-
-        discountEntryViewModel.closeFragmentEvent.observe(viewLifecycleOwner) { it.consume()?.apply { closeFragment() } }
     }
 
     override fun onResume() {
@@ -152,6 +149,7 @@ class DiscountEntryFragment: Fragment(), Revealable by RevealableImpl() {
             DiscountEntryViewModel.MISSING_RECIPIENTS -> Snackbar.make(binding.coordinatorLayout, R.string.discountentry_alert_missing_recipients, Snackbar.LENGTH_SHORT).show()
             DiscountEntryViewModel.INVALID_COST -> Snackbar.make(binding.coordinatorLayout, R.string.discountentry_alert_invalid_cost, Snackbar.LENGTH_SHORT).show()
             DiscountEntryViewModel.MISSING_PURCHASERS -> Snackbar.make(binding.coordinatorLayout, R.string.discountentry_alert_missing_purchasers, Snackbar.LENGTH_SHORT).show()
+            DiscountEntryViewModel.DISCOUNT_SAVED -> closeFragment()
         }
     }
 
@@ -163,7 +161,7 @@ class DiscountEntryFragment: Fragment(), Revealable by RevealableImpl() {
         discountEntryViewModel.freezeOutput()
 
         when {
-            discountEntryViewModel.loadedDiscountId.value == 0L -> {
+            discountEntryViewModel.loadedDiscount.value == null -> {
                 // New discount was not completed
                 if (args.originParams == null) {
                     // Discount entry was started from TaxTipFragment
@@ -198,7 +196,7 @@ class DiscountEntryFragment: Fragment(), Revealable by RevealableImpl() {
         }
 
         // Close fragment using default onBackPressed behavior
-        findNavController().previousBackStackEntry?.savedStateHandle?.set("discountIdKey", discountEntryViewModel.loadedDiscountId.value)
+        findNavController().previousBackStackEntry?.savedStateHandle?.set("discountIdKey", discountEntryViewModel.loadedDiscount.value?.id ?: 0L)
         requireActivity().onBackPressed()
     }
 
@@ -698,7 +696,7 @@ class DiscountEntryFragment: Fragment(), Revealable by RevealableImpl() {
     private fun setupReturnTransitionToDiscounts(view: View) {
         binding.coveredFragment.setImageBitmap(coveredFragmentBitmap)
         binding.fadeView.visibility = View.GONE
-        binding.container.transitionName = "container" + discountEntryViewModel.loadedDiscountId.value
+        binding.container.transitionName = "container" + (discountEntryViewModel.loadedDiscount.value?.id ?: "")
 
         //TODO move to attemptClose  to handle inset changes
         sharedElementReturnTransition = CardViewExpandTransition(binding.container.transitionName, binding.revealedLayout.id, false)

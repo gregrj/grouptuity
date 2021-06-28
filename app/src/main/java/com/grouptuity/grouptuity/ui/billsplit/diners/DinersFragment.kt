@@ -130,8 +130,7 @@ class DinersFragment : Fragment() {
 
 class DinersRecyclerViewAdapter(private val context: Context,
                                 private val dinersViewModel: DinersViewModel,
-                                private val listener: RecyclerViewListener
-): RecyclerView.Adapter<DinersRecyclerViewAdapter.ViewHolder>() {
+                                private val listener: RecyclerViewListener): RecyclerView.Adapter<DinersRecyclerViewAdapter.ViewHolder>() {
 
     private var mDataSet = emptyList<Pair<Diner,String>>()
 
@@ -173,13 +172,13 @@ class DinersRecyclerViewAdapter(private val context: Context,
                 //TODO handle orphan items / discounts from removed diner
             }
 
-            if(newDiner.items.isEmpty()) {
+            if(newDiner.itemIds.isEmpty()) {
                 viewBinding.message.text = context.resources.getString(R.string.diners_zero_items)
             } else {
                 viewBinding.message.text = context.resources.getQuantityString(
                     R.plurals.diners_num_items_with_subtotal,
-                    newDiner.items.size,
-                    newDiner.items.size,
+                    newDiner.itemIds.size,
+                    newDiner.itemIds.size,
                     dinerSubtotal)
             }
 
@@ -203,7 +202,7 @@ class DinersRecyclerViewAdapter(private val context: Context,
                 return newDiner.id == oldDiner.id &&
                         newDiner.name == oldDiner.name &&
                         newDiner.photoUri == oldDiner.photoUri &&
-                        newDiner.items.size == oldDiner.items.size &&
+                        newDiner.itemIds.size == oldDiner.itemIds.size &&
                         newDataSet[newPosition].second == mDataSet[oldPosition].second
             }
         })

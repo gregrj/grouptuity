@@ -1,7 +1,6 @@
 package com.grouptuity.grouptuity.ui.billsplit.discountentry
 
 import android.app.Application
-import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.asLiveData
@@ -44,24 +43,20 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
     val loadItemRecyclerViewEvent: LiveData<Event<Boolean>> = loadItemRecyclerViewEventMutable
     val loadReimbursementFragmentEvent: LiveData<Event<Boolean>> = loadReimbursementFragmentEventMutable
 
-    val loadedDiscountId = MutableStateFlow(0L)
-    val diners: LiveData<Array<Diner>> = repository.diners.withOutputSwitch(isOutputFlowing).asLiveData()
-    val dinerIdMap = repository.dinerIdMap.withOutputSwitch(isOutputFlowing).asLiveData()
-    val dinerSubtotals: LiveData<Map<Long, String>> = repository.dinerSubtotals.mapLatest {
-        it.mapValues { entry -> NumberFormat.getCurrencyInstance().format(it.getOrDefault(entry.key, 0.0)) }
-    }.withOutputSwitch(isOutputFlowing).asLiveData()
-    val items: LiveData<Array<Item>> = repository.items.withOutputSwitch(isOutputFlowing).asLiveData()
-
     private val priceCalcData = CalculatorData(percentMaxDecimals = app.resources.getInteger(R.integer.percent_max_decimals))
     private val costCalcData = CalculatorData(currencyZeroAcceptable = true)
 
     private val _isHandlingReimbursements = MutableStateFlow(false)
     private val _isDiscountOnItems = MutableStateFlow(true)
 
-    // Selections
-    private val itemSelectionSet = mutableSetOf<Long>()
-    private val dinerSelectionSet = mutableSetOf<Long>()
-    private val reimburseeSelectionSet = mutableSetOf<Long>()
+    // Bill Entities and Selections
+    val loadedDiscount = MutableStateFlow<Discount?>(null)
+    val diners: LiveData<List<Diner>> = repository.diners.withOutputSwitch(isOutputFlowing).asLiveData()
+    val items: LiveData<List<Item>> = repository.items.withOutputSwitch(isOutputFlowing).asLiveData()
+    val numberOfDiners: LiveData<Int> = repository.numberOfDiners.withOutputSwitch(isOutputFlowing).asLiveData()
+    private val itemSelectionSet = mutableSetOf<Item>()
+    private val dinerSelectionSet = mutableSetOf<Diner>()
+    private val reimburseeSelectionSet = mutableSetOf<Diner>()
     private val _itemSelections = MutableStateFlow(itemSelectionSet.toSet())
     private val _dinerSelections = MutableStateFlow(dinerSelectionSet.toSet())
     private val _reimburseeSelections = MutableStateFlow(reimburseeSelectionSet.toSet())
@@ -73,7 +68,7 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
     private var editedRecipientSelections: Boolean? = null
     private var editedReimbursementSelections: Boolean? = null
     private var hasSubstantiveEdits: StateFlow<Boolean> = combine(
-        repository.getDiscount(loadedDiscountId),
+        loadedDiscount,
         priceCalcData.numericalValue,
         costCalcData.numericalValue,
         priceCalcData.isInPercent,
@@ -86,22 +81,27 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
             val price = it[1] as Double?
             val cost = it[2] as Double?
             val inPercent = it[3] as Boolean
-            val items = it[4] as Set<Long>
-            val diners = it[5] as Set<Long>
-            val reimbursees = it[6] as Set<Long>
+            val items = it[4] as Set<Item>
+            val diners = it[5] as Set<Diner>
+            val reimbursees = it[6] as Set<Diner>
 
             discount.value != price ||
             discount.cost != cost ||
             discount.asPercent != inPercent ||
-            discount.items.toSet() != items ||
-            discount.recipients.toSet() != diners ||
-            discount.purchasers.toSet() != reimbursees
+            discount.itemIds.toSet() != items ||
+            discount.recipientIds.toSet() != diners ||
+            discount.purchaserIds.toSet() != reimbursees
         } ?: false
     }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, false)
 
-    private val recipients: Flow<Set<Long>> = combine(_isDiscountOnItems, _dinerSelections, _itemSelections, repository.itemIdMap) { onItems, dinerSelections, itemSelections, itemMap ->
+    private val recipients: Flow<Set<Diner>> = combine(
+        _isDiscountOnItems,
+        _dinerSelections,
+        _itemSelections,
+        repository.items) { onItems, dinerSelections, itemSelections, _ ->
+
         if(onItems) {
-            itemSelections.flatMap { itemMap[it]?.diners ?: emptyList() }.toSet()
+            itemSelections.flatMap { it.diners }.toSet()
         } else {
             dinerSelections
         }
@@ -112,21 +112,19 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
         priceCalcData.numericalValue,
         _itemSelections,
         _dinerSelections,
-        repository.itemIdMap,
-        repository.dinerSubtotals) {
+        repository.individualSubtotals) {
         val onItems = it[0] as Boolean
         val asPercent  = it[1] as Boolean
         val rawValue = it[2] as Double?
-        val items = it[3] as Set<Long>
-        val recipients = it[4] as Set<Long>
-        val itemMap = it[5] as Map<Long, Item>
-        val subtotals = it[6] as Map<Long, Double>
+        val items = it[3] as Set<Item>
+        val recipients = it[4] as Set<Diner>
+        val subtotals = it[5] as Map<Diner, Double>
 
         if(rawValue == null) {
             null
         } else if(asPercent) {
             if(onItems) {
-                getDiscountCurrencyOnItemsPercent(rawValue, items, itemMap)
+                getDiscountCurrencyOnItemsPercent(rawValue, items)
             } else {
                 getDiscountCurrencyOnDinersPercent(rawValue, recipients, subtotals)
             }
@@ -134,28 +132,28 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
             rawValue
         }
     }
-    private val recipientShares: Flow<Map<Long, Double>> = combine(
+    private val recipientShares: Flow<Map<Diner, Double>> = combine(
         _isDiscountOnItems,
         priceCalcData.isInPercent,
         priceCalcData.numericalValue,
         _itemSelections,
-        repository.itemIdMap,
+        repository.items,
         recipients,
-        repository.dinerSubtotals) {
+        repository.individualSubtotals) {
+
         val onItems = it[0] as Boolean
         val asPercent = it[1] as Boolean
         val value = it[2] as Double?
-        val items = it[3] as Set<Long>
-        val itemMap = it[4] as Map<Long, Item>
-        val recipients = it[5] as Set<Long>
-        val subtotals = it[6] as Map<Long, Double>
+        val itemSelections = it[3] as Set<Item>
+        val recipients = it[5] as Set<Diner>
+        val subtotals = it[6] as Map<Diner, Double>
 
         if(value != null && value > 0.0) {
             if(onItems) {
                 if(asPercent) {
-                    getDiscountRecipientSharesOnItemsPercent(value, items, itemMap)
+                    getDiscountRecipientSharesOnItemsPercent(value, itemSelections)
                 } else {
-                    getDiscountRecipientSharesOnItemsValue(value, items, itemMap)
+                    getDiscountRecipientSharesOnItemsValue(value, itemSelections)
                 }
             } else {
                 if (asPercent) {
@@ -168,7 +166,7 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
             emptyMap()
         }
     }
-    private val discountedSubtotals = combine(repository.dinerSubtotals, recipientShares) { subtotals, shares ->
+    private val discountedSubtotals = combine(repository.individualSubtotals, recipientShares) { subtotals, shares ->
         shares.mapValues { subtotals.getOrDefault(it.key, 0.0) - it.value }
     }
 
@@ -182,11 +180,11 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
                 getApplication<Application>().resources.getString(R.string.discountentry_toolbar_priceentry_value)
         }
     }
-    private val itemsToolBarTitle: Flow<String> = combine(_itemSelections, repository.numberOfItems, priceCalcData.isInPercent) { selectedItemIds, maxItems, inPercent ->
-        when(selectedItemIds.size) {
+    private val itemsToolBarTitle: Flow<String> = combine(_itemSelections, repository.numberOfItems, priceCalcData.isInPercent) { selectedItems, maxItems, inPercent ->
+        when(selectedItems.size) {
             0 -> { getApplication<Application>().resources.getString(R.string.discountentry_toolbar_selection_zeroitems) }
             1 -> {
-                repository.itemIdMap.value[selectedItemIds.firstOrNull()]?.name?.let {
+                selectedItems.firstOrNull()?.name?.let {
                     getApplication<Application>().resources.getString(R.string.discountentry_toolbar_selection_oneitem, it)
                 } ?: if(inPercent) {
                     getApplication<Application>().resources.getQuantityString(R.plurals.discountentry_toolbar_selection_someitems_percent, 1, 1)
@@ -197,49 +195,49 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
             maxItems -> { getApplication<Application>().resources.getString(R.string.discountentry_toolbar_selection_allitems) }
             else -> {
                 if(inPercent) {
-                    getApplication<Application>().resources.getQuantityString(R.plurals.discountentry_toolbar_selection_someitems_percent, selectedItemIds.size, selectedItemIds.size)
+                    getApplication<Application>().resources.getQuantityString(R.plurals.discountentry_toolbar_selection_someitems_percent, selectedItems.size, selectedItems.size)
                 } else {
-                    getApplication<Application>().resources.getQuantityString(R.plurals.discountentry_toolbar_selection_someitems_currency, selectedItemIds.size, selectedItemIds.size)
+                    getApplication<Application>().resources.getQuantityString(R.plurals.discountentry_toolbar_selection_someitems_currency, selectedItems.size, selectedItems.size)
                 }
             }
         }
     }
-    private val dinersToolBarTitle: Flow<String> = combine(_dinerSelections, repository.numberOfDiners, priceCalcData.isInPercent) { selectedDinerIds, maxDiners, inPercent ->
+    private val dinersToolBarTitle: Flow<String> = combine(_dinerSelections, repository.numberOfDiners, priceCalcData.isInPercent) { selectedDiners, maxDiners, inPercent ->
         if(inPercent) {
-            when(selectedDinerIds.size) {
+            when(selectedDiners.size) {
                 0 -> { getApplication<Application>().resources.getString(R.string.discountentry_toolbar_selection_zerodiners) }
                 1 -> {
-                    repository.dinerIdMap.value[selectedDinerIds.firstOrNull()]?.name?.let {
+                    selectedDiners.firstOrNull()?.name?.let {
                         getApplication<Application>().resources.getString(R.string.discountentry_toolbar_selection_onediner, it)
                     } ?: getApplication<Application>().resources.getQuantityString(R.plurals.discountentry_toolbar_selection_somediners_percent, 1, 1)
                 }
                 maxDiners -> { getApplication<Application>().resources.getString(R.string.discountentry_toolbar_selection_alldiners_percent) }
-                else -> { getApplication<Application>().resources.getQuantityString(R.plurals.discountentry_toolbar_selection_somediners_percent, selectedDinerIds.size, selectedDinerIds.size) }
+                else -> { getApplication<Application>().resources.getQuantityString(R.plurals.discountentry_toolbar_selection_somediners_percent, selectedDiners.size, selectedDiners.size) }
             }
         } else {
-            when(selectedDinerIds.size) {
+            when(selectedDiners.size) {
                 0 -> { getApplication<Application>().resources.getString(R.string.discountentry_toolbar_selection_zerodiners) }
                 1 -> {
-                    repository.dinerIdMap.value[selectedDinerIds.firstOrNull()]?.name?.let {
+                    selectedDiners.firstOrNull()?.name?.let {
                         getApplication<Application>().resources.getString(R.string.discountentry_toolbar_selection_onediner, it)
                     } ?: getApplication<Application>().resources.getQuantityString(R.plurals.discountentry_toolbar_selection_somediners_currency, 1, 1)
                 }
                 maxDiners -> { getApplication<Application>().resources.getString(R.string.discountentry_toolbar_selection_alldiners_currency) }
                 else -> {
-                    getApplication<Application>().resources.getQuantityString(R.plurals.discountentry_toolbar_selection_somediners_currency, selectedDinerIds.size, selectedDinerIds.size)
+                    getApplication<Application>().resources.getQuantityString(R.plurals.discountentry_toolbar_selection_somediners_currency, selectedDiners.size, selectedDiners.size)
                 }
             }
         }
     }
-    private val reimbursementToolBarTitle: Flow<String> = combine(_reimburseeSelections, repository.numberOfDiners) { selectedReimburseeIds, maxReimbursees ->
-        when(selectedReimburseeIds.size) {
+    private val reimbursementToolBarTitle: Flow<String> = combine(_reimburseeSelections, repository.numberOfDiners) { selectedReimbursees, maxReimbursees ->
+        when(selectedReimbursees.size) {
             0 -> { getApplication<Application>().resources.getString(R.string.discountentry_toolbar_selection_zeroreimbursees) }
             1 -> {
-                repository.dinerIdMap.value[selectedReimburseeIds.firstOrNull()]?.name?.let { getApplication<Application>().resources.getString(R.string.discountentry_toolbar_selection_onereimbursee, it) } ?:
+                selectedReimbursees.firstOrNull()?.name?.let { getApplication<Application>().resources.getString(R.string.discountentry_toolbar_selection_onereimbursee, it) } ?:
                 getApplication<Application>().resources.getQuantityString(R.plurals.discountentry_toolbar_selection_somereimbursees, 1, 1)
             }
             maxReimbursees -> { getApplication<Application>().resources.getString(R.string.discountentry_toolbar_selection_allreimbursees) }
-            else -> { getApplication<Application>().resources.getQuantityString(R.plurals.discountentry_toolbar_selection_somereimbursees, selectedReimburseeIds.size, selectedReimburseeIds.size) }
+            else -> { getApplication<Application>().resources.getQuantityString(R.plurals.discountentry_toolbar_selection_somereimbursees, selectedReimbursees.size, selectedReimbursees.size) }
         }
     }
     private val uiInTertiaryState: Flow<Boolean> = combine(
@@ -268,10 +266,15 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
     val isDiscountOnItems: LiveData<Boolean> = _isDiscountOnItems.withOutputSwitch(isOutputFlowing).asLiveData()
     val tabsVisible: LiveData<Boolean> = combine(priceCalcData.isNumberPadVisible, costCalcData.isNumberPadVisible){ price, cost -> !price && !cost }.withOutputSwitch(isOutputFlowing).asLiveData()
 
-    val itemSelections: LiveData<Set<Long>> = _itemSelections.withOutputSwitch(isOutputFlowing).asLiveData()
-    val dinerSelections: LiveData<Set<Long>> = _dinerSelections.withOutputSwitch(isOutputFlowing).asLiveData()
-    val reimburseeSelections: LiveData<Set<Long>> = _reimburseeSelections.withOutputSwitch(isOutputFlowing).asLiveData()
+    val itemSelections: LiveData<Set<Item>> = _itemSelections.withOutputSwitch(isOutputFlowing).asLiveData()
+    val dinerSelections: LiveData<Set<Diner>> = _dinerSelections.withOutputSwitch(isOutputFlowing).asLiveData()
+    val reimburseeSelections: LiveData<Set<Diner>> = _reimburseeSelections.withOutputSwitch(isOutputFlowing).asLiveData()
 
+    val dinerSubtotals: LiveData<Map<Diner, String>> = repository.individualSubtotals.mapLatest {
+        it.mapValues { entry ->
+            NumberFormat.getCurrencyInstance().format(it.getOrDefault(entry.key, 0.0))
+        }
+    }.withOutputSwitch(isOutputFlowing).asLiveData()
     val discountRecipientShares = recipientShares.mapLatest { shares ->
         val currencyFormatter = NumberFormat.getCurrencyInstance()
         shares.mapValues { currencyFormatter.format(it.value) }
@@ -295,7 +298,7 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
             }
         }
     }.withOutputSwitch(isOutputFlowing).asLiveData()
-    val recipientReimbursementDebts: LiveData<Map<Long, Double>> = combine(costCalcData.numericalValue, currencyValue, recipientShares) { cost, value, recipientShares ->
+    val recipientReimbursementDebts: LiveData<Map<Diner, Double>> = combine(costCalcData.numericalValue, currencyValue, recipientShares) { cost, value, recipientShares ->
         if(cost != null && value != null && value > 0.0) {
             getDiscountReimbursementDebts(cost, value, recipientShares)
         }
@@ -303,7 +306,7 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
             emptyMap()
         }
     }.withOutputSwitch(isOutputFlowing).asLiveData()
-    val purchaserReimbursementCredits: LiveData<Map<Long, Double>> = combine(costCalcData.numericalValue, _reimburseeSelections) { cost, selections ->
+    val purchaserReimbursementCredits: LiveData<Map<Diner, Double>> = combine(costCalcData.numericalValue, _reimburseeSelections) { cost, selections ->
         if(cost == null) {
             emptyMap()
         } else {
@@ -393,7 +396,6 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
         selections.size == max
     }.withOutputSwitch(isOutputFlowing).distinctUntilChanged().asLiveData()
 
-    val priceAcceptEvents: LiveData<Event<String>> = priceCalcData.acceptEvents.asLiveData()
     val costAcceptEvents: LiveData<Event<String>> = costCalcData.acceptEvents.asLiveData()
     private val showUnsavedInvalidEditsAlertEventMutable = MutableLiveData<Event<Boolean>>()
     val showUnsavedInvalidEditsAlertEvent: LiveData<Event<Boolean>> = showUnsavedInvalidEditsAlertEventMutable
@@ -401,8 +403,6 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
     val showUnsavedValidEditsAlertEvent: LiveData<Event<Boolean>> = showUnsavedValidEditsAlertEventMutable
     private val showIncompleteReimbursementAlertEventMutable = MutableLiveData<Event<Boolean>>()
     val showIncompleteReimbursementAlertEvent: LiveData<Event<Boolean>> = showIncompleteReimbursementAlertEventMutable
-    private val closeFragmentEventMutable = MutableLiveData<Event<Boolean>>()
-    val closeFragmentEvent: LiveData<Event<Boolean>> = closeFragmentEventMutable
 
     override fun notifyTransitionFinished() {
         super.notifyTransitionFinished()
@@ -429,7 +429,6 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
         showIncompleteReimbursementAlertEventMutable.value?.consume()
         showUnsavedInvalidEditsAlertEventMutable.value?.consume()
         showUnsavedValidEditsAlertEventMutable.value?.consume()
-        closeFragmentEventMutable.value?.consume()
 
         itemSelectionSet.clear()
         dinerSelectionSet.clear()
@@ -440,7 +439,7 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
         if(discount == null) {
             // Creating new discount
             editingExistingDiscount = false
-            loadedDiscountId.value = 0L
+            loadedDiscount.value = null
 
             priceCalcData.initialize(null, false, showNumberPad = true)
             costCalcData.initialize(null, false)
@@ -453,7 +452,7 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
         } else {
             // Editing existing discount
             editingExistingDiscount = true
-            loadedDiscountId.value = discount.id
+            loadedDiscount.value = discount
 
             priceCalcData.initialize(discount.value, discount.asPercent)
             costCalcData.initialize(discount.cost, false)
@@ -628,14 +627,14 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
     }
     fun acceptCost() = costCalcData.tryAcceptValue()
 
-    fun isDinerSelected(diner: Diner) = dinerSelectionSet.contains(diner.id)
+    fun isDinerSelected(diner: Diner) = dinerSelectionSet.contains(diner)
     fun toggleDinerSelection(diner: Diner) {
         editedRecipientSelections = true
 
-        if(dinerSelectionSet.contains(diner.id)) {
-            dinerSelectionSet.remove(diner.id)
+        if(dinerSelectionSet.contains(diner)) {
+            dinerSelectionSet.remove(diner)
         } else {
-            dinerSelectionSet.add(diner.id)
+            dinerSelectionSet.add(diner)
         }
         _dinerSelections.value = dinerSelectionSet.toSet()
     }
@@ -644,7 +643,7 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
 
         diners.value?.apply {
             dinerSelectionSet.clear()
-            dinerSelectionSet.addAll(this.map { it.id })
+            dinerSelectionSet.addAll(this)
             _dinerSelections.value = dinerSelectionSet.toSet()
         }
     }
@@ -654,13 +653,13 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
         _dinerSelections.value = dinerSelectionSet.toSet()
     }
 
-    fun isItemSelected(item: Item) = itemSelectionSet.contains(item.id)
+    fun isItemSelected(item: Item) = itemSelectionSet.contains(item)
     fun toggleItemSelection(item: Item) {
         editedRecipientSelections = true
-        if(itemSelectionSet.contains(item.id)) {
-            itemSelectionSet.remove(item.id)
+        if(itemSelectionSet.contains(item)) {
+            itemSelectionSet.remove(item)
         } else {
-            itemSelectionSet.add(item.id)
+            itemSelectionSet.add(item)
         }
         _itemSelections.value = itemSelectionSet.toSet()
     }
@@ -668,7 +667,7 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
         editedRecipientSelections = true
         items.value?.apply {
             itemSelectionSet.clear()
-            itemSelectionSet.addAll(this.map { it.id })
+            itemSelectionSet.addAll(this)
             _itemSelections.value = itemSelectionSet.toSet()
         }
     }
@@ -678,13 +677,13 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
         _itemSelections.value = itemSelectionSet.toSet()
     }
 
-    fun isReimburseeSelected(reimbursee: Diner) = reimburseeSelectionSet.contains(reimbursee.id)
+    fun isReimburseeSelected(reimbursee: Diner) = reimburseeSelectionSet.contains(reimbursee)
     fun toggleReimburseeSelection(reimbursee: Diner) {
         editedReimbursementSelections = true
-        if(reimburseeSelectionSet.contains(reimbursee.id)) {
-            reimburseeSelectionSet.remove(reimbursee.id)
+        if(reimburseeSelectionSet.contains(reimbursee)) {
+            reimburseeSelectionSet.remove(reimbursee)
         } else {
-            reimburseeSelectionSet.add(reimbursee.id)
+            reimburseeSelectionSet.add(reimbursee)
         }
         _reimburseeSelections.value = reimburseeSelectionSet.toSet()
     }
@@ -692,7 +691,7 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
         editedReimbursementSelections = true
         diners.value?.apply {
             reimburseeSelectionSet.clear()
-            reimburseeSelectionSet.addAll(this.map { it.id })
+            reimburseeSelectionSet.addAll(this)
             _reimburseeSelections.value = reimburseeSelectionSet.toSet()
         }
     }
@@ -718,13 +717,24 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
             (cost != null && cost > 0.0) && purchasers.isEmpty() -> { return MISSING_PURCHASERS }
             purchasers.isNotEmpty() && (cost == null || cost == 0.0) -> { return INVALID_COST }
             else -> {
-                CoroutineScope(Dispatchers.IO).launch {
-                    loadedDiscountId.value = if(onItems) {
-                        repository.createItemDiscount(loadedDiscountId.value, asPercent, price, cost, items, purchasers)
+                if (loadedDiscount.value == null) {
+                    if(onItems) {
+                        if(asPercent) {
+                            repository.addItemPercentDiscount(price, cost, items, purchasers)
+                        } else {
+                            repository.addItemValueDiscount(price, cost, items, purchasers)
+                        }
                     } else {
-                        repository.createDinerDiscount(loadedDiscountId.value, asPercent, price, cost, recipients, purchasers)
+                        if(asPercent) {
+                            repository.addDinerPercentDiscount(price, cost, recipients, purchasers)
+                        } else {
+                            repository.addDinerValueDiscount(price, cost, recipients, purchasers)
+                        }
                     }
-                }.invokeOnCompletion { closeFragmentEventMutable.postValue(Event(true)) }
+                } else {
+                    // TODO edit existing discount
+                }
+
                 return DISCOUNT_SAVED
             }
         }

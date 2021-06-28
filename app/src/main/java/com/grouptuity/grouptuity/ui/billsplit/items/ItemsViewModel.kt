@@ -8,7 +8,7 @@ import com.grouptuity.grouptuity.data.withOutputSwitch
 
 class ItemsViewModel(application: Application): UIViewModel(application) {
     val items = repository.items.withOutputSwitch(isOutputFlowing).asLiveData()
-    val dinerIdMap = repository.dinerIdMap.withOutputSwitch(isOutputFlowing).asLiveData()
+    val numberOfDiners = repository.numberOfDiners.withOutputSwitch(isOutputFlowing).asLiveData()
 
-    fun removeItem(item: Item) { repository.deleteItem(item) }
+    fun removeItem(item: Item) { repository.removeItem(item) }
 }

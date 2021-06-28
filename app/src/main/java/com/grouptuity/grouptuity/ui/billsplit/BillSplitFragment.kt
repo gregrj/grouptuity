@@ -20,6 +20,8 @@ import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
 import com.grouptuity.grouptuity.ui.custom.transitions.CircularRevealTransition
 
 
+// TODO prevent double tap on fab causing navigation error
+
 class BillSplitFragment: Fragment() {
     private var binding by setNullOnDestroy<FragBillSplitBinding>()
     private lateinit var billSplitViewModel: BillSplitViewModel

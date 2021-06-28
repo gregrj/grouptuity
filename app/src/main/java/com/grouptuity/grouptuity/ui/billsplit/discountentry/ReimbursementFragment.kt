@@ -29,7 +29,6 @@ class ReimbursementFragment: Fragment() {
     private var binding by setNullOnDestroy<FragDiscountEntryReimbursementBinding>()
     private lateinit var discountEntryViewModel: DiscountEntryViewModel
     private lateinit var reimburseeRecyclerAdapter: ReimburseeSelectionRecyclerViewAdapter
-    private var observing = false
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         discountEntryViewModel = ViewModelProvider(requireActivity()).get(DiscountEntryViewModel::class.java)
@@ -111,17 +110,29 @@ class ReimbursementFragment: Fragment() {
         binding.selections.swipeRefreshLayout.isEnabled = false
         binding.selections.swipeRefreshLayout.isRefreshing = true
 
-        discountEntryViewModel.diners.observe(viewLifecycleOwner, { diners -> lifecycleScope.launch { reimburseeRecyclerAdapter.updateDataSet(diners = diners) }})
-        discountEntryViewModel.reimburseeSelections.observe(viewLifecycleOwner, { selections -> lifecycleScope.launch { reimburseeRecyclerAdapter.updateDataSet(selections = selections) }})
-        discountEntryViewModel.recipientReimbursementDebts.observe(viewLifecycleOwner, { debts -> lifecycleScope.launch { reimburseeRecyclerAdapter.updateDataSet(reimbursementDebts = debts) }})
-        discountEntryViewModel.purchaserReimbursementCredits.observe(viewLifecycleOwner, { credits -> lifecycleScope.launch { reimburseeRecyclerAdapter.updateDataSet(reimbursementCredits = credits) }})
+        discountEntryViewModel.diners.observe(viewLifecycleOwner) { diners ->
+            lifecycleScope.launch {
+                reimburseeRecyclerAdapter.updateDataSet(
+                    diners = diners
+                )
+            }
+        }
+        discountEntryViewModel.reimburseeSelections.observe(viewLifecycleOwner) { selections ->
+            lifecycleScope.launch { reimburseeRecyclerAdapter.updateDataSet(selections = selections) }
+        }
+        discountEntryViewModel.recipientReimbursementDebts.observe(viewLifecycleOwner) { debts ->
+            lifecycleScope.launch { reimburseeRecyclerAdapter.updateDataSet(reimbursementDebts = debts) }
+        }
+        discountEntryViewModel.purchaserReimbursementCredits.observe(viewLifecycleOwner) { credits ->
+            lifecycleScope.launch { reimburseeRecyclerAdapter.updateDataSet(reimbursementCredits = credits) }
+        }
     }
 
     private inner class ReimburseeSelectionRecyclerViewAdapter(val context: Context, val listener: RecyclerViewListener): RecyclerView.Adapter<ReimburseeSelectionRecyclerViewAdapter.ViewHolder>() {
-        private var mDinerList = emptyArray<Diner>()
-        private var mSelections = emptySet<Long>()
-        private var mReimbursementDebts = emptyMap<Long, Double>()
-        private var mReimbursementCredits = emptyMap<Long, Double>()
+        private var mDinerList = emptyList<Diner>()
+        private var mSelections = emptySet<Diner>()
+        private var mReimbursementDebts = emptyMap<Diner, Double>()
+        private var mReimbursementCredits = emptyMap<Diner, Double>()
         private val currencyFormatter = NumberFormat.getCurrencyInstance()
 
         val colorBackground = TypedValue().also { requireContext().theme.resolveAttribute(R.attr.colorBackground, it, true) }.data
@@ -144,7 +155,7 @@ class ReimbursementFragment: Fragment() {
             holder.apply {
                 itemView.tag = newDiner // store updated data
 
-                val isSelected = mSelections.contains(newDiner.id)
+                val isSelected = mSelections.contains(newDiner)
 
                 viewBinding.contactIcon.setContact(newDiner.contact, isSelected)
 
@@ -152,19 +163,19 @@ class ReimbursementFragment: Fragment() {
 
                 itemView.setBackgroundColor(if(isSelected) colorBackgroundVariant else colorBackground)
 
-                if(newDiner.id in mReimbursementCredits) {
+                if(newDiner in mReimbursementCredits) {
                     viewBinding.message.visibility = View.VISIBLE
                     viewBinding.message.setTypeface(viewBinding.message.typeface, Typeface.BOLD)
 
-                    if(newDiner.id in mReimbursementDebts) {
-                        val netReimbursementNumerical = mReimbursementCredits[newDiner.id]!! - mReimbursementDebts[newDiner.id]!!
+                    if(newDiner in mReimbursementDebts) {
+                        val netReimbursementNumerical = mReimbursementCredits[newDiner]!! - mReimbursementDebts[newDiner]!!
                         val netReimbursementString = currencyFormatter.format(abs(netReimbursementNumerical))
 
                         viewBinding.message.text = if(netReimbursementString == currencyFormatter.format(0.0)) {
                             context.getString(R.string.discountentry_reimbursement_neutral)
                         } else {
-                            val fullDebtString = currencyFormatter.format(mReimbursementDebts[newDiner.id])
-                            val fullCreditString = currencyFormatter.format(mReimbursementCredits[newDiner.id])
+                            val fullDebtString = currencyFormatter.format(mReimbursementDebts[newDiner])
+                            val fullCreditString = currencyFormatter.format(mReimbursementCredits[newDiner])
                             if (netReimbursementNumerical > 0.0) {
                                 context.getString(R.string.discountentry_reimbursement_receive_reduced, netReimbursementString, fullCreditString, fullDebtString)
                             } else {
@@ -172,19 +183,19 @@ class ReimbursementFragment: Fragment() {
                             }
                         }
                     } else {
-                        viewBinding.message.text = context.getString(R.string.discountentry_reimbursement_receive, currencyFormatter.format(mReimbursementCredits[newDiner.id]))
+                        viewBinding.message.text = context.getString(R.string.discountentry_reimbursement_receive, currencyFormatter.format(mReimbursementCredits[newDiner]))
                     }
-                } else if(newDiner.id in mReimbursementDebts) {
+                } else if(newDiner in mReimbursementDebts) {
                     viewBinding.message.visibility = View.VISIBLE
                     viewBinding.message.setTypeface(Typeface.create(viewBinding.message.typeface, Typeface.NORMAL), Typeface.NORMAL)
-                    viewBinding.message.text = context.getString(R.string.discountentry_reimbursement_pay, currencyFormatter.format(mReimbursementDebts[newDiner.id]))
+                    viewBinding.message.text = context.getString(R.string.discountentry_reimbursement_pay, currencyFormatter.format(mReimbursementDebts[newDiner]))
                 } else {
                     viewBinding.message.visibility = View.GONE
                 }
             }
         }
 
-        suspend fun updateDataSet(diners: Array<Diner>?=null, selections: Set<Long>?=null, reimbursementDebts: Map<Long, Double>?=null, reimbursementCredits: Map<Long, Double>?=null) {
+        suspend fun updateDataSet(diners: List<Diner>?=null, selections: Set<Diner>?=null, reimbursementDebts: Map<Diner, Double>?=null, reimbursementCredits: Map<Diner, Double>?=null) {
             val newDiners = diners ?: mDinerList
             val newSelections = selections ?: mSelections
             val newReimbursementDebts = reimbursementDebts ?: mReimbursementDebts
@@ -202,9 +213,9 @@ class ReimbursementFragment: Fragment() {
                     val oldDiner = mDinerList[oldPosition]
 
                     return newDiner.id == oldDiner.id &&
-                            newSelections.contains(newDiner.id) == mSelections.contains(oldDiner.id) &&
-                            newReimbursementDebts[newDiner.id] == mReimbursementDebts[oldDiner.id] &&
-                            newReimbursementCredits[newDiner.id] == mReimbursementCredits[oldDiner.id]
+                            newSelections.contains(newDiner) == mSelections.contains(oldDiner) &&
+                            newReimbursementDebts[newDiner] == mReimbursementDebts[oldDiner] &&
+                            newReimbursementCredits[newDiner] == mReimbursementCredits[oldDiner]
                 }
             })
 
