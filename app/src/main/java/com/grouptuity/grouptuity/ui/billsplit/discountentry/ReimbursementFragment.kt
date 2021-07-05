@@ -21,8 +21,6 @@ import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.text.NumberFormat
-import kotlin.math.abs
 
 
 class ReimbursementFragment: Fragment() {
@@ -110,30 +108,13 @@ class ReimbursementFragment: Fragment() {
         binding.selections.swipeRefreshLayout.isEnabled = false
         binding.selections.swipeRefreshLayout.isRefreshing = true
 
-        discountEntryViewModel.diners.observe(viewLifecycleOwner) { diners ->
-            lifecycleScope.launch {
-                reimburseeRecyclerAdapter.updateDataSet(
-                    diners = diners
-                )
-            }
-        }
-        discountEntryViewModel.reimburseeSelections.observe(viewLifecycleOwner) { selections ->
-            lifecycleScope.launch { reimburseeRecyclerAdapter.updateDataSet(selections = selections) }
-        }
-        discountEntryViewModel.recipientReimbursementDebts.observe(viewLifecycleOwner) { debts ->
-            lifecycleScope.launch { reimburseeRecyclerAdapter.updateDataSet(reimbursementDebts = debts) }
-        }
-        discountEntryViewModel.purchaserReimbursementCredits.observe(viewLifecycleOwner) { credits ->
-            lifecycleScope.launch { reimburseeRecyclerAdapter.updateDataSet(reimbursementCredits = credits) }
+        discountEntryViewModel.reimbursementData.observe(viewLifecycleOwner) {
+            lifecycleScope.launch { reimburseeRecyclerAdapter.updateDataSet(it) }
         }
     }
 
     private inner class ReimburseeSelectionRecyclerViewAdapter(val context: Context, val listener: RecyclerViewListener): RecyclerView.Adapter<ReimburseeSelectionRecyclerViewAdapter.ViewHolder>() {
-        private var mDinerList = emptyList<Diner>()
-        private var mSelections = emptySet<Diner>()
-        private var mReimbursementDebts = emptyMap<Diner, Double>()
-        private var mReimbursementCredits = emptyMap<Diner, Double>()
-        private val currencyFormatter = NumberFormat.getCurrencyInstance()
+        private var mData = emptyList<Triple<Diner, Boolean, String>>()
 
         val colorBackground = TypedValue().also { requireContext().theme.resolveAttribute(R.attr.colorBackground, it, true) }.data
         val colorBackgroundVariant = TypedValue().also { requireContext().theme.resolveAttribute(R.attr.colorBackgroundVariant, it, true) }.data
@@ -145,87 +126,61 @@ class ReimbursementFragment: Fragment() {
             }
         }
 
-        override fun getItemCount() = mDinerList.size
+        override fun getItemCount() = mData.size
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) = ViewHolder(ListDinerBinding.inflate(LayoutInflater.from(context), parent, false))
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-            val newDiner = mDinerList[position]
+            val (newDiner, isSelected, messageString) = mData[position]
 
             holder.apply {
                 itemView.tag = newDiner // store updated data
 
-                val isSelected = mSelections.contains(newDiner)
-
                 viewBinding.contactIcon.setContact(newDiner.contact, isSelected)
-
                 viewBinding.name.text = newDiner.name
 
                 itemView.setBackgroundColor(if(isSelected) colorBackgroundVariant else colorBackground)
 
-                if(newDiner in mReimbursementCredits) {
-                    viewBinding.message.visibility = View.VISIBLE
-                    viewBinding.message.setTypeface(viewBinding.message.typeface, Typeface.BOLD)
-
-                    if(newDiner in mReimbursementDebts) {
-                        val netReimbursementNumerical = mReimbursementCredits[newDiner]!! - mReimbursementDebts[newDiner]!!
-                        val netReimbursementString = currencyFormatter.format(abs(netReimbursementNumerical))
-
-                        viewBinding.message.text = if(netReimbursementString == currencyFormatter.format(0.0)) {
-                            context.getString(R.string.discountentry_reimbursement_neutral)
-                        } else {
-                            val fullDebtString = currencyFormatter.format(mReimbursementDebts[newDiner])
-                            val fullCreditString = currencyFormatter.format(mReimbursementCredits[newDiner])
-                            if (netReimbursementNumerical > 0.0) {
-                                context.getString(R.string.discountentry_reimbursement_receive_reduced, netReimbursementString, fullCreditString, fullDebtString)
-                            } else {
-                                context.getString(R.string.discountentry_reimbursement_pay_reduced, netReimbursementString, fullDebtString, fullCreditString)
-                            }
-                        }
-                    } else {
-                        viewBinding.message.text = context.getString(R.string.discountentry_reimbursement_receive, currencyFormatter.format(mReimbursementCredits[newDiner]))
-                    }
-                } else if(newDiner in mReimbursementDebts) {
-                    viewBinding.message.visibility = View.VISIBLE
-                    viewBinding.message.setTypeface(Typeface.create(viewBinding.message.typeface, Typeface.NORMAL), Typeface.NORMAL)
-                    viewBinding.message.text = context.getString(R.string.discountentry_reimbursement_pay, currencyFormatter.format(mReimbursementDebts[newDiner]))
-                } else {
+                if(messageString.isEmpty()) {
                     viewBinding.message.visibility = View.GONE
+                } else {
+                    if(isSelected) {
+                        viewBinding.message.setTypeface(viewBinding.message.typeface, Typeface.BOLD)
+                    } else {
+                        viewBinding.message.setTypeface(
+                            Typeface.create(viewBinding.message.typeface, Typeface.NORMAL),
+                            Typeface.NORMAL)
+                    }
+
+                    viewBinding.message.text = messageString
+                    viewBinding.message.visibility = View.VISIBLE
                 }
             }
         }
 
-        suspend fun updateDataSet(diners: List<Diner>?=null, selections: Set<Diner>?=null, reimbursementDebts: Map<Diner, Double>?=null, reimbursementCredits: Map<Diner, Double>?=null) {
-            val newDiners = diners ?: mDinerList
-            val newSelections = selections ?: mSelections
-            val newReimbursementDebts = reimbursementDebts ?: mReimbursementDebts
-            val newReimbursementCredits = reimbursementCredits ?: mReimbursementCredits
-
+        suspend fun updateDataSet(newData: List<Triple<Diner, Boolean, String>>) {
             val diffResult = DiffUtil.calculateDiff(object: DiffUtil.Callback() {
-                override fun getOldListSize() = mDinerList.size
+                override fun getOldListSize() = mData.size
 
-                override fun getNewListSize() = newDiners.size
+                override fun getNewListSize() = newData.size
 
-                override fun areItemsTheSame(oldPosition: Int, newPosition: Int) = newDiners[newPosition].id == mDinerList[oldPosition].id
+                override fun areItemsTheSame(oldPosition: Int, newPosition: Int) = newData[newPosition].first.id == mData[oldPosition].first.id
 
                 override fun areContentsTheSame(oldPosition: Int, newPosition: Int): Boolean {
-                    val newDiner = newDiners[newPosition]
-                    val oldDiner = mDinerList[oldPosition]
+                    val (newDiner, newIsSelected, newString) = newData[newPosition]
+                    val (oldDiner, oldIsSelected, oldString) = mData[oldPosition]
 
                     return newDiner.id == oldDiner.id &&
-                            newSelections.contains(newDiner) == mSelections.contains(oldDiner) &&
-                            newReimbursementDebts[newDiner] == mReimbursementDebts[oldDiner] &&
-                            newReimbursementCredits[newDiner] == mReimbursementCredits[oldDiner]
+                            newIsSelected == oldIsSelected &&
+                            newString == oldString &&
+                            newDiner.name == oldDiner.name &&
+                            newDiner.photoUri == oldDiner.photoUri
                 }
             })
 
             val adapter = this
             withContext(Dispatchers.Main) {
-                mDinerList = newDiners
-                mSelections = newSelections
-                mReimbursementDebts = newReimbursementDebts
-                mReimbursementCredits = newReimbursementCredits
-
+                mData = newData
                 diffResult.dispatchUpdatesTo(adapter)
                 binding.selections.swipeRefreshLayout.isRefreshing = false
             }

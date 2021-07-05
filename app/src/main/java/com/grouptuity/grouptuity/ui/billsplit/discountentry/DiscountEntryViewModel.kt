@@ -1,17 +1,24 @@
 package com.grouptuity.grouptuity.ui.billsplit.discountentry
 
 import android.app.Application
+import android.graphics.Typeface
 import android.util.Log
+import android.view.View
+import android.widget.LinearLayout
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.asLiveData
+import androidx.lifecycle.lifecycleScope
 import com.grouptuity.grouptuity.Event
 import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.*
+import com.grouptuity.grouptuity.ui.custom.views.ContactIcon
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
 import java.text.NumberFormat
+import kotlin.math.abs
 import kotlin.math.max
 
 
@@ -277,7 +284,47 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
     val isDiscountOnItems: LiveData<Boolean> = _isDiscountOnItems.withOutputSwitch(isOutputFlowing).asLiveData()
     val tabsVisible: LiveData<Boolean> = combine(priceCalcData.isNumberPadVisible, costCalcData.isNumberPadVisible){ price, cost -> !price && !cost }.withOutputSwitch(isOutputFlowing).asLiveData()
 
-    val recipientData: LiveData<List<Triple<Diner, Boolean, String>>> = combineTransform(
+    val itemData: LiveData<List<Triple<Item, Boolean, Triple<String, String?, String>>>> = combine(
+        repository.diners,
+        repository.items,
+        _itemSelections,
+        _isDiscountOnItems,
+        priceCalcData.numericalValue.filterNotNull(),
+        priceCalcData.isInPercent) {
+
+        val diners = it[0] as List<Diner>
+        val items = it[1] as List<Item>
+        val itemSelections = it[2] as Set<Item>
+        val onItems = it[3] as Boolean
+        val discountValue = it[4] as Double
+        val asPercent = it[5] as Boolean
+
+        val currencyFormatter = NumberFormat.getCurrencyInstance()
+
+        val discountedPrices = getDiscountedItemPrices(discountValue, onItems, asPercent, itemSelections)
+
+        items.map { item ->
+            Triple(
+                item,
+                itemSelections.contains(item),
+                Triple(
+                    currencyFormatter.format(item.price),
+                    discountedPrices[item]?.let { price -> currencyFormatter.format(price) },
+                    when(item.dinerIds.size) {
+                        0 -> {
+                            getApplication<Application>().resources.getString(R.string.discountentry_foritems_no_diners_warning)
+                        }
+                        diners.size -> {
+                            getApplication<Application>().resources.getString(R.string.discountentry_foritems_shared_by_everyone)
+                        }
+                        else -> { "" }
+                    }
+                )
+            )
+        }
+    }.withOutputSwitch(isOutputFlowing).asLiveData()
+
+    val recipientData: LiveData<List<Triple<Diner, Boolean, String>>> = combine(
         repository.diners,
         _dinerSelections,
         repository.individualSubtotals,
@@ -286,7 +333,7 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
 
         val currencyFormatter = NumberFormat.getCurrencyInstance()
 
-        emit(diners.map { diner ->
+        diners.map { diner ->
             Triple(diner, dinerSelections.contains(diner), if(dinerSelections.contains(diner)) {
                 when {
                     diner.itemIds.isEmpty() -> {
@@ -322,28 +369,77 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
                     }
                 }
             })
-        })
+        }
     }.withOutputSwitch(isOutputFlowing).asLiveData()
 
-    val itemSelections: LiveData<Set<Item>> = _itemSelections.withOutputSwitch(isOutputFlowing).asLiveData()
-    val dinerSelections: LiveData<Set<Diner>> = _dinerSelections.withOutputSwitch(isOutputFlowing).asLiveData()
-    val reimburseeSelections: LiveData<Set<Diner>> = _reimburseeSelections.withOutputSwitch(isOutputFlowing).asLiveData()
+    val reimbursementData: LiveData<List<Triple<Diner, Boolean, String>>> = combine(
+        repository.diners,
+        _reimburseeSelections,
+        recipientShares,
+        currencyValue,
+        costCalcData.numericalValue) { diners, selections, recipientShares, value, cost ->
 
-    val recipientReimbursementDebts: LiveData<Map<Diner, Double>> = combine(costCalcData.numericalValue, currencyValue, recipientShares) { cost, value, recipientShares ->
-        if(cost != null && value != null && value > 0.0) {
+        val debts = if(cost != null && value != null && value > 0.0) {
             getDiscountReimbursementDebts(cost, value, recipientShares)
         }
         else {
             emptyMap()
         }
-    }.withOutputSwitch(isOutputFlowing).asLiveData()
-    val purchaserReimbursementCredits: LiveData<Map<Diner, Double>> = combine(costCalcData.numericalValue, _reimburseeSelections) { cost, selections ->
-        if(cost == null) {
+
+        val credits = if(cost == null) {
             emptyMap()
         } else {
             getDiscountReimbursementCredits(cost, selections)
         }
+
+        val currencyFormatter = NumberFormat.getCurrencyInstance()
+
+        diners.map { diner ->
+            val message = if (diner in credits) {
+                if(diner in debts) {
+                    val netReimbursementNumerical = credits[diner]!! - debts[diner]!!
+                    val netReimbursementString = currencyFormatter.format(abs(netReimbursementNumerical))
+
+                    if(netReimbursementString == currencyFormatter.format(0.0)) {
+                        getApplication<Application>().resources.getString(R.string.discountentry_reimbursement_neutral)
+                    } else {
+                        val fullDebtString = currencyFormatter.format(debts[diner])
+                        val fullCreditString = currencyFormatter.format(credits[diner])
+
+                        if (netReimbursementNumerical > 0.0) {
+                            getApplication<Application>().resources.getString(
+                                R.string.discountentry_reimbursement_receive_reduced,
+                                netReimbursementString,
+                                fullCreditString,
+                                fullDebtString)
+                        } else {
+                            getApplication<Application>().resources.getString(
+                                R.string.discountentry_reimbursement_pay_reduced,
+                                netReimbursementString,
+                                fullDebtString,
+                                fullCreditString)
+                        }
+                    }
+                } else {
+                    getApplication<Application>().resources.getString(
+                        R.string.discountentry_reimbursement_receive,
+                        currencyFormatter.format(credits[diner]))
+                }
+            } else if(diner in debts) {
+                getApplication<Application>().resources.getString(
+                    R.string.discountentry_reimbursement_pay,
+                    currencyFormatter.format(debts[diner]))
+            } else {
+                ""
+            }
+
+            Triple(diner, selections.contains(diner), message)
+        }
     }.withOutputSwitch(isOutputFlowing).asLiveData()
+
+    val itemSelections: LiveData<Set<Item>> = _itemSelections.withOutputSwitch(isOutputFlowing).asLiveData()
+    val dinerSelections: LiveData<Set<Diner>> = _dinerSelections.withOutputSwitch(isOutputFlowing).asLiveData()
+    val reimburseeSelections: LiveData<Set<Diner>> = _reimburseeSelections.withOutputSwitch(isOutputFlowing).asLiveData()
 
     val fabIcon: LiveData<Int?> = combine(
         _isHandlingReimbursements,

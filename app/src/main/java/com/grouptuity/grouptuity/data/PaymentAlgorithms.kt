@@ -443,6 +443,24 @@ class BillCalculation(private val bill: Bill,
     }
 }
 
+fun getDiscountedItemPrices(discountValue: Double,
+                            onItems: Boolean,
+                            asPercent: Boolean,
+                            discountedItems: Collection<Item>): Map<Item, Double> =
+    if(onItems) {
+        if(asPercent) {
+            val factor = 1.0 - (0.01 * discountValue)
+            discountedItems.associateWith { factor * it.price }
+        } else {
+            val discountedItemsTotal = discountedItems.sumOf { it.price }
+            discountedItems.associateWith {
+                it.price - (it.price / discountedItemsTotal * discountValue)
+            }
+        }
+    } else {
+        emptyMap()
+    }
+
 fun getDiscountCurrencyValue(discount: Discount, dinerSubtotals: Map<Diner, Double>): Double {
     return if (discount.asPercent) {
         if (discount.onItems) {
