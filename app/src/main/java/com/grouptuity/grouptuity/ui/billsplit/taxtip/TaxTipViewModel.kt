@@ -19,5 +19,5 @@ class TaxTipViewModel(app: Application): UIViewModel(app) {
     val tipAmount = repository.groupTipAmount.asLiveData()
     val total = repository.groupTotal.asLiveData()
 
-    val hasNoDiscounts: LiveData<Boolean> = repository.numberOfDiscounts.mapLatest { it == 0 }.asLiveData()
+    val hasNoDiscounts: LiveData<Boolean> = repository.discounts.mapLatest { it.isEmpty() }.asLiveData()
 }

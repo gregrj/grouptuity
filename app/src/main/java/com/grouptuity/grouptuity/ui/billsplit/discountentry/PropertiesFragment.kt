@@ -4,6 +4,7 @@ import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.Typeface
 import android.os.Bundle
+import android.util.Log
 import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
@@ -239,23 +240,8 @@ internal class DinersListFragment: Fragment() {
                 it.consume()?.also {
                     if(!observing) {
                         observing = true
-                        discountEntryViewModel.diners.observe(viewLifecycleOwner) { diners ->
-                            lifecycleScope.launch { dinerRecyclerAdapter.updateDataSet(diners = diners) }
-                        }
-                        discountEntryViewModel.dinerSelections.observe(viewLifecycleOwner) { selections ->
-                            lifecycleScope.launch { dinerRecyclerAdapter.updateDataSet(selections = selections) }
-                        }
-                        discountEntryViewModel.dinerSubtotals.observe(viewLifecycleOwner) { subtotals ->
-                            lifecycleScope.launch { dinerRecyclerAdapter.updateDataSet(subtotals = subtotals) }
-                        }
-                        discountEntryViewModel.discountRecipientShares.observe(viewLifecycleOwner) { shares ->
-                            lifecycleScope.launch { dinerRecyclerAdapter.updateDataSet(discountShares = shares) }
-                        }
-                        discountEntryViewModel.discountedDinerSubtotals.observe(viewLifecycleOwner) { discountedSubtotals ->
-                            lifecycleScope.launch { dinerRecyclerAdapter.updateDataSet(discountedSubtotals = discountedSubtotals) }
-                        }
-                        discountEntryViewModel.unusedDiscounts.observe(viewLifecycleOwner) { unusedDiscounts ->
-                            lifecycleScope.launch { dinerRecyclerAdapter.updateDataSet(unusedDiscounts = unusedDiscounts) }
+                        discountEntryViewModel.recipientData.observe(viewLifecycleOwner) { data ->
+                            lifecycleScope.launch { dinerRecyclerAdapter.updateDataSet(data) }
                         }
                     }
                 }
@@ -265,15 +251,9 @@ internal class DinersListFragment: Fragment() {
 
     private inner class DinerSelectionRecyclerViewAdapter(
         val context: Context,
-        val listener: RecyclerViewListener):
-        RecyclerView.Adapter<DinerSelectionRecyclerViewAdapter.ViewHolder>() {
+        val listener: RecyclerViewListener): RecyclerView.Adapter<DinerSelectionRecyclerViewAdapter.ViewHolder>() {
 
-        private var mDinerList: List<Diner>? = null
-        private var mSelections: Set<Diner>? = null
-        private var mSubtotals: Map<Diner, String>? = null
-        private var mDiscountShares: Map<Diner, String>? = null
-        private var mDiscountedSubtotals: Map<Diner, String>? = null
-        private var mUnusedDiscounts: Map<Diner, String?>? = null
+        private var mRecipientData: List<Triple<Diner, Boolean, String>> = emptyList()
 
         val colorBackground = TypedValue().also { requireContext().theme.resolveAttribute(R.attr.colorBackground, it, true) }.data
         val colorBackgroundVariant = TypedValue().also { requireContext().theme.resolveAttribute(R.attr.colorBackgroundVariant, it, true) }.data
@@ -285,108 +265,57 @@ internal class DinersListFragment: Fragment() {
             }
         }
 
-        override fun getItemCount() = mDinerList?.size ?: 0
+        override fun getItemCount() = mRecipientData.size
 
         override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
             ViewHolder(ListDinerBinding.inflate(LayoutInflater.from(context), parent, false))
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-            val newDiner = mDinerList!![position]
+            val (newDiner, isSelected, message) = mRecipientData[position]
 
             holder.apply {
                 itemView.tag = newDiner // store updated data
-
-                val isSelected = mSelections!!.contains(newDiner)
 
                 viewBinding.contactIcon.setContact(newDiner.contact, isSelected)
 
                 viewBinding.name.text = newDiner.name
 
+                viewBinding.message.text = message
+
                 if(isSelected) {
                     itemView.setBackgroundColor(colorBackgroundVariant)
-
                     viewBinding.message.setTypeface(viewBinding.message.typeface, Typeface.BOLD)
-                    viewBinding.message.text = when {
-                        newDiner.itemIds.isEmpty() -> context.resources.getString(R.string.discountentry_fordiners_unused, mDiscountShares!![newDiner])
-                        mUnusedDiscounts!![newDiner] == null -> context.resources.getString(R.string.discountentry_fordiners_fullyused, mDiscountedSubtotals!![newDiner], mDiscountShares!![newDiner])
-                        else -> {
-                            context.resources.getString(R.string.discountentry_fordiners_partiallyused, mDiscountedSubtotals!![newDiner], mDiscountShares!![newDiner])
-                        }
-                    }
+
                 } else {
                     itemView.setBackgroundColor(colorBackground)
-
                     viewBinding.message.setTypeface(Typeface.create(viewBinding.message.typeface, Typeface.NORMAL), Typeface.NORMAL)
-                    viewBinding.message.text = when(newDiner.itemIds.size) {
-                        0 -> {
-                            context.resources.getString(R.string.discountentry_fordiners_zeroitems)
-                        }
-                        else -> {
-                            context.resources.getQuantityString(
-                                R.plurals.discountentry_fordiners_items_with_subtotal,
-                                newDiner.itemIds.size,
-                                newDiner.itemIds.size,
-                                mSubtotals!![newDiner])
-                        }
-                    }
                 }
             }
         }
 
-        suspend fun updateDataSet(
-            diners: List<Diner>?=null,
-            selections: Set<Diner>?=null,
-            subtotals: Map<Diner, String>?=null,
-            discountShares: Map<Diner, String>?=null,
-            discountedSubtotals: Map<Diner, String>?=null,
-            unusedDiscounts: Map<Diner, String?>?=null) {
-
-            val newDiners = diners?.also { if(mDinerList == null) mDinerList = emptyList() } ?: mDinerList
-            val newSelections = selections?.also { if(mSelections == null) mSelections = emptySet() } ?: mSelections
-            val newSubtotals = subtotals?.also { if(mSubtotals == null) mSubtotals = emptyMap() } ?: mSubtotals
-            val newDiscountShares = discountShares?.also { if(mDiscountShares == null) mDiscountShares = emptyMap() } ?: mDiscountShares
-            val newDiscountedSubtotals = discountedSubtotals?.also { if(mDiscountedSubtotals == null) mDiscountedSubtotals = emptyMap() } ?: mDiscountedSubtotals
-            val newUnusedDiscounts = unusedDiscounts?.also { if(mDiscountShares == null) mDiscountShares = emptyMap() } ?: mDiscountShares
-
-            if(newDiners == null || newSelections == null || newSubtotals == null || newDiscountShares == null || newDiscountedSubtotals == null || newUnusedDiscounts == null) {
-                mDinerList = newDiners
-                mSelections = newSelections
-                mSubtotals = newSubtotals
-                mDiscountShares = newDiscountShares
-                mDiscountedSubtotals = newDiscountedSubtotals
-                mUnusedDiscounts = newUnusedDiscounts
-                return
-            }
-
+        suspend fun updateDataSet(newRecipientData: List<Triple<Diner, Boolean, String>>) {
             val diffResult = DiffUtil.calculateDiff(object: DiffUtil.Callback() {
-                override fun getOldListSize() = mDinerList!!.size
+                override fun getOldListSize() = mRecipientData.size
 
-                override fun getNewListSize() = newDiners.size
+                override fun getNewListSize() = newRecipientData.size
 
-                override fun areItemsTheSame(oldPosition: Int, newPosition: Int) = newDiners[newPosition].id == mDinerList!![oldPosition].id
+                override fun areItemsTheSame(oldPosition: Int, newPosition: Int) =
+                    newRecipientData[newPosition].first.id == mRecipientData[oldPosition].first.id
 
                 override fun areContentsTheSame(oldPosition: Int, newPosition: Int): Boolean {
-                    val newDiner = newDiners[newPosition]
-                    val oldDiner = mDinerList!![oldPosition]
+                    val newDiner = newRecipientData[newPosition].first
+                    val oldDiner = mRecipientData[oldPosition].first
 
-                    return newDiner.id == oldDiner.id &&
-                            newSelections.contains(newDiner) == mSelections!!.contains(oldDiner) &&
-                            newSubtotals[newDiner] == mSubtotals!![oldDiner] &&
-                            newDiscountShares[newDiner] == mDiscountShares!![oldDiner] &&
-                            newDiscountedSubtotals[newDiner] == mDiscountedSubtotals!![oldDiner] &&
-                            newUnusedDiscounts[newDiner] == mUnusedDiscounts!![oldDiner]
+                    return newRecipientData[newPosition].second == mRecipientData[oldPosition].second &&
+                            newRecipientData[newPosition].third == mRecipientData[oldPosition].third &&
+                            newDiner.name == oldDiner.name &&
+                            newDiner.photoUri == oldDiner.photoUri
                 }
             })
 
             val adapter = this
             withContext(Dispatchers.Main) {
-                mDinerList = newDiners
-                mSelections = newSelections
-                mSubtotals = newSubtotals
-                mDiscountShares = newDiscountShares
-                mDiscountedSubtotals = newDiscountedSubtotals
-                mUnusedDiscounts = newUnusedDiscounts
-
+                mRecipientData = newRecipientData
                 diffResult.dispatchUpdatesTo(adapter)
                 binding.list.doOnPreDraw { binding.swipeRefreshLayout.isRefreshing = false }
             }
@@ -551,6 +480,7 @@ internal class ItemsListFragment: Fragment() {
             }
         }
 
+        // TODO consolidate into data
         suspend fun updateDataSet(items: List<Item>?=null, selections: Set<Item>?=null, numberOfDiners: Int? = null) {
             val newItems = items ?: mItemList
             val newSelections = selections ?: mSelections
@@ -579,6 +509,7 @@ internal class ItemsListFragment: Fragment() {
                 mNumberOfDiners = newNumberOfDiners
 
                 diffResult.dispatchUpdatesTo(adapter)
+
                 binding.list.doOnPreDraw { binding.swipeRefreshLayout.isRefreshing = false }
             }
         }

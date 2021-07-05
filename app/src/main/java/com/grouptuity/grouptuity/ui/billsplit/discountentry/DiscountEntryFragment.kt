@@ -196,7 +196,6 @@ class DiscountEntryFragment: Fragment(), Revealable by RevealableImpl() {
         }
 
         // Close fragment using default onBackPressed behavior
-        findNavController().previousBackStackEntry?.savedStateHandle?.set("discountIdKey", discountEntryViewModel.loadedDiscount.value?.id ?: 0L)
         requireActivity().onBackPressed()
     }
 

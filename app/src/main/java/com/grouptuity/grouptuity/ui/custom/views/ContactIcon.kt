@@ -75,10 +75,6 @@ class ContactIcon @JvmOverloads constructor(context: Context, attrs: AttributeSe
 
     fun setSelectable(enabled: Boolean) { selectable = enabled }
 
-//    fun setLoadFinishedCallback(callback: (Boolean) -> Unit) { loadFinishedCallback = callback }
-
-    fun isPhotoShowing() = photoShowing
-
     fun setContact(contact: Contact, selected: Boolean = false) {
         applyContactToView(contact.getInitials(), contact.photoUri, contact.visibility)
 
@@ -103,14 +99,14 @@ class ContactIcon @JvmOverloads constructor(context: Context, attrs: AttributeSe
     }
 
     private fun applyContactToView(initials: String, photoUri: String?, visibility: Int) {
-        if(photoUri == null) {
-
+        if(photoUri.isNullOrBlank()) {
             Glide.with(this).clear(binding.image)
             photoShowing = false
 
             binding.image.strokeWidth = 0f
 
             if(useInitialsPlaceholder) {
+
                 binding.text.text = initials
                 binding.image.setColorFilter(backgroundColor, PorterDuff.Mode.MULTIPLY)
                 binding.image.setImageResource(R.drawable.person_blank)

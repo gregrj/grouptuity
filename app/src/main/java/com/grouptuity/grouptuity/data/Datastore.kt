@@ -4,7 +4,6 @@ import android.app.Application
 import android.content.Context
 import android.content.pm.PackageManager
 import android.provider.ContactsContract
-import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
@@ -92,13 +91,13 @@ class Repository(context: Context) {
     val discountsReduceTip: StateFlow<Boolean> = getPreferenceFlow(DISCOUNTS_REDUCE_TIP_KEY, false)
 
     // App-level data
+    val loadInProgress = MutableStateFlow(true)
     val bills = database.getSavedBills()
     val selfContact = combine(userName, userPhotoUri) { userName, userPhotoUri ->
         Contact.updateSelfContactData(userName, userPhotoUri)
         //TODO database.contactDao().save(Contact.self)
         Contact.self
     }.stateIn(CoroutineScope(Dispatchers.Unconfined), SharingStarted.Eagerly, Contact.self)
-
 
     // Private backing fields for bill-specific entity flows
     private var mBill = Bill("", "", 0L, 0.0, true, 0.0, tipAsPercent = true, isTaxTipped = false, discountsReduceTip = false)
@@ -110,11 +109,11 @@ class Repository(context: Context) {
     private var mPayments = mutableListOf<Payment>()
     private val _bill = MutableStateFlow(mBill)
     private val _restaurant = MutableStateFlow(mRestaurant)
-    private val _diners = MutableStateFlow(mDiners)
-    private val _items = MutableStateFlow(mItems)
-    private val _debts = MutableStateFlow(mDebts)
-    private val _discounts = MutableStateFlow(mDiscounts)
-    private val _payments = MutableStateFlow(mPayments)
+    private val _diners: MutableStateFlow<List<Diner>> = MutableStateFlow(mDiners)
+    private val _items: MutableStateFlow<List<Item>> = MutableStateFlow(mItems)
+    private val _debts: MutableStateFlow<List<Debt>> = MutableStateFlow(mDebts)
+    private val _discounts: MutableStateFlow<List<Discount>> = MutableStateFlow(mDiscounts)
+    private val _payments: MutableStateFlow<List<Payment>> = MutableStateFlow(mPayments)
 
     // Bill entities
     val bill: Flow<Bill> = _bill
@@ -124,13 +123,6 @@ class Repository(context: Context) {
     val debts: Flow<List<Debt>> = _debts
     val discounts: Flow<List<Discount>> = _discounts
     val payments: Flow<List<Payment>> = _payments
-
-    // Bill entity counts
-    val numberOfDiners = _diners.mapLatest { it.size }
-    val numberOfItems = _items.mapLatest { it.size }
-    val numberOfDebts = _debts.mapLatest { it.size }
-    val numberOfDiscounts = _discounts.mapLatest { it.size }
-    val numberOfPayments = _payments.mapLatest { it.size }
 
     // Group bill calculation results
     private val _groupSubtotal = MutableStateFlow(0.0)
@@ -192,14 +184,15 @@ class Repository(context: Context) {
     private fun newUUID() = UUID.randomUUID().toString()
 
     private fun commitBill() = CoroutineScope(Dispatchers.Main).launch {
+
         val billCalculation = BillCalculation(mBill, mRestaurant, mDiners, mItems, mDebts, mDiscounts, mPayments)
 
         _bill.value = mBill
-        _diners.value = mDiners
-        _items.value = mItems
-        _debts.value = mDebts
-        _discounts.value = mDiscounts
-        _payments.value = mPayments
+        _diners.value = mDiners.toList()
+        _items.value = mItems.toList()
+        _debts.value = mDebts.toList()
+        _discounts.value = mDiscounts.toList()
+        _payments.value = mPayments.toList()
 
         _groupSubtotal.value = billCalculation.groupSubtotal
         _groupDiscountAmount.value = billCalculation.groupDiscountAmount
@@ -225,10 +218,13 @@ class Repository(context: Context) {
         _individualSubtotalWithDiscountsAndTax.value = billCalculation.individualSubtotalWithDiscountsAndTax
         _individualTip.value = billCalculation.individualTip
         _individualTotal.value = billCalculation.individualTotal
+
+        loadInProgress.value = false
     }
 
     // Bill Functions
     fun createAndLoadNewBill() {
+        loadInProgress.value = true
         val timestamp = System.currentTimeMillis()
 
         val newBill = Bill(
@@ -259,6 +255,8 @@ class Repository(context: Context) {
         database.saveDiner(restaurant)
     }
     fun loadSavedBill(billId: String) = CoroutineScope(Dispatchers.IO).launch {
+        loadInProgress.value = true
+
         database.loadBill(billId)?.also { payload ->
             withContext(Dispatchers.Main) {
                 mBill = payload.bill
@@ -289,8 +287,6 @@ class Repository(context: Context) {
     fun addSelfAsDiner(includeWithEveryone: Boolean = true) {
         val selfDiner = Diner(newUUID(), mBill.id, Contact.self)
 
-        Log.e("bill addSelfAsDiner", mBill.id)
-
         if (includeWithEveryone) {
             // TODO
         }
@@ -302,10 +298,8 @@ class Repository(context: Context) {
         //TODO commit updates for other entities affected by includeWithEveryone
     }
     fun addContactsAsDiners(dinerContacts: Collection<Contact>, includeWithEveryone: Boolean = true) {
-
         val diners: List<Diner> = if (includeWithEveryone) {
             dinerContacts.map { contact ->
-                Log.e("bill addContac", contact.lookupKey)
                 Diner(newUUID(), mBill.id, contact).also {
                     // TODO
                 }
@@ -391,13 +385,13 @@ class Repository(context: Context) {
     }
 
     // Discount Functions
-    private fun addDiscount(asPercent: Boolean, onItems: Boolean, value: Double, cost: Double?, items: List<Item>?, recipients: List<Diner>?, purchasers: List<Diner>) {
+    fun addDiscount(asPercent: Boolean, onItems: Boolean, value: Double, cost: Double?, items: List<Item>, recipients: List<Diner>, purchasers: List<Diner>) {
         val discount = Discount(newUUID(), mBill.id, asPercent, onItems, value, cost)
-        items?.forEach { item ->
+        items.forEach { item ->
             discount.addItem(item)
             item.addDiscount(discount)
         }
-        recipients?.forEach { recipient ->
+        recipients.forEach { recipient ->
             discount.addRecipient(recipient)
             recipient.addReceivedDiscount(discount)
         }
@@ -411,14 +405,36 @@ class Repository(context: Context) {
 
         database.saveDiscount(discount)
     }
-    fun addDinerPercentDiscount(percent: Double, cost: Double?, recipients: List<Diner>, purchasers: List<Diner>) =
-        addDiscount(asPercent = true, onItems = false, percent, cost, null, recipients, purchasers)
-    fun addDinerValueDiscount(value: Double, cost: Double?, recipients: List<Diner>, purchasers: List<Diner>) =
-        addDiscount(asPercent = false, onItems = false, value, cost, null, recipients, purchasers)
-    fun addItemPercentDiscount(percent: Double, cost: Double?, items: List<Item>, purchasers: List<Diner>) =
-        addDiscount(asPercent = true, onItems = true, percent, cost, items, null, purchasers)
-    fun addItemValueDiscount(value: Double, cost: Double?, items: List<Item>, purchasers: List<Diner>) =
-        addDiscount(asPercent = false, onItems = true, value, cost, items, null, purchasers)
+    fun editDiscount(editedDiscount: Discount, asPercent: Boolean, onItems: Boolean, value: Double, cost: Double?, items: List<Item>, recipients: List<Diner>, purchasers: List<Diner>) {
+        // Remove discount from associated items, recipients, and purchasers
+        editedDiscount.items.forEach { it.removeDiscount(editedDiscount) }
+        editedDiscount.recipients.forEach { it.removeReceivedDiscount(editedDiscount) }
+        editedDiscount.purchasers.forEach { it.removePurchasedDiscount(editedDiscount) }
+
+        // Add new discount to item, recipient, and purchaser objects
+        val newDiscount = Discount(editedDiscount.id, editedDiscount.billId, asPercent, onItems, value, cost)
+        items.forEach { item ->
+            newDiscount.addItem(item)
+            item.addDiscount(newDiscount)
+        }
+        recipients.forEach { recipient ->
+            newDiscount.addRecipient(recipient)
+            recipient.addReceivedDiscount(newDiscount)
+        }
+        purchasers.forEach { purchaser ->
+            newDiscount.addPurchaser(purchaser)
+            purchaser.addPurchasedDiscount(newDiscount)
+        }
+
+        // Replace oldDiscount with new Discount
+        val index = mDiscounts.indexOf(editedDiscount)
+        mDiscounts.remove(editedDiscount)
+        mDiscounts.add(index, newDiscount)
+
+        commitBill()
+
+        database.saveDiscount(newDiscount)
+    }
     fun removeDiscount(discount: Discount) {
         mDiscounts.remove(discount)
         discount.items.forEach { it.removeDiscount(discount) }

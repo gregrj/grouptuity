@@ -84,7 +84,7 @@ class PaymentPreferences(private val preferenceMap: Map<String, Pair<PaymentMeth
  * Contacts TODO
  */
 @Entity(tableName = "contact_table", indices = [Index(value = ["lookupKey"], unique = true)])
-data class Contact(@PrimaryKey val lookupKey: String,
+class Contact(@PrimaryKey val lookupKey: String,
                    val name: String,
                    val photoUri: String?,
                    val visibility: Int): Parcelable {  //TODO also include contact info?
@@ -143,7 +143,7 @@ data class Contact(@PrimaryKey val lookupKey: String,
  * datastore entities so that SQL queries can retrieve the objects associated with this Bill.
  */
 @Entity(tableName = "bill_table")
-data class Bill(@PrimaryKey val id: String,
+class Bill(@PrimaryKey val id: String,
                 val title: String,
                 val timeCreated: Long,
                 val tax: Double,
@@ -158,7 +158,7 @@ data class Bill(@PrimaryKey val id: String,
     foreignKeys = [ ForeignKey(entity = Bill::class, parentColumns = ["id"], childColumns = ["billId"], onDelete = ForeignKey.CASCADE),
         ForeignKey(entity = Contact::class, parentColumns = ["lookupKey"], childColumns = ["contact_lookupKey"], onDelete = ForeignKey.NO_ACTION, deferred = true)],
     indices = [Index("billId")])
-data class Diner(@PrimaryKey val id: String,
+class Diner(@PrimaryKey val id: String,
                  val billId: String,
                  @Embedded(prefix = "contact_") val contact: Contact,
                  var paymentPreferences: PaymentPreferences = PaymentPreferences()): Parcelable {
@@ -327,7 +327,7 @@ data class Diner(@PrimaryKey val id: String,
 @Entity(tableName = "item_table",
     foreignKeys = [ForeignKey(entity = Bill::class, parentColumns = ["id"], childColumns = ["billId"], onDelete = ForeignKey.CASCADE)],
     indices = [Index("billId")])
-data class Item(@PrimaryKey val id: String,
+class Item(@PrimaryKey val id: String,
                 val billId: String,
                 val price: Double,
                 val name: String): Parcelable {
@@ -402,7 +402,7 @@ data class Item(@PrimaryKey val id: String,
 @Entity(tableName = "debt_table",
     foreignKeys = [ForeignKey(entity = Bill::class, parentColumns = ["id"], childColumns = ["billId"], onDelete = ForeignKey.CASCADE)],
     indices = [Index("billId")])
-data class Debt(@PrimaryKey val id: String, val billId: String, val amount: Double): Parcelable {
+class Debt(@PrimaryKey val id: String, val billId: String, val amount: Double): Parcelable {
 
     @Ignore private val debtorIdsMutable = mutableListOf<String>()
     @Ignore private val creditorIdsMutable = mutableListOf<String>()
@@ -472,7 +472,7 @@ data class Debt(@PrimaryKey val id: String, val billId: String, val amount: Doub
 @Entity(tableName = "discount_table",
     foreignKeys = [ForeignKey(entity = Bill::class, parentColumns = ["id"], childColumns = ["billId"], onDelete = ForeignKey.CASCADE)],
     indices = [Index("billId")])
-data class Discount(@PrimaryKey val id: String,
+class Discount(@PrimaryKey val id: String,
                     val billId: String,
                     val asPercent: Boolean,
                     val onItems: Boolean,
@@ -571,7 +571,7 @@ data class Discount(@PrimaryKey val id: String,
         ForeignKey(entity = Diner::class, parentColumns = ["id"], childColumns = ["payerId"], onDelete = ForeignKey.CASCADE),
         ForeignKey(entity = Diner::class, parentColumns = ["id"], childColumns = ["payeeId"], onDelete = ForeignKey.CASCADE)],
     indices = [Index("billId"), Index("payerId"), Index("payeeId")])
-data class Payment(@PrimaryKey val id: String,
+class Payment(@PrimaryKey val id: String,
                    val billId: String,
                    val amount: Double,
                    val method: String,

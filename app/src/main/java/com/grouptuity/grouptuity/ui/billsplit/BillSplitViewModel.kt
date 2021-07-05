@@ -3,12 +3,12 @@ package com.grouptuity.grouptuity.ui.billsplit
 import android.app.Application
 import androidx.lifecycle.*
 import com.grouptuity.grouptuity.data.Repository
+import kotlinx.coroutines.flow.mapLatest
 
 
 class BillSplitViewModel(application: Application): AndroidViewModel(application) {
     private val repository = Repository.getInstance(getApplication())
 
-    // TODO unify these to prevent staggered updates
-    val dinerCount = repository.numberOfDiners.asLiveData()
-    val itemCount = repository.numberOfItems.asLiveData()
+    val dinerCount = repository.diners.mapLatest { it.size }.asLiveData()
+    val itemCount = repository.items.mapLatest { it.size }.asLiveData()
 }

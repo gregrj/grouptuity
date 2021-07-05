@@ -454,7 +454,8 @@ fun getDiscountCurrencyValue(discount: Discount, dinerSubtotals: Map<Diner, Doub
         discount.value
     }
 }
-fun getDiscountCurrencyOnItemsPercent(percent: Double, items: Collection<Item>) = 0.01 * percent * items.sumOf { it.price }
+fun getDiscountCurrencyOnItemsPercent(percent: Double, items: Collection<Item>) =
+    0.01 * percent * items.sumOf { it.price }
 fun getDiscountCurrencyOnDinersPercent(percent: Double, recipients: Collection<Diner>, dinerSubtotals: Map<Diner, Double>) =
     0.01 * percent * recipients.sumOf { dinerSubtotals[it] ?: 0.0 }
 
