@@ -7,17 +7,18 @@ import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.Discount
 import com.grouptuity.grouptuity.data.UIViewModel
 import com.grouptuity.grouptuity.data.getDiscountCurrencyValue
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import java.text.NumberFormat
 
 
 class DiscountsViewModel(app: Application): UIViewModel(app) {
-    val discounts: LiveData<List<Discount>> = repository.discounts.asLiveData()
+    val discounts: StateFlow<List<Discount>> = repository.discounts
     val diners = repository.diners.asLiveData()
     val items = repository.items.asLiveData()
 
     val discountData: LiveData<List<Pair<Discount, Triple<String, String, String>>>> = combine(
-        repository.discounts,
+        discounts,
         repository.diners,
         repository.items,
         repository.individualSubtotals) { discounts, diners, items, subtotals ->
