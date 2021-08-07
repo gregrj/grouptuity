@@ -116,13 +116,13 @@ class Repository(context: Context) {
     private val _payments: MutableStateFlow<List<Payment>> = MutableStateFlow(mPayments)
 
     // Bill entities
-    val bill: Flow<Bill> = _bill
-    val restaurant: Flow<Diner> = _restaurant
-    val diners: Flow<List<Diner>> = _diners
-    val items: Flow<List<Item>> = _items
-    val debts: Flow<List<Debt>> = _debts
-    val discounts: Flow<List<Discount>> = _discounts
-    val payments: Flow<List<Payment>> = _payments
+    val bill: StateFlow<Bill> = _bill
+    val restaurant: StateFlow<Diner> = _restaurant
+    val diners: StateFlow<List<Diner>> = _diners
+    val items: StateFlow<List<Item>> = _items
+    val debts: StateFlow<List<Debt>> = _debts
+    val discounts: StateFlow<List<Discount>> = _discounts
+    val payments: StateFlow<List<Payment>> = _payments
 
     // Group bill calculation results
     private val _groupSubtotal = MutableStateFlow(0.0)
@@ -343,9 +343,26 @@ class Repository(context: Context) {
 
         database.saveItem(item)
     }
-//    fun editItem(item: Item, newPrice: Double? = null,) {
-//        item.price = 3 // TODO
-//    }
+    fun editItem(editedItem: Item, price: Double, name: String, diners: Collection<Diner>) {
+        // Remove edited item from the associated diners
+        editedItem.diners.forEach { it.removeItem(editedItem) }
+
+        // Add new item to diners
+        val newItem = Item(editedItem.id, editedItem.billId, price, name)
+        diners.forEach { diner ->
+            newItem.addDiner(diner)
+            diner.addItem(newItem)
+        }
+
+        // Replace old item with new item
+        val index = mItems.indexOf(editedItem)
+        mItems.remove(editedItem)
+        mItems.add(index, newItem)
+
+        commitBill()
+
+        database.saveItem(newItem)
+    }
     fun removeItem(item: Item) {
         mItems.remove(item)
         item.diners.forEach { it.removeItem(item) }

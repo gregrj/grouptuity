@@ -15,8 +15,8 @@
     <color name="white">#FFFFFFFF</color>
     <color name="off_white">#FFBDBDBD</color>
 
-    <color name="off_black">#FF1E1E1E</color>
     <color name="black">#FF000000</color>
+    <color name="off_black">#FF1E1E1E</color>
 
     <color name="TranslucentOverlay">#46000000</color>
 </resources>

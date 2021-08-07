@@ -32,7 +32,7 @@ class ItemEntryViewModel(app: Application): UIViewModel(app) {
     private var hasUntouchedPriorSelections = false
 
     // UI State
-    private var creatingNewItem = true
+    private var loadedItem = MutableStateFlow<Item?>(null)
     private val pauseDinerRefresh: MutableStateFlow<Boolean> = MutableStateFlow(true)
     private val editingName = MutableStateFlow(false)
 
@@ -83,7 +83,7 @@ class ItemEntryViewModel(app: Application): UIViewModel(app) {
         super.notifyTransitionFinished()
 
         // For better performance, allow the diners to update only after transition finishes
-        if(creatingNewItem) {
+        if(loadedItem.value == null) {
             pauseDinerRefresh.value = false
         }
     }
@@ -96,13 +96,13 @@ class ItemEntryViewModel(app: Application): UIViewModel(app) {
 
         if(item == null) {
             // New item
-            creatingNewItem = true
+            loadedItem.value = null
             calculator.initialize(null, false, showNumberPad = true)
             itemNameInput.value = null
             hasUntouchedPriorSelections = false
         } else {
             // Editing existing item
-            creatingNewItem = false
+            loadedItem.value = item
             pauseDinerRefresh.value = false
             calculator.initialize(item.price, false, showNumberPad = false)
             itemNameInput.value = item.name
@@ -177,12 +177,23 @@ class ItemEntryViewModel(app: Application): UIViewModel(app) {
     }
 
     fun addItemToBill() {
-        //TODO handle re-editing existing items
-        selections.value?.apply {
-            val price = calculator.numericalValue.value ?: 0.0
-            val itemDiners = diners.value.filter { diner -> this.contains(diner) }
-
-            repository.addItem(price, itemName.value ?: "Item", itemDiners)
+        loadedItem.value.also { editedItem ->
+            if (editedItem == null) {
+                selections.value?.apply {
+                    repository.addItem(
+                        calculator.numericalValue.value ?: 0.0,
+                        itemName.value ?: "Item",
+                        diners.value.filter { diner -> this.contains(diner) })
+                }
+            } else {
+                selections.value?.apply {
+                    repository.editItem(
+                        editedItem,
+                        calculator.numericalValue.value ?: 0.0,
+                        itemName.value ?: "Item",
+                        diners.value.filter { diner -> this.contains(diner) })
+                }
+            }
         }
     }
 }

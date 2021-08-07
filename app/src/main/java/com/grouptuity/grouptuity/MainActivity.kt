@@ -1,21 +1,12 @@
 package com.grouptuity.grouptuity
 
-import android.Manifest
 import android.app.SearchManager
 import android.content.Intent
-import android.content.pm.PackageManager
-import android.graphics.Color
-import android.graphics.drawable.Drawable
-import android.os.Build
 import android.os.Bundle
-import android.util.Log
 import android.util.TypedValue
-import android.view.View
 import android.view.ViewGroup
-import android.view.WindowManager
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
-import androidx.core.content.ContextCompat
 import androidx.core.view.*
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.ViewModelProvider
@@ -80,12 +71,9 @@ class MainActivity: AppCompatActivity() {
         // the color programmatically works.
         appViewModel.darkThemeActive.observe(this) {
             switchWidget.isChecked = it
-            window.navigationBarColor = if(it) {
-                //TODO read from an attribute and move the color choice to xml
-                resources.getColor(R.color.black)
-            } else {
-                resources.getColor(R.color.white)
-            }
+            val typedValue = TypedValue()
+            this.theme.resolveAttribute(R.attr.colorBackground, typedValue, true)
+            window.navigationBarColor = typedValue.data
         }
     }
 

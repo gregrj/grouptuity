@@ -58,9 +58,6 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
 
     // Bill Entities and Selections
     val loadedDiscount = MutableStateFlow<Discount?>(null)
-    val diners: LiveData<List<Diner>> = repository.diners.withOutputSwitch(isOutputFlowing).asLiveData()
-    val items: LiveData<List<Item>> = repository.items.withOutputSwitch(isOutputFlowing).asLiveData()
-    val numberOfDiners: LiveData<Int> = repository.diners.mapLatest { it.size }.withOutputSwitch(isOutputFlowing).asLiveData()
     private val itemSelectionSet = mutableSetOf<Item>()
     private val dinerSelectionSet = mutableSetOf<Diner>()
     private val reimburseeSelectionSet = mutableSetOf<Diner>()
@@ -69,7 +66,6 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
     private val _reimburseeSelections = MutableStateFlow(reimburseeSelectionSet.toSet())
 
     // Edit tracking (null == not set, false == prior value unchanged, true == new value set)
-    private var editingExistingDiscount: Boolean = false
     private val editedPrice: Boolean? get() = priceCalcData.editedValue
     private val editedCost: Boolean? get() = costCalcData.editedValue
     private var editedRecipientSelections: Boolean? = null
@@ -565,7 +561,6 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
 
         if(discount == null) {
             // Creating new discount
-            editingExistingDiscount = false
             loadedDiscount.value = null
 
             priceCalcData.initialize(null, false, showNumberPad = true)
@@ -578,7 +573,6 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
             startTransitionEventMutable.value = Event(true)
         } else {
             // Editing existing discount
-            editingExistingDiscount = true
             loadedDiscount.value = discount
 
             priceCalcData.initialize(discount.value, discount.asPercent)
@@ -646,7 +640,7 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
                 when {
                     itemSelectionSet.isEmpty() -> {
                         // Discount amount has been entered, but no items are selected
-                        if(editingExistingDiscount) {
+                        if(loadedDiscount.value != null) {
                             // Alert user of unsaved edits and present option to discard and close fragment
                             showUnsavedInvalidEditsAlertEventMutable.value = Event(true)
                         } else {
@@ -677,7 +671,7 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
                 when {
                     dinerSelectionSet.isEmpty() -> {
                         // Discount amount has been entered, but no diners are selected
-                        if(editingExistingDiscount) {
+                        if(loadedDiscount.value != null) {
                             // Alert user of unsaved edits and present option to discard and close fragment
                             showUnsavedInvalidEditsAlertEventMutable.value = Event(true)
                         } else {
@@ -768,7 +762,7 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
     fun selectAllDiners() {
         editedRecipientSelections = true
 
-        diners.value?.apply {
+        repository.diners.value.apply {
             dinerSelectionSet.clear()
             dinerSelectionSet.addAll(this)
             _dinerSelections.value = dinerSelectionSet.toSet()
@@ -792,7 +786,7 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
     }
     fun selectAllItems() {
         editedRecipientSelections = true
-        items.value?.apply {
+        repository.items.value.apply {
             itemSelectionSet.clear()
             itemSelectionSet.addAll(this)
             _itemSelections.value = itemSelectionSet.toSet()
@@ -816,7 +810,7 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
     }
     fun selectAllReimbursees() {
         editedReimbursementSelections = true
-        diners.value?.apply {
+        repository.diners.value.apply {
             reimburseeSelectionSet.clear()
             reimburseeSelectionSet.addAll(this)
             _reimburseeSelections.value = reimburseeSelectionSet.toSet()

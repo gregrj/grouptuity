@@ -209,6 +209,7 @@
 
     <string name="ok">OK</string>
     <string name="cancel">Cancel</string>
+    <string name="keep_editing">Keep Editing</string>
     <string name="save">Save</string>
     <string name="proceed">Continue</string>
     <string name="keep">Keep</string>

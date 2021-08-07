@@ -38,7 +38,6 @@ import com.grouptuity.grouptuity.ui.custom.views.slideUpFAB
 import java.text.NumberFormat
 
 // TODO handle inset changes
-// TODO update item prices during selection on discount properties
 
 
 class DiscountEntryFragment: Fragment(), Revealable by RevealableImpl() {
@@ -204,7 +203,7 @@ class DiscountEntryFragment: Fragment(), Revealable by RevealableImpl() {
             .setTitle(resources.getString(R.string.discountentry_alert_abort_unsaved_valid_edits_title))
             .setMessage(resources.getString(R.string.discountentry_alert_abort_unsaved_valid_edits_message))
             .setCancelable(true)
-            .setNeutralButton(resources.getString(R.string.cancel)) { _, _ -> }
+            .setNeutralButton(resources.getString(R.string.keep_editing)) { _, _ -> }
             .setNegativeButton(resources.getString(R.string.discard)) { _, _ -> closeFragment() }
             .setPositiveButton(resources.getString(R.string.save)) { _, _ -> trySavingDiscount() }
             .show()
@@ -215,7 +214,7 @@ class DiscountEntryFragment: Fragment(), Revealable by RevealableImpl() {
             .setTitle(resources.getString(R.string.discountentry_alert_abort_unsaved_invalid_edits_title))
             .setMessage(resources.getString(R.string.discountentry_alert_abort_unsaved_invalid_edits_message))
             .setCancelable(true)
-            .setNegativeButton(resources.getString(R.string.cancel)) { _, _ ->  }
+            .setNegativeButton(resources.getString(R.string.keep_editing)) { _, _ ->  }
             .setPositiveButton(resources.getString(R.string.discard)) { _, _ -> closeFragment() }
             .show()
     }
@@ -225,7 +224,7 @@ class DiscountEntryFragment: Fragment(), Revealable by RevealableImpl() {
             .setTitle(resources.getString(R.string.discountentry_alert_abort_reimbursement_no_selections_title))
             .setMessage(resources.getString(R.string.discountentry_alert_abort_reimbursement_no_selections_message))
             .setCancelable(false)
-            .setNegativeButton(resources.getString(R.string.keep)) { _, _ ->
+            .setNegativeButton(resources.getString(R.string.keep_editing)) { _, _ ->
                 binding.tabLayout.apply {
                     // Set tab position to ensure consistency of TabLayout position with ViewPager
                     selectTab(getTabAt(1))
