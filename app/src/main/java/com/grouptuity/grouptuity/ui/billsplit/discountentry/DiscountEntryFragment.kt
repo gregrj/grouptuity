@@ -5,6 +5,7 @@ import android.animation.ArgbEvaluator
 import android.animation.ValueAnimator
 import android.graphics.Color
 import android.os.Bundle
+import android.util.Log
 import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
@@ -66,7 +67,7 @@ class DiscountEntryFragment: Fragment(), Revealable by RevealableImpl() {
         backPressedCallback = object: OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
                 if (discountEntryViewModel.handleOnBackPressed() != null)
-                    closeFragment()
+                    closeFragment(false)
             }
         }
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, backPressedCallback)
@@ -148,43 +149,24 @@ class DiscountEntryFragment: Fragment(), Revealable by RevealableImpl() {
             DiscountEntryViewModel.MISSING_RECIPIENTS -> Snackbar.make(binding.coordinatorLayout, R.string.discountentry_alert_missing_recipients, Snackbar.LENGTH_SHORT).show()
             DiscountEntryViewModel.INVALID_COST -> Snackbar.make(binding.coordinatorLayout, R.string.discountentry_alert_invalid_cost, Snackbar.LENGTH_SHORT).show()
             DiscountEntryViewModel.MISSING_PURCHASERS -> Snackbar.make(binding.coordinatorLayout, R.string.discountentry_alert_missing_purchasers, Snackbar.LENGTH_SHORT).show()
-            DiscountEntryViewModel.DISCOUNT_SAVED -> closeFragment()
+            DiscountEntryViewModel.DISCOUNT_SAVED -> closeFragment(true)
         }
     }
 
-    private fun closeFragment() {
+    private fun closeFragment(discountSaved: Boolean) {
         // Prevent callback from intercepting back pressed events
         backPressedCallback.isEnabled = false
 
         // Prevent live updates to UI during return transition
         discountEntryViewModel.freezeOutput()
 
-        when {
-            discountEntryViewModel.loadedDiscount.value == null -> {
-                // New discount was not completed
-                if (args.originParams == null) {
-                    // Discount entry was started from TaxTipFragment
-                    setupReturnTransitionToTaxTip(requireView(), false)
-                } else {
-                    // Discount entry was started from DiscountFragment so close by shrinking into the FAB
-                    returnTransition = CircularRevealTransition(
-                        binding.fadeView,
-                        binding.revealedLayout,
-                        (args.originParams as CircularRevealTransition.OriginParams).withInsetsOn(binding.fab),
-                        resources.getInteger(R.integer.frag_transition_duration).toLong(),
-                        false)
-                }
-            }
-            args.editedDiscount != null -> {
-                // Completed or canceled editing of existing discount so return to DiscountsFragment
-                setupReturnTransitionToDiscounts(requireView())
-            }
-            args.originParams == null -> {
-                // New discount is also the only one so return directly to the TaxTipFragment
-                setupReturnTransitionToTaxTip(requireView(), true)
-            }
-            else -> {
-                // Created new discount so return by collapsing into DiscountsFragment FAB
+        if (args.editedDiscount == null) {
+            // Not editing an existing discount
+            if (args.originParams == null) {
+                // Fragment was opened from TaxTipFragment so return to TaxTipFragment
+                setupReturnTransitionToTaxTip(requireView(), discountSaved)
+            } else {
+                // Fragment was opened from DiscountsFragment so close by shrinking into the FAB
                 returnTransition = CircularRevealTransition(
                     binding.fadeView,
                     binding.revealedLayout,
@@ -192,6 +174,9 @@ class DiscountEntryFragment: Fragment(), Revealable by RevealableImpl() {
                     resources.getInteger(R.integer.frag_transition_duration).toLong(),
                     false)
             }
+        } else {
+            // Completed or canceled editing of existing discount so return to DiscountsFragment
+            setupReturnTransitionToDiscounts(requireView())
         }
 
         // Close fragment using default onBackPressed behavior
@@ -204,7 +189,7 @@ class DiscountEntryFragment: Fragment(), Revealable by RevealableImpl() {
             .setMessage(resources.getString(R.string.discountentry_alert_abort_unsaved_valid_edits_message))
             .setCancelable(true)
             .setNeutralButton(resources.getString(R.string.keep_editing)) { _, _ -> }
-            .setNegativeButton(resources.getString(R.string.discard)) { _, _ -> closeFragment() }
+            .setNegativeButton(resources.getString(R.string.discard)) { _, _ -> closeFragment(false) }
             .setPositiveButton(resources.getString(R.string.save)) { _, _ -> trySavingDiscount() }
             .show()
     }
@@ -215,7 +200,7 @@ class DiscountEntryFragment: Fragment(), Revealable by RevealableImpl() {
             .setMessage(resources.getString(R.string.discountentry_alert_abort_unsaved_invalid_edits_message))
             .setCancelable(true)
             .setNegativeButton(resources.getString(R.string.keep_editing)) { _, _ ->  }
-            .setPositiveButton(resources.getString(R.string.discard)) { _, _ -> closeFragment() }
+            .setPositiveButton(resources.getString(R.string.discard)) { _, _ -> closeFragment(false) }
             .show()
     }
 

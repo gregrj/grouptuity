@@ -78,12 +78,6 @@ class DiscountsFragment: Fragment(), Revealable by RevealableImpl() {
                 // Opening from TaxTipFragment hosted in BillSplitFragment
                 setupEnterTransitionFromTaxTip()
             }
-            R.id.discountEntryFragment -> {
-                args.newDiscount?.apply {
-                    // Simulated return transition from DiscountEntryFragment for first new discount
-                    // setupEnterTransitionFromDiscountEntry(this)
-                }
-            }
         }
 
         setupList()
