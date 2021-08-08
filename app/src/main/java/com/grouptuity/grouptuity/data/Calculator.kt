@@ -1,6 +1,5 @@
 package com.grouptuity.grouptuity.data
 
-import android.util.Log
 import androidx.lifecycle.MutableLiveData
 import com.grouptuity.grouptuity.Event
 import kotlinx.coroutines.CoroutineScope
@@ -9,30 +8,42 @@ import kotlinx.coroutines.flow.*
 import java.text.DecimalFormat
 import java.text.NumberFormat
 
-class CalculatorData(
-    private val percentZeroAcceptable: Boolean = false,
-    private val percentMaxDecimals: Int = 3,
-    private val percentMaxIntegers: Int = 3,
-    private val currencyZeroAcceptable: Boolean = false,
-    private val currencyMaxDecimals: Int = NumberFormat.getCurrencyInstance().maximumFractionDigits,
-    private val currencyMaxIntegers: Int = 9 - currencyMaxDecimals,
-    private val acceptValueCallback: () -> Unit = {}) {
+private val decimalSymbol = (DecimalFormat.getInstance() as DecimalFormat).decimalFormatSymbols.decimalSeparator
+private const val percentMaxDecimals = 3
+private const val percentMaxIntegers = 3
+private val currencyMaxDecimals = NumberFormat.getCurrencyInstance().maximumFractionDigits
+private val currencyMaxIntegers = 9 - currencyMaxDecimals
 
-    companion object {
-        private val decimalSymbol get() = (DecimalFormat.getInstance() as DecimalFormat).decimalFormatSymbols.decimalSeparator
-    }
+enum class CalculationType(val isPercent: Boolean,
+                           val isZeroAcceptable: Boolean,
+                           val maxDecimals: Int,
+                           val maxIntegers: Int) {
+    ITEM_PRICE(false, false, currencyMaxDecimals, currencyMaxIntegers),
+    DISCOUNT_PERCENT(true, false, percentMaxDecimals, percentMaxIntegers),
+    DISCOUNT_AMOUNT(false, false, currencyMaxDecimals, currencyMaxIntegers),
+    REIMBURSEMENT_AMOUNT(false, false, currencyMaxDecimals, currencyMaxIntegers),
+    TAX_PERCENT(true, true, percentMaxDecimals, percentMaxIntegers),
+    TAX_AMOUNT(false, true, currencyMaxDecimals, currencyMaxIntegers),
+    TIP_PERCENT(true, true, percentMaxDecimals, percentMaxIntegers),
+    TIP_AMOUNT(false, true, currencyMaxDecimals, currencyMaxIntegers)
+}
+
+class CalculatorData(initialCalculationType: CalculationType, private val acceptValueCallback: () -> Unit = {}) {
+    private val calculationType = MutableStateFlow(initialCalculationType)
 
     val isNumberPadVisible = MutableStateFlow(false)
-    val isInPercent = MutableStateFlow(false)
-    private val isZeroAcceptable: StateFlow<Boolean> = isInPercent.mapLatest {
-        if(it) percentZeroAcceptable else currencyZeroAcceptable
-    }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, currencyZeroAcceptable)
-    private val maxDecimalsAllowed: StateFlow<Int> = isInPercent.mapLatest {
-        if(it) percentMaxDecimals else currencyMaxDecimals
-    }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, currencyMaxDecimals)
-    private val maxIntegersAllowed: StateFlow<Int> = isInPercent.mapLatest {
-        if(it) percentMaxIntegers else currencyMaxIntegers
-    }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, currencyMaxIntegers)
+    val isInPercent: StateFlow<Boolean> = calculationType.mapLatest {
+        it.isPercent
+    }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, initialCalculationType.isPercent)
+    private val isZeroAcceptable: StateFlow<Boolean> = calculationType.mapLatest {
+        it.isZeroAcceptable
+    }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, initialCalculationType.isZeroAcceptable)
+    private val maxDecimalsAllowed: StateFlow<Int> = calculationType.mapLatest {
+        it.maxDecimals
+    }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, initialCalculationType.maxDecimals)
+    private val maxIntegersAllowed: StateFlow<Int> = calculationType.mapLatest {
+        it.maxIntegers
+    }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, initialCalculationType.maxIntegers)
 
     private val rawInputValue: MutableStateFlow<String?> = MutableStateFlow(null)
     private val _lastCompletedRawValue = MutableLiveData<String?>(null)
@@ -162,31 +173,29 @@ class CalculatorData(
     private val _acceptEvents = MutableStateFlow<Event<String>?>(null)
     val acceptEvents: Flow<Event<String>> = _acceptEvents.filterNotNull()
 
-    fun initialize(newRawInputValue: Double?, inPercent: Boolean, showNumberPad: Boolean = false) {
+    fun reset(type: CalculationType, newRawInputValue: Double?, showNumberPad: Boolean = false) {
         // Invalidate any unconsumed events
         _acceptEvents.value?.consume()
+
+        calculationType.value = type
 
         if (newRawInputValue == null) {
             editedValue = null
             _lastCompletedRawValue.value = null
             rawInputValue.value = null
-
         } else {
             editedValue = false
             _lastCompletedRawValue.value = newRawInputValue.toString()
             rawInputValue.value = newRawInputValue.toString()
         }
 
-        isInPercent.value = inPercent
-
         isNumberPadVisible.value = showNumberPad
     }
 
+    fun switchCalculationType(type: CalculationType) { calculationType.value = type }
+
     fun showNumberPad() { isNumberPadVisible.value = true }
     fun hideNumberPad() { isNumberPadVisible.value = false }
-
-    fun switchToPercent() { isInPercent.value = true }
-    fun switchToCurrency() { isInPercent.value = false }
 
     fun addDigit(digit: Char) = when(val rawValue = rawInputValue.value) {
         null -> {

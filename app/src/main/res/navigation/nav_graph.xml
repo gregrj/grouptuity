@@ -21,18 +21,22 @@
         <action android:id="@+id/action_billSplit_to_itemEntry" app:destination="@id/itemEntryFragment"/>
         <action android:id="@+id/createFirstDiscount" app:destination="@id/discountEntryFragment"/>
         <action android:id="@+id/manageDiscounts" app:destination="@id/discountsFragment"/>
+        <action android:id="@+id/adjustBillSplitTaxTip" app:destination="@id/calculator" />
+    </nav_fragment>
+
+    <nav_fragment
+        android:id="@+id/simpleCalcFragment"
+        android:name="com.grouptuity.grouptuity.ui.simplecalc.SimpleCalcFragment"
+        android:label="@string/simple_calc_toolbar_title"
+        tools:layout="@layout/frag_simple_calc">
+
+        <action android:id="@+id/adjustSimpleCalcTaxTip" app:destination="@id/calculator" />
     </nav_fragment>
 
     <nav_fragment
         android:id="@+id/settingsHolderFragment"
         android:name="com.grouptuity.grouptuity.ui.SettingsHolderFragment"
         android:label="SettingsHolderFragment" />
-
-    <nav_fragment
-        android:id="@+id/simpleCalcFragment"
-        android:name="com.grouptuity.grouptuity.ui.simplecalc.SimpleCalcFragment"
-        android:label="@string/simple_calc_toolbar_title"
-        tools:layout="@layout/frag_simple_calc"/>
 
     <nav_fragment
         android:id="@+id/addressBookFragment"
@@ -82,5 +86,20 @@
             android:name="origin_params"
             app:nullable="true"
             app:argType="com.grouptuity.grouptuity.ui.custom.transitions.CircularRevealTransition$OriginParams"/>
+    </nav_fragment>
+
+    <nav_fragment
+        android:id="@+id/calculator"
+        android:name="com.grouptuity.grouptuity.ui.calculator.CalculatorFragment"
+        tools:layout="@layout/frag_calculator">
+        <argument
+            android:name="title"
+            app:argType="string"/>
+        <argument
+            android:name="previous_value"
+            app:argType="string"/>
+        <argument
+            android:name="calculation_type"
+            app:argType="com.grouptuity.grouptuity.data.CalculationType"/>
     </nav_fragment>
 </navigation>

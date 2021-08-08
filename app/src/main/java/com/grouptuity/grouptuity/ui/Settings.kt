@@ -31,8 +31,9 @@ class SettingsHolderFragment: Fragment() {
         binding.toolbar.apply {
             setNavigationIcon(R.drawable.ic_arrow_back)
 
+            // TODO this color change needs to be reverted when this fragment is closed or it persists
             val typedValue = TypedValue()
-            context.theme.resolveAttribute(R.attr.colorOnSurface, typedValue, true)
+            context.theme.resolveAttribute(R.attr.colorOnSurfaceMediumEmphasis, typedValue, true)
             navigationIcon?.setTint(typedValue.data)
 
             setNavigationOnClickListener { requireActivity().onBackPressed() }

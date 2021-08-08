@@ -8,7 +8,11 @@
   <component name="DesignSurface">
     <option name="filePathToZoomLevelMap">
       <map>
+        <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/layout/calculator_collapsible.xml" value="0.38697916666666665" />
+        <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/layout/calculator_fixed.xml" value="0.38697916666666665" />
+        <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/layout/frag_calculator.xml" value="0.1" />
         <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/layout/frag_settings_holder.xml" value="0.1" />
+        <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/menu/main.xml" value="0.21875" />
       </map>
     </option>
   </component>

@@ -1,4 +1,4 @@
-package com.grouptuity.grouptuity.ui.billsplit.items
+package com.grouptuity.grouptuity.ui.billsplit
 
 import android.app.Application
 import androidx.lifecycle.asLiveData

@@ -1,38 +1,19 @@
 <resources>
-    <plurals name="diners_num_items_with_subtotal">
-        <item quantity="one">%2$s (1 item)</item>
-        <item quantity="other">%2$s (%1$d items)</item>
-    </plurals>
-    <plurals name="addressbook_toolbar_num_selected">
-        <item quantity="one">%d selected</item>
-        <item quantity="other">%d selected</item>
-    </plurals>
-    <plurals name="itementry_num_items_with_subtotal">
-        <item quantity="one">%2$s (1 item)</item>
-        <item quantity="other">%2$s (%1$d items)</item>
-    </plurals>
-    <plurals name="itementry_num_diners_selected">
-        <item quantity="other">%d selected</item>
-    </plurals>
-    <plurals name="itementry_num_diners_selected_everyone">
-        <item quantity="other">%d selected (everyone)</item>
-    </plurals>
     <string name="app_name">Grouptuity</string>
-    <string name="navigation_drawer_open">Open navigation drawer</string>
 
+    <string name="navigation_drawer_open">Open navigation drawer</string>
     <string name="navigation_drawer_close">Close navigation drawer</string>
     <string name="nav_header_title">Android Studio</string>
     <string name="nav_header_subtitle">android.studio@android.com</string>
     <string name="nav_header_desc">Navigation header</string>
-    <string name="action_settings">Settings</string>
     <string name="nav_drawer_bill_splitter">Group Bill Splitter</string>
-
     <string name="nav_drawer_simple_calculator">Simple Tip Calculator</string>
-
     <string name="nav_drawer_saved_bills_header">Saved Bills</string>
     <string name="nav_drawer_dark_mode">Dark Mode</string>
     <string name="nav_drawer_settings">Settings</string>
     <string name="nav_drawer_help">Help &amp; Feedback</string>
+
+    <string name="action_settings">Settings</string>
 
     <string name="simple_calc_toolbar_title">Tip Calculator</string>>
     <string name="billsplit_tab_diners">Diners</string>>
@@ -42,6 +23,11 @@
     <string name="billsplit_tab_payment">Pay</string>
     <string name="diners_add_self">Include yourself</string>
     <string name="diners_zero_items">0 items</string>
+    <plurals name="diners_num_items_with_subtotal">
+        <item quantity="one">%2$s (1 item)</item>
+        <item quantity="other">%2$s (%1$d items)</item>
+    </plurals>
+
     <string name="addressbook_toolbar_select_diners">Select Diners</string>
     <string name="addressbook_toolbar_search_instructions">Search contacts</string>
     <string name="addressbook_toolbar_create_instructions">Enter diner name</string>
@@ -67,14 +53,18 @@
     <string name="addressbook_snackbar_unfavorited">Contacts unfavorited</string>
     <string name="addressbook_snackbar_unhide_all">All contacts visible</string>
     <string name="addressbook_snackbar_unfavorite_all">All favorites cleared</string>
-
     <string name="addressbook_snackbar_hidden">Contacts hidden</string>
     <string name="addressbook_snackbar_unhidden">Contacts unhidden</string>
     <string name="addressbook_listitem_hidden">(contact hidden)</string>
+    <plurals name="addressbook_toolbar_num_selected">
+        <item quantity="one">%d selected</item>
+        <item quantity="other">%d selected</item>
+    </plurals>
 
     <string name="items_add_items_hint">Add all items\non the bill</string>
     <string name="items_no_diners_warning">No diners assigned</string>
     <string name="items_shared_by_everyone">Shared by everyone</string>
+
     <string name="itementry_clear_selections">Clear</string>
     <string name="itementry_select_all">Everyone</string>
     <string name="itementry_toolbar_edit_name">Edit item name</string>
@@ -82,6 +72,16 @@
     <string name="itementry_toolbar_select_diners">Select Diners</string>
     <string name="itementry_toolbar_item_number">Item #</string>
     <string name="itementry_zero_items">0 items</string>
+    <plurals name="itementry_num_items_with_subtotal">
+        <item quantity="one">%2$s (1 item)</item>
+        <item quantity="other">%2$s (%1$d items)</item>
+    </plurals>
+    <plurals name="itementry_num_diners_selected">
+        <item quantity="other">%d selected</item>
+    </plurals>
+    <plurals name="itementry_num_diners_selected_everyone">
+        <item quantity="other">%d selected (everyone)</item>
+    </plurals>
 
     <string name="taxtip_add_discount_button">Add</string>
     <string name="taxtip_edit_discounts_button">Discounts</string>
@@ -92,6 +92,11 @@
     <string name="taxtip_after_tax">Including Tax</string>
     <string name="taxtip_tip">Tip</string>
     <string name="taxtip_total">Total</string>
+
+    <string name="calculator_toolbar_title_tax_percent">Enter Tax (was %s)</string>
+    <string name="calculator_toolbar_title_tax_amount">Enter Tax (was %s)</string>
+    <string name="calculator_toolbar_title_tip_percent">Enter Tip (was %s)</string>
+    <string name="calculator_toolbar_title_tip_amount">Enter Tip (was %s)</string>
 
     <string name="discounts_toolbar_title">Discounts</string>
     <string name="discounts_onitems_percent_single">%1$s off %2$s</string>
@@ -118,7 +123,6 @@
         <item quantity="other">Shared by %1$d diners</item>
     </plurals>
     <string name="discounts_fordiners_currency_all">Shared by everyone</string>
-
     <string name="discounts_reimbursement_single">%2$s reimbursed %1$s</string>
     <plurals name="discounts_reimbursement_multiple">
         <item quantity="one">%1$d diner reimbursed %2$s</item>
@@ -186,13 +190,10 @@
     <string name="discountentry_alert_switch_to_diners_message">Splitting the discount by diners will discard all item selections</string>
     <string name="discountentry_alert_switch_to_items_title">Discard diner selections?</string>
     <string name="discountentry_alert_switch_to_items_message">Applying the discount on items will discard all diner selections</string>
-
     <string name="discountentry_alert_abort_unsaved_valid_edits_title">Save changes?</string>
     <string name="discountentry_alert_abort_unsaved_valid_edits_message">Save or discard edits before returning to the previous screen</string>
-
     <string name="discountentry_alert_abort_unsaved_invalid_edits_title">Discard changes?</string>
     <string name="discountentry_alert_abort_unsaved_invalid_edits_message">Any edits will be discarded before returning to the previous screen</string>
-
     <string name="discountentry_alert_abort_reimbursement_no_selections_title">Discard reimbursement?</string>
     <string name="discountentry_alert_abort_reimbursement_no_selections_message">At least one diner needs to be selected to be reimbursed</string>
     <string name="discountentry_alert_abort_reimbursement_zero_value_title">Discard reimbursement?</string>
@@ -239,6 +240,8 @@
     <string name="equals_symbol">\u003D</string>
     <string name="open_parenthesis">(</string>
     <string name="close_parenthesis">)</string>
+
+    <!-- ################################################################################################################################ -->
 
     <string name="messages_header">Messages</string>
 

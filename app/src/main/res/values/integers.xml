@@ -4,7 +4,7 @@
 
     <integer name="viewprop_animation_duration">300</integer>
     <integer name="card_flip_time_full">300</integer>
-    <integer name="frag_transition_duration">3000</integer>
+    <integer name="frag_transition_duration">300</integer>
 
     <integer name="permission_read_contacts_addressbook">1</integer>
     <integer name="permission_request_get_accounts">2</integer>

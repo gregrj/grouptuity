@@ -1,4 +1,4 @@
-package com.grouptuity.grouptuity.ui.billsplit.items
+package com.grouptuity.grouptuity.ui.billsplit
 
 import android.content.Context
 import android.os.Bundle
@@ -18,11 +18,9 @@ import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.SimpleItemAnimator
 import com.google.android.material.transition.Hold
 import com.grouptuity.grouptuity.R
-import com.grouptuity.grouptuity.data.Diner
 import com.grouptuity.grouptuity.data.Item
 import com.grouptuity.grouptuity.databinding.FragItemsBinding
 import com.grouptuity.grouptuity.databinding.FragItemsListitemBinding
-import com.grouptuity.grouptuity.ui.billsplit.BillSplitFragmentDirections
 import com.grouptuity.grouptuity.ui.custom.views.RecyclerViewBottomOffset
 import com.grouptuity.grouptuity.ui.custom.views.RecyclerViewListener
 import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy

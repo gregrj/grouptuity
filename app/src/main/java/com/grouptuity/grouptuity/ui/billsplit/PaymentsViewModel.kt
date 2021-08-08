@@ -1,4 +1,4 @@
-package com.grouptuity.grouptuity.ui.billsplit.payments
+package com.grouptuity.grouptuity.ui.billsplit
 
 import androidx.lifecycle.ViewModel
 

@@ -5,7 +5,6 @@ import android.animation.ArgbEvaluator
 import android.animation.ValueAnimator
 import android.graphics.Color
 import android.os.Bundle
-import android.util.Log
 import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
@@ -17,7 +16,6 @@ import androidx.core.animation.doOnStart
 import androidx.core.view.doOnPreDraw
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
-import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.*
 import androidx.transition.Transition
@@ -33,8 +31,8 @@ import com.google.android.material.transition.Hold
 import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.databinding.*
 import com.grouptuity.grouptuity.ui.custom.transitions.*
-import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
 import com.grouptuity.grouptuity.ui.custom.views.TabLayoutMediator
+import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
 import com.grouptuity.grouptuity.ui.custom.views.slideUpFAB
 import java.text.NumberFormat
 
@@ -72,7 +70,7 @@ class DiscountEntryFragment: Fragment(), Revealable by RevealableImpl() {
         }
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, backPressedCallback)
 
-        //Reset state and setup transitions
+        // Reset state and setup transitions
         postponeEnterTransition()
         discountEntryViewModel.startTransitionEvent.observe(viewLifecycleOwner) {
             it.consume()?.also { requireView().doOnPreDraw { startPostponedEnterTransition() } }

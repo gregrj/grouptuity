@@ -135,6 +135,7 @@ class AddressBookViewModel(app: Application): UIViewModel(app) {
         acquireReadContactsPermissionEventMutable.value?.consume()
     }
 
+    //TODO why three values? Simplify across all ViewModels
     fun handleOnBackPressed(): Boolean? {
         when {
             isInputLocked.value -> { }

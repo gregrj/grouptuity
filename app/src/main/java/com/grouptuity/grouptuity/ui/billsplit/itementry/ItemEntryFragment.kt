@@ -43,7 +43,8 @@ import kotlinx.coroutines.withContext
 // TODO ripple effect on long press clear
 // TODO disable interactions when transitions are running
 // TODO finish item name editor -> issues with back press and keyboard dismiss; block calculator inputs
-// TODO exit transition to new item rather than circular reveal
+// TODO check for substantial edits and show alert on dismiss
+
 
 
 class ItemEntryFragment: Fragment(), Revealable by RevealableImpl() {

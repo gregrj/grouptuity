@@ -97,6 +97,11 @@
                                 <LayoutPositions />
                               </value>
                             </entry>
+                            <entry key="adjustBillSplitTaxTip">
+                              <value>
+                                <LayoutPositions />
+                              </value>
+                            </entry>
                             <entry key="createFirstDiscount">
                               <value>
                                 <LayoutPositions />
@@ -112,13 +117,25 @@
                       </LayoutPositions>
                     </value>
                   </entry>
+                  <entry key="calculator">
+                    <value>
+                      <LayoutPositions>
+                        <option name="myPosition">
+                          <Point>
+                            <option name="x" value="426" />
+                            <option name="y" value="-531" />
+                          </Point>
+                        </option>
+                      </LayoutPositions>
+                    </value>
+                  </entry>
                   <entry key="discountEntryFragment">
                     <value>
                       <LayoutPositions>
                         <option name="myPosition">
                           <Point>
-                            <option name="x" value="12" />
-                            <option name="y" value="12" />
+                            <option name="x" value="431" />
+                            <option name="y" value="262" />
                           </Point>
                         </option>
                       </LayoutPositions>
@@ -129,8 +146,8 @@
                       <LayoutPositions>
                         <option name="myPosition">
                           <Point>
-                            <option name="x" value="12" />
-                            <option name="y" value="12" />
+                            <option name="x" value="675" />
+                            <option name="y" value="260" />
                           </Point>
                         </option>
                         <option name="myPositions">
@@ -150,8 +167,8 @@
                       <LayoutPositions>
                         <option name="myPosition">
                           <Point>
-                            <option name="x" value="12" />
-                            <option name="y" value="12" />
+                            <option name="x" value="104" />
+                            <option name="y" value="440" />
                           </Point>
                         </option>
                       </LayoutPositions>
@@ -177,6 +194,15 @@
                             <option name="x" value="6" />
                             <option name="y" value="-531" />
                           </Point>
+                        </option>
+                        <option name="myPositions">
+                          <map>
+                            <entry key="adjustSimpleCalcTaxTip">
+                              <value>
+                                <LayoutPositions />
+                              </value>
+                            </entry>
+                          </map>
                         </option>
                       </LayoutPositions>
                     </value>

@@ -1,12 +1,10 @@
-package com.grouptuity.grouptuity.ui.billsplit.diners
+package com.grouptuity.grouptuity.ui.billsplit
 
 import android.app.Application
-import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.asLiveData
 import com.grouptuity.grouptuity.data.Diner
 import com.grouptuity.grouptuity.data.UIViewModel
-import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.combineTransform
 import java.text.NumberFormat
 

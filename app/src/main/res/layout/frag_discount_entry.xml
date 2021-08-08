@@ -160,12 +160,12 @@
 
                         <include
                             android:id="@+id/priceNumberPad"
-                            layout="@layout/calculator"
+                            layout="@layout/calculator_collapsible"
                             android:elevation="4dp"/>
 
                         <include
                             android:id="@+id/costNumberPad"
-                            layout="@layout/calculator"
+                            layout="@layout/calculator_collapsible"
                             android:elevation="4dp"/>
                     </androidx.coordinatorlayout.widget.CoordinatorLayout>
                 </LinearLayout>
@@ -178,9 +178,4 @@
                 android:background="?attr/colorSecondary"/>
         </FrameLayout>
     </com.google.android.material.card.MaterialCardView>
-
-    <View
-        android:id="@+id/touch_interceptor"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"/>
 </com.grouptuity.grouptuity.ui.custom.views.LockableFrameLayout>

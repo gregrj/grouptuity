@@ -185,7 +185,7 @@
 
                         <include
                             android:id="@+id/calculator"
-                            layout="@layout/calculator"
+                            layout="@layout/calculator_collapsible"
                             android:elevation="4dp"/>
 
                     </androidx.coordinatorlayout.widget.CoordinatorLayout>

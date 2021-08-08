@@ -151,7 +151,23 @@ class Bill(@PrimaryKey val id: String,
                 val tip: Double,
                 val tipAsPercent: Boolean,
                 val isTaxTipped: Boolean,
-                val discountsReduceTip: Boolean)
+                val discountsReduceTip: Boolean) {
+
+    fun withTitle(title: String) =
+        Bill(this.id, title, this.timeCreated, this.tax, this.taxAsPercent, this.tip, this.tipAsPercent, this.isTaxTipped, this.discountsReduceTip)
+    fun withTaxPercent(taxPercent: Double) =
+        Bill(this.id, this.title, this.timeCreated, taxPercent, true, this.tip, this.tipAsPercent, this.isTaxTipped, this.discountsReduceTip)
+    fun withTaxAmount(taxAmount: Double) =
+        Bill(this.id, this.title, this.timeCreated, taxAmount, false, this.tip, this.tipAsPercent, this.isTaxTipped, this.discountsReduceTip)
+    fun withTipPercent(tipPercent: Double) =
+        Bill(this.id, this.title, this.timeCreated, this.tax, this.taxAsPercent, tipPercent, true, this.isTaxTipped, this.discountsReduceTip)
+    fun withTipAmount(tipAmount: Double) =
+        Bill(this.id, this.title, this.timeCreated, this.tax, this.taxAsPercent, tipAmount, false, this.isTaxTipped, this.discountsReduceTip)
+    fun withTaxTipped(taxTipped: Boolean) =
+        Bill(this.id, this.title, this.timeCreated, this.tax, this.taxAsPercent, this.tip, this.tipAsPercent, taxTipped, this.discountsReduceTip)
+    fun withDiscountsReduceTip(reduceTip: Boolean) =
+        Bill(this.id, this.title, this.timeCreated, this.tax, this.taxAsPercent, this.tip, this.tipAsPercent, this.isTaxTipped, reduceTip)
+}
 
 
 @Entity(tableName = "diner_table",

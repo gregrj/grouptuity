@@ -1,7 +1,8 @@
-package com.grouptuity.grouptuity.ui.billsplit.diners
+package com.grouptuity.grouptuity.ui.billsplit
 
 import android.content.Context
 import android.os.Bundle
+import android.util.Log
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup

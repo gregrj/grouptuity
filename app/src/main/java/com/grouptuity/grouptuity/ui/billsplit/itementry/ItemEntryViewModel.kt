@@ -17,7 +17,9 @@ class ItemEntryViewModel(app: Application): UIViewModel(app) {
     }
 
     private val formatter = NumberFormat.getCurrencyInstance()
-    private val calculator = CalculatorData(acceptValueCallback = { hasUntouchedPriorSelections = false })
+    private val calculator = CalculatorData(CalculationType.ITEM_PRICE, acceptValueCallback = {
+        hasUntouchedPriorSelections = false
+    })
 
     // Item Name
     private val itemNameInput = MutableStateFlow<String?>(null)
@@ -97,14 +99,14 @@ class ItemEntryViewModel(app: Application): UIViewModel(app) {
         if(item == null) {
             // New item
             loadedItem.value = null
-            calculator.initialize(null, false, showNumberPad = true)
+            calculator.reset(CalculationType.ITEM_PRICE, null, showNumberPad = true)
             itemNameInput.value = null
             hasUntouchedPriorSelections = false
         } else {
             // Editing existing item
             loadedItem.value = item
             pauseDinerRefresh.value = false
-            calculator.initialize(item.price, false, showNumberPad = false)
+            calculator.reset(CalculationType.ITEM_PRICE, item.price, showNumberPad = false)
             itemNameInput.value = item.name
             selectionSet.addAll(item.diners)
             hasUntouchedPriorSelections = selectionSet.isNotEmpty()

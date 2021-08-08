@@ -4,6 +4,7 @@ import android.app.Application
 import android.content.Context
 import android.content.pm.PackageManager
 import android.provider.ContactsContract
+import android.util.Log
 import androidx.datastore.core.DataStore
 import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
@@ -181,7 +182,7 @@ class Repository(context: Context) {
         preferenceDataStore.edit { preferences -> preferences[key] = newValue }
     }
 
-    private fun newUUID() = UUID.randomUUID().toString()
+    private fun newUUID(): String = UUID.randomUUID().toString()
 
     private fun commitBill() = CoroutineScope(Dispatchers.Main).launch {
 
@@ -257,7 +258,10 @@ class Repository(context: Context) {
     fun loadSavedBill(billId: String) = CoroutineScope(Dispatchers.IO).launch {
         loadInProgress.value = true
 
-        database.loadBill(billId)?.also { payload ->
+        val payload = database.loadBill(billId)
+        if (payload == null) {
+            createAndLoadNewBill()
+        } else {
             withContext(Dispatchers.Main) {
                 mBill = payload.bill
                 mRestaurant = payload.restaurant
@@ -282,6 +286,41 @@ class Repository(context: Context) {
 
         database.deleteBill(bill)
     }
+    fun setTitle(title: String) {
+        mBill = mBill.withTitle(title)
+        commitBill()
+        database.saveBill(mBill)
+    }
+    fun setTaxPercent(taxPercent: Double) {
+        mBill = mBill.withTaxPercent(taxPercent)
+        commitBill()
+        database.saveBill(mBill)
+    }
+    fun setTaxAmount(taxAmount: Double) {
+        mBill = mBill.withTaxAmount(taxAmount)
+        commitBill()
+        database.saveBill(mBill)
+    }
+    fun setTipPercent(tipPercent: Double) {
+        mBill = mBill.withTipPercent(tipPercent)
+        commitBill()
+        database.saveBill(mBill)
+    }
+    fun setTipAmount(tipAmount: Double) {
+        mBill = mBill.withTipAmount(tipAmount)
+        commitBill()
+        database.saveBill(mBill)
+    }
+    fun setTaxTipped(taxTipped: Boolean) {
+        mBill = mBill.withTaxTipped(taxTipped)
+        commitBill()
+        database.saveBill(mBill)
+    }
+    fun setDiscountsReduceTip(reduceTip: Boolean) {
+        mBill = mBill.withDiscountsReduceTip(reduceTip)
+        commitBill()
+        database.saveBill(mBill)
+    }
 
     // Diner Functions
     fun addSelfAsDiner(includeWithEveryone: Boolean = true) {
@@ -299,9 +338,11 @@ class Repository(context: Context) {
     }
     fun addContactsAsDiners(dinerContacts: Collection<Contact>, includeWithEveryone: Boolean = true) {
         val diners: List<Diner> = if (includeWithEveryone) {
+            Log.e("fewf", "f")
             dinerContacts.map { contact ->
+                Log.e(contact.name, ""+ mBill.id)
                 Diner(newUUID(), mBill.id, contact).also {
-                    // TODO
+
                 }
             }
         } else {
@@ -309,6 +350,7 @@ class Repository(context: Context) {
         }
 
         mDiners.addAll(diners)
+
         commitBill()
 
         database.saveDiners(diners)
@@ -470,6 +512,7 @@ class Repository(context: Context) {
                 mBill.id -> { /* Correct bill already loaded */ }
                 else -> {
                     // TODO check if bill is expired
+                    Log.e("Loading bill", billId)
                     loadSavedBill(billId)
                 }
             }
@@ -627,15 +670,15 @@ abstract class AppDatabase: RoomDatabase() {
         }
 
         private fun populateInitialData(newDatabase: AppDatabase) = runBlocking {
-            newDatabase.contactDao().save(Contact.restaurant)
-            newDatabase.contactDao().save(Contact.self)
+            newDatabase.contactDao().insert(Contact.restaurant)
+            newDatabase.contactDao().insert(Contact.self)
         }
     }
 
     fun getSavedBills() = billDao().getSavedBills()
 
-    fun saveContact(contact: Contact) = CoroutineScope(Dispatchers.IO).launch { contactDao().save(contact) }
-    fun saveContacts(contacts: Collection<Contact>) = CoroutineScope(Dispatchers.IO).launch { contactDao().save(contacts) }
+    fun saveContact(contact: Contact) = CoroutineScope(Dispatchers.IO).launch { contactDao().upsert(contact) }
+    fun saveContacts(contacts: List<Contact>) = CoroutineScope(Dispatchers.IO).launch { contactDao().upsert(contacts) }
     fun removeContact(contact: Contact) = CoroutineScope(Dispatchers.IO).launch { contactDao().delete(contact) }
     suspend fun resetContactVisibility(lookupKey: String) = contactDao().resetVisibility(lookupKey)
     suspend fun resetContactVisibilities(lookupKeys: Collection<String>) = contactDao().resetVisibility(lookupKeys)
@@ -660,7 +703,7 @@ abstract class AppDatabase: RoomDatabase() {
     fun deleteDiscounts(discounts: Collection<Discount>) = CoroutineScope(Dispatchers.IO).launch { discountDao().delete(discounts) }
     fun deletePayments(payments: Collection<Payment>) = CoroutineScope(Dispatchers.IO).launch { paymentDao().delete(payments) }
 
-    fun saveBill(bill: Bill) = CoroutineScope(Dispatchers.IO).launch { billDao().save(bill) }
+    fun saveBill(bill: Bill) = CoroutineScope(Dispatchers.IO).launch { billDao().upsert(bill) }
     fun saveDiner(diner: Diner) = CoroutineScope(Dispatchers.IO).launch { dinerDao().save(diner) }
     fun saveDiners(diners: Collection<Diner>) = CoroutineScope(Dispatchers.IO).launch { dinerDao().save(diners) }
     fun saveItem(item: Item) = CoroutineScope(Dispatchers.IO).launch { itemDao().save(item) }

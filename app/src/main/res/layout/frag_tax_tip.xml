@@ -186,8 +186,22 @@
                 app:layout_constraintBaseline_toBaselineOf="@+id/after_discount_title"
                 app:layout_constraintEnd_toEndOf="parent" />
 
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/edit_tax_percent_container"
+                android:transitionName="taxPercentContainerTransitionName"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                app:layout_constraintTop_toTopOf="@+id/tax_percent"
+                app:layout_constraintBottom_toBottomOf="@+id/tax_percent"
+                app:layout_constraintStart_toStartOf="@+id/tax_percent"
+                app:layout_constraintEnd_toEndOf="@+id/tax_percent"
+                app:cardBackgroundColor="@android:color/transparent"
+                app:cardCornerRadius="0dp"
+                app:cardElevation="0dp"/>
+
             <EditText
                 android:id="@+id/tax_percent"
+                android:transitionName="taxPercentEditTextTransitionName"
                 style="@android:style/TextAppearance.Material.Large"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -196,10 +210,25 @@
                 android:focusable="false"
                 android:cursorVisible="false"
                 app:layout_constraintBaseline_toBaselineOf="@+id/tax_title"
-                app:layout_constraintEnd_toStartOf="@+id/tax_amount" />
+                app:layout_constraintEnd_toStartOf="@+id/tax_amount"
+                tools:ignore="Autofill,LabelFor"/>
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/edit_tax_amount_container"
+                android:transitionName="taxAmountContainerTransitionName"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                app:layout_constraintTop_toTopOf="@+id/tax_amount"
+                app:layout_constraintBottom_toBottomOf="@+id/tax_amount"
+                app:layout_constraintStart_toStartOf="@+id/tax_amount"
+                app:layout_constraintEnd_toEndOf="@+id/tax_amount"
+                app:cardBackgroundColor="@android:color/transparent"
+                app:cardCornerRadius="0dp"
+                app:cardElevation="0dp"/>
 
             <EditText
                 android:id="@+id/tax_amount"
+                android:transitionName="taxAmountEditTextTransitionName"
                 style="@android:style/TextAppearance.Material.Large"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -207,7 +236,8 @@
                 android:focusable="false"
                 android:cursorVisible="false"
                 app:layout_constraintBaseline_toBaselineOf="@+id/tax_title"
-                app:layout_constraintEnd_toEndOf="parent" />
+                app:layout_constraintEnd_toEndOf="parent"
+                tools:ignore="Autofill,LabelFor"/>
 
             <TextView
                 android:id="@+id/after_tax_amount"
@@ -218,8 +248,22 @@
                 app:layout_constraintBaseline_toBaselineOf="@+id/after_tax_title"
                 app:layout_constraintEnd_toEndOf="parent" />
 
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/edit_tip_percent_container"
+                android:transitionName="tipPercentContainerTransitionName"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                app:layout_constraintTop_toTopOf="@+id/tip_percent"
+                app:layout_constraintBottom_toBottomOf="@+id/tip_percent"
+                app:layout_constraintStart_toStartOf="@+id/tip_percent"
+                app:layout_constraintEnd_toEndOf="@+id/tip_percent"
+                app:cardBackgroundColor="@android:color/transparent"
+                app:cardCornerRadius="0dp"
+                app:cardElevation="0dp"/>
+
             <EditText
                 android:id="@+id/tip_percent"
+                android:transitionName="tipPercentEditTextTransitionName"
                 style="@android:style/TextAppearance.Material.Large"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -228,10 +272,25 @@
                 android:focusable="false"
                 android:cursorVisible="false"
                 app:layout_constraintBaseline_toBaselineOf="@+id/tip_title"
-                app:layout_constraintEnd_toStartOf="@+id/tip_amount" />
+                app:layout_constraintEnd_toStartOf="@+id/tip_amount"
+                tools:ignore="Autofill,LabelFor"/>
+
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/edit_tip_amount_container"
+                android:transitionName="tipAmountContainerTransitionName"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                app:layout_constraintTop_toTopOf="@+id/tip_amount"
+                app:layout_constraintBottom_toBottomOf="@+id/tip_amount"
+                app:layout_constraintStart_toStartOf="@+id/tip_amount"
+                app:layout_constraintEnd_toEndOf="@+id/tip_amount"
+                app:cardBackgroundColor="@android:color/transparent"
+                app:cardCornerRadius="0dp"
+                app:cardElevation="0dp"/>
 
             <EditText
                 android:id="@+id/tip_amount"
+                android:transitionName="tipAmountEditTextTransitionName"
                 style="@android:style/TextAppearance.Material.Large"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
@@ -239,7 +298,8 @@
                 android:focusable="false"
                 android:cursorVisible="false"
                 app:layout_constraintBaseline_toBaselineOf="@+id/tip_title"
-                app:layout_constraintEnd_toEndOf="parent" />
+                app:layout_constraintEnd_toEndOf="parent"
+                tools:ignore="Autofill,LabelFor"/>
 
             <TextView
                 android:id="@+id/total"

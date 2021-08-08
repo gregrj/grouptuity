@@ -82,23 +82,27 @@ class CustomNavigator(private val context: Context, private val manager: Fragmen
         val initialNavigation = mBackStack.isEmpty()
         val isSingleTopReplacement = (navOptions != null && !initialNavigation && navOptions.shouldLaunchSingleTop() && mBackStack.last() == destId)
 
-        val isAdded: Boolean = if (initialNavigation) { true } else if (isSingleTopReplacement) {
-            // Single Top means we only want one instance on the back stack
-            if (mBackStack.size > 1) {
-                // If the Fragment to be replaced is on the FragmentManager's
-                // back stack, a simple replace() isn't enough so we
-                // remove it from the back stack and put our replacement
-                // on the back stack in its place
-                manager.popBackStack(
+        val isAdded: Boolean = when {
+            initialNavigation -> true
+            isSingleTopReplacement -> {
+                // Single Top means we only want one instance on the back stack
+                if (mBackStack.size > 1) {
+                    // If the Fragment to be replaced is on the FragmentManager's
+                    // back stack, a simple replace() isn't enough so we
+                    // remove it from the back stack and put our replacement
+                    // on the back stack in its place
+                    manager.popBackStack(
                         generateBackStackName(mBackStack.size, mBackStack.last()),
                         FragmentManager.POP_BACK_STACK_INCLUSIVE
-                )
-                ft.addToBackStack(generateBackStackName(mBackStack.size, destId))
+                    )
+                    ft.addToBackStack(generateBackStackName(mBackStack.size, destId))
+                }
+                false
             }
-            false
-        } else {
-            ft.addToBackStack(generateBackStackName(mBackStack.size + 1, destId))
-            true
+            else -> {
+                ft.addToBackStack(generateBackStackName(mBackStack.size + 1, destId))
+                true
+            }
         }
 
         if (navigatorExtras is Extras) {

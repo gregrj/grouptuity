@@ -1,22 +1,15 @@
 package com.grouptuity.grouptuity.ui.billsplit.discountentry
 
 import android.app.Application
-import android.graphics.Typeface
-import android.util.Log
-import android.view.View
-import android.widget.LinearLayout
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.asLiveData
-import androidx.lifecycle.lifecycleScope
 import com.grouptuity.grouptuity.Event
 import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.*
-import com.grouptuity.grouptuity.ui.custom.views.ContactIcon
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
-import kotlinx.coroutines.launch
 import java.text.NumberFormat
 import kotlin.math.abs
 import kotlin.math.max
@@ -50,8 +43,8 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
     val loadItemRecyclerViewEvent: LiveData<Event<Boolean>> = loadItemRecyclerViewEventMutable
     val loadReimbursementFragmentEvent: LiveData<Event<Boolean>> = loadReimbursementFragmentEventMutable
 
-    private val priceCalcData = CalculatorData(percentMaxDecimals = app.resources.getInteger(R.integer.percent_max_decimals))
-    private val costCalcData = CalculatorData(currencyZeroAcceptable = true)
+    private val priceCalcData = CalculatorData(CalculationType.DISCOUNT_AMOUNT)
+    private val costCalcData = CalculatorData(CalculationType.REIMBURSEMENT_AMOUNT)
 
     private val _isHandlingReimbursements = MutableStateFlow(false)
     private val _isDiscountOnItems = MutableStateFlow(true)
@@ -563,8 +556,8 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
             // Creating new discount
             loadedDiscount.value = null
 
-            priceCalcData.initialize(null, false, showNumberPad = true)
-            costCalcData.initialize(null, false)
+            priceCalcData.reset(CalculationType.DISCOUNT_AMOUNT, null, true)
+            costCalcData.reset(CalculationType.REIMBURSEMENT_AMOUNT, null, false)
 
             _isDiscountOnItems.value = true
             editedRecipientSelections = null
@@ -575,8 +568,12 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
             // Editing existing discount
             loadedDiscount.value = discount
 
-            priceCalcData.initialize(discount.value, discount.asPercent)
-            costCalcData.initialize(discount.cost, false)
+            priceCalcData.reset(
+                if (discount.asPercent) CalculationType.DISCOUNT_PERCENT else CalculationType.DISCOUNT_AMOUNT,
+                discount.value,
+                false
+            )
+            costCalcData.reset(CalculationType.REIMBURSEMENT_AMOUNT, discount.cost, false)
 
             _isDiscountOnItems.value = if(discount.onItems) {
                 itemSelectionSet.addAll(discount.items)
@@ -718,8 +715,8 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
     }
     fun switchDiscountBasisToItems() { _isDiscountOnItems.value = true }
     fun switchDiscountBasisToDiners() { _isDiscountOnItems.value = false }
-    fun switchPriceToPercent() = priceCalcData.switchToPercent()
-    fun switchPriceToCurrency() = priceCalcData.switchToCurrency()
+    fun switchPriceToPercent() { priceCalcData.switchCalculationType(CalculationType.DISCOUNT_PERCENT) }
+    fun switchPriceToCurrency() { priceCalcData.switchCalculationType(CalculationType.DISCOUNT_AMOUNT) }
 
     fun editPrice() {
         priceCalcData.clearValue()
