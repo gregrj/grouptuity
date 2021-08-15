@@ -20,15 +20,11 @@ import com.grouptuity.grouptuity.ui.custom.transitions.Revealable
 @Navigator.Name("nav_fragment")
 class CustomNavigator(private val context: Context, private val manager: FragmentManager, private val containerId: Int): FragmentNavigator(context, manager, containerId) {
     private val mBackStack = ArrayDeque<Int>()
-    var previousDestination: Int = -1
-        private set
 
     override fun popBackStack(): Boolean {
         if (mBackStack.isEmpty() || manager.isStateSaved) {
             return false
         }
-
-        previousDestination = mBackStack.last()
 
         manager.popBackStack(generateBackStackName(mBackStack.size, mBackStack.last()), FragmentManager.POP_BACK_STACK_INCLUSIVE)
         mBackStack.removeLast()
@@ -40,8 +36,6 @@ class CustomNavigator(private val context: Context, private val manager: Fragmen
         if (manager.isStateSaved) {
             return null
         }
-
-        previousDestination = mBackStack.lastOrNull() ?: -1
 
         var className = destination.className
         if (className[0] == '.') {
@@ -107,7 +101,7 @@ class CustomNavigator(private val context: Context, private val manager: Fragmen
 
         if (navigatorExtras is Extras) {
             for ((key, value) in navigatorExtras.sharedElements) {
-                ft.addSharedElement(key!!, value!!)
+                ft.addSharedElement(key, value)
             }
         }
         ft.setReorderingAllowed(true)
@@ -132,14 +126,12 @@ class CustomNavigator(private val context: Context, private val manager: Fragmen
         return b
     }
 
-    override fun onRestoreState(savedState: Bundle?) {
-        if (savedState != null) {
-            val backStack = savedState.getIntArray(KEY_BACK_STACK_IDS)
-            if (backStack != null) {
-                mBackStack.clear()
-                for (destId in backStack) {
-                    mBackStack.add(destId)
-                }
+    override fun onRestoreState(savedState: Bundle) {
+        val backStack = savedState.getIntArray(KEY_BACK_STACK_IDS)
+        if (backStack != null) {
+            mBackStack.clear()
+            for (destId in backStack) {
+                mBackStack.add(destId)
             }
         }
     }

@@ -43,7 +43,7 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
     val loadItemRecyclerViewEvent: LiveData<Event<Boolean>> = loadItemRecyclerViewEventMutable
     val loadReimbursementFragmentEvent: LiveData<Event<Boolean>> = loadReimbursementFragmentEventMutable
 
-    private val priceCalcData = CalculatorData(CalculationType.DISCOUNT_AMOUNT)
+    private val priceCalcData = CalculatorData(CalculationType.ITEMIZED_DISCOUNT_AMOUNT)
     private val costCalcData = CalculatorData(CalculationType.REIMBURSEMENT_AMOUNT)
 
     private val _isHandlingReimbursements = MutableStateFlow(false)
@@ -556,7 +556,7 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
             // Creating new discount
             loadedDiscount.value = null
 
-            priceCalcData.reset(CalculationType.DISCOUNT_AMOUNT, null, true)
+            priceCalcData.reset(CalculationType.ITEMIZED_DISCOUNT_AMOUNT, null, true)
             costCalcData.reset(CalculationType.REIMBURSEMENT_AMOUNT, null, false)
 
             _isDiscountOnItems.value = true
@@ -569,7 +569,7 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
             loadedDiscount.value = discount
 
             priceCalcData.reset(
-                if (discount.asPercent) CalculationType.DISCOUNT_PERCENT else CalculationType.DISCOUNT_AMOUNT,
+                if (discount.asPercent) CalculationType.ITEMIZED_DISCOUNT_PERCENT else CalculationType.ITEMIZED_DISCOUNT_AMOUNT,
                 discount.value,
                 false
             )
@@ -715,8 +715,8 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
     }
     fun switchDiscountBasisToItems() { _isDiscountOnItems.value = true }
     fun switchDiscountBasisToDiners() { _isDiscountOnItems.value = false }
-    fun switchPriceToPercent() { priceCalcData.switchCalculationType(CalculationType.DISCOUNT_PERCENT) }
-    fun switchPriceToCurrency() { priceCalcData.switchCalculationType(CalculationType.DISCOUNT_AMOUNT) }
+    fun switchPriceToPercent() { priceCalcData.switchCalculationType(CalculationType.ITEMIZED_DISCOUNT_PERCENT) }
+    fun switchPriceToCurrency() { priceCalcData.switchCalculationType(CalculationType.ITEMIZED_DISCOUNT_AMOUNT) }
 
     fun editPrice() {
         priceCalcData.clearValue()

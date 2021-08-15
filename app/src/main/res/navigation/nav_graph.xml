@@ -21,16 +21,16 @@
         <action android:id="@+id/action_billSplit_to_itemEntry" app:destination="@id/itemEntryFragment"/>
         <action android:id="@+id/createFirstDiscount" app:destination="@id/discountEntryFragment"/>
         <action android:id="@+id/manageDiscounts" app:destination="@id/discountsFragment"/>
-        <action android:id="@+id/adjustBillSplitTaxTip" app:destination="@id/calculator" />
+        <action android:id="@+id/editBillSplitTaxTip" app:destination="@id/calculator" />
     </nav_fragment>
 
     <nav_fragment
         android:id="@+id/simpleCalcFragment"
-        android:name="com.grouptuity.grouptuity.ui.simplecalc.SimpleCalcFragment"
-        android:label="@string/simple_calc_toolbar_title"
-        tools:layout="@layout/frag_simple_calc">
+        android:name="com.grouptuity.grouptuity.ui.basictipcalc.BasicTipCalcFragment"
+        android:label="@string/basic_tip_calc_toolbar_title"
+        tools:layout="@layout/frag_basic_tip_calc">
 
-        <action android:id="@+id/adjustSimpleCalcTaxTip" app:destination="@id/calculator" />
+        <action android:id="@+id/editSimpleCalcTaxTip" app:destination="@id/calculator" />
     </nav_fragment>
 
     <nav_fragment

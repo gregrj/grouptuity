@@ -7,7 +7,7 @@
     <string name="nav_header_subtitle">android.studio@android.com</string>
     <string name="nav_header_desc">Navigation header</string>
     <string name="nav_drawer_bill_splitter">Group Bill Splitter</string>
-    <string name="nav_drawer_simple_calculator">Simple Tip Calculator</string>
+    <string name="nav_drawer_simple_calculator">Basic Tip Calculator</string>
     <string name="nav_drawer_saved_bills_header">Saved Bills</string>
     <string name="nav_drawer_dark_mode">Dark Mode</string>
     <string name="nav_drawer_settings">Settings</string>
@@ -15,12 +15,13 @@
 
     <string name="action_settings">Settings</string>
 
-    <string name="simple_calc_toolbar_title">Tip Calculator</string>>
+    <string name="basic_tip_calc_toolbar_title">Basic Tip Calculator</string>>
+
     <string name="billsplit_tab_diners">Diners</string>>
     <string name="billsplit_tab_items">Items</string>
-
     <string name="billsplit_tab_taxtip">Tax&amp;Tip</string>
     <string name="billsplit_tab_payment">Pay</string>
+
     <string name="diners_add_self">Include yourself</string>
     <string name="diners_zero_items">0 items</string>
     <plurals name="diners_num_items_with_subtotal">
@@ -93,10 +94,26 @@
     <string name="taxtip_tip">Tip</string>
     <string name="taxtip_total">Total</string>
 
-    <string name="calculator_toolbar_title_tax_percent">Enter Tax (was %s)</string>
-    <string name="calculator_toolbar_title_tax_amount">Enter Tax (was %s)</string>
-    <string name="calculator_toolbar_title_tip_percent">Enter Tip (was %s)</string>
-    <string name="calculator_toolbar_title_tip_amount">Enter Tip (was %s)</string>
+    <string name="calculator_toolbar_title_subtotal">Subtotal (was %s)</string>
+    <string name="calculator_toolbar_title_discount_pct">Discount (was %s)</string>
+    <string name="calculator_toolbar_title_discount_amt">Discount (was %s)</string>
+    <string name="calculator_toolbar_title_after_discounts">After Discounts (was %s)</string>
+    <string name="calculator_toolbar_title_tax_pct">Tax (was %s)</string>
+    <string name="calculator_toolbar_title_tax_amt">Tax (was %s)</string>
+    <string name="calculator_toolbar_title_after_tax">After Tax (was %s)</string>
+    <string name="calculator_toolbar_title_tip_pct">Tip (was %s)</string>
+    <string name="calculator_toolbar_title_tip_amt">Tip (was %s)</string>
+    <string name="calculator_toolbar_title_total">Total (was %s)</string>
+    <string name="calculator_toolbar_tax_is_tipped">Apply tip to tax</string>
+    <string name="calculator_toolbar_discount_reduces_tip">Discount reduces tip</string>
+    <string name="calculator_toolbar_reset">Reset</string>
+    <string name="calculator_gt_100_pct">>100%</string>
+    <string name="calculator_warning_discount_exceeds_100pct">Discount cannot be larger than 100%</string>
+    <string name="calculator_warning_discount_exceeds_subtotal">Discount cannot be larger than the subtotal</string>
+    <string name="calculator_warning_tax_exceeds_aftertax">Tax amount cannot be larger than the after-tax subtotal</string>
+    <string name="calculator_warning_tax_exceeds_total">Tax amount cannot be larger than the total</string>
+    <string name="calculator_warning_tip_exceeds_total">Tip amount cannot be larger than the total</string>
+    <string name="calculator_warning_tip_plus_tax_exceeds_total">Tax reduced because tip + tax cannot be larger than the total</string>
 
     <string name="discounts_toolbar_title">Discounts</string>
     <string name="discounts_onitems_percent_single">%1$s off %2$s</string>

@@ -19,16 +19,22 @@ enum class CalculationType(val isPercent: Boolean,
                            val maxDecimals: Int,
                            val maxIntegers: Int) {
     ITEM_PRICE(false, false, currencyMaxDecimals, currencyMaxIntegers),
-    DISCOUNT_PERCENT(true, false, percentMaxDecimals, percentMaxIntegers),
-    DISCOUNT_AMOUNT(false, false, currencyMaxDecimals, currencyMaxIntegers),
+    ITEMIZED_DISCOUNT_PERCENT(true, false, percentMaxDecimals, percentMaxIntegers),
+    ITEMIZED_DISCOUNT_AMOUNT(false, false, currencyMaxDecimals, currencyMaxIntegers),
     REIMBURSEMENT_AMOUNT(false, false, currencyMaxDecimals, currencyMaxIntegers),
+    OVERALL_DISCOUNT_PERCENT(true, true, percentMaxDecimals, percentMaxIntegers),
+    OVERALL_DISCOUNT_AMOUNT(false, true, currencyMaxDecimals, currencyMaxIntegers),
     TAX_PERCENT(true, true, percentMaxDecimals, percentMaxIntegers),
     TAX_AMOUNT(false, true, currencyMaxDecimals, currencyMaxIntegers),
     TIP_PERCENT(true, true, percentMaxDecimals, percentMaxIntegers),
-    TIP_AMOUNT(false, true, currencyMaxDecimals, currencyMaxIntegers)
+    TIP_AMOUNT(false, true, currencyMaxDecimals, currencyMaxIntegers),
+    SUBTOTAL(false, true, currencyMaxDecimals, currencyMaxIntegers),
+    AFTER_DISCOUNT(false, true, currencyMaxDecimals, currencyMaxIntegers),
+    AFTER_TAX(false, true, currencyMaxDecimals, currencyMaxIntegers),
+    TOTAL(false, true, currencyMaxDecimals, currencyMaxIntegers)
 }
 
-class CalculatorData(initialCalculationType: CalculationType, private val acceptValueCallback: () -> Unit = {}) {
+class CalculatorData(initialCalculationType: CalculationType, val autoHideNumberPad: Boolean=true, private val acceptValueCallback: () -> Unit = {}) {
     private val calculationType = MutableStateFlow(initialCalculationType)
 
     val isNumberPadVisible = MutableStateFlow(false)
@@ -57,90 +63,9 @@ class CalculatorData(initialCalculationType: CalculationType, private val accept
             else -> { it.toDouble() }
         }
     }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, null)
-    val displayValue: Flow<String> = combine(isNumberPadVisible, rawInputValue, isInPercent) { numberPadVisible, rawValue, inPercent ->
-        if(numberPadVisible) {
-            if(inPercent) {
-                val formatter = NumberFormat.getPercentInstance()
-
-                when(rawValue) {
-                    null -> {
-                        formatter.maximumFractionDigits = 0
-                        formatter.format(0)
-                    }
-                    "." -> {
-                        formatter.maximumFractionDigits = 0
-                        appendDecimalSymbol(formatter.format(0))
-                    }
-                    else -> {
-                        when(val numDecimals = numDecimalPlaces(rawValue)) {
-                            null -> {
-                                formatter.maximumFractionDigits = 0
-                                formatter.format(rawValue.toDouble()*0.01)
-                            }
-                            0 -> {
-                                formatter.maximumFractionDigits = 0
-                                appendDecimalSymbol(formatter.format(rawValue.toDouble()*0.01))
-                            }
-                            else -> {
-                                formatter.minimumFractionDigits = numDecimals
-                                formatter.format(rawValue.toDouble()*0.01)
-                            }
-                        }
-                    }
-                }
-            } else {
-                val formatter = NumberFormat.getCurrencyInstance()
-
-                when(rawValue) {
-                    null -> {
-                        formatter.minimumFractionDigits = 0
-                        formatter.format(0)
-                    }
-                    "." -> {
-                        formatter.minimumFractionDigits = 0
-                        appendDecimalSymbol(formatter.format(0))
-                    }
-                    else -> {
-                        when(val numDecimals = numDecimalPlaces(rawValue)) {
-                            null -> {
-                                formatter.maximumFractionDigits = 0
-                                formatter.format(rawValue.toDouble())
-                            }
-                            0 -> {
-                                formatter.maximumFractionDigits = 0
-                                appendDecimalSymbol(formatter.format(rawValue.toDouble()))
-                            }
-                            else -> {
-                                formatter.minimumFractionDigits = numDecimals
-                                formatter.format(rawValue.toDouble())
-                            }
-                        }
-                    }
-                }
-            }
-        } else {
-            if(inPercent) {
-                val formatter = NumberFormat.getPercentInstance()
-
-                if(rawValue == null || !rawValue.contains(Regex("[1-9]"))) {
-                    formatter.minimumFractionDigits = 0
-                    formatter.format(0)
-                } else if(rawValue.contains('.')) {
-                    val trimmedValue = rawValue.replace(Regex("0*$"), "").replace(Regex("\\.$"), "")
-                    formatter.minimumFractionDigits = trimmedValue.length - trimmedValue.indexOf('.') - 1
-                    formatter.format(trimmedValue.toDouble()*0.01)
-                } else {
-                    formatter.minimumFractionDigits = 0
-                    formatter.format(rawValue.toDouble()*0.01)
-                }
-            } else {
-                NumberFormat.getCurrencyInstance().format(when(rawValue) {
-                    null, "." -> 0
-                    else -> rawValue.toDouble()
-                })
-            }
-        }
-    }
+    val displayValue: StateFlow<String> = combine(isNumberPadVisible, rawInputValue, isInPercent) { numberPadVisible, rawValue, inPercent ->
+        formatRawValue(numberPadVisible, rawValue, inPercent)
+    }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, "")
 
     val editButtonVisible: Flow<Boolean> = isNumberPadVisible.mapLatest { !it }
     val backspaceButtonVisible: Flow<Boolean> = combine(isNumberPadVisible, rawInputValue) { visible, rawValue -> visible && rawValue != null }
@@ -216,7 +141,11 @@ class CalculatorData(initialCalculationType: CalculationType, private val accept
                             true
                         }
                         maxIntegersAllowed.value -> {
-                            acceptValue(newRawValue)
+                            if (maxDecimalsAllowed.value == 0) {
+                                acceptValue(newRawValue)
+                            } else {
+                                rawInputValue.value = newRawValue
+                            }
                             true
                         }
                         else -> {
@@ -273,7 +202,9 @@ class CalculatorData(initialCalculationType: CalculationType, private val accept
     fun tryRevertToLastValue(): Boolean {
         return if (_lastCompletedRawValue.value != null) {
             rawInputValue.value = _lastCompletedRawValue.value
-            hideNumberPad()
+            if (autoHideNumberPad) {
+                hideNumberPad()
+            }
             true
         } else {
             false
@@ -286,7 +217,9 @@ class CalculatorData(initialCalculationType: CalculationType, private val accept
             editedValue = true
         }
 
-        hideNumberPad()
+        if (autoHideNumberPad) {
+            hideNumberPad()
+        }
     }
     fun tryAcceptValue(): Boolean {
         val value = rawInputValue.value
@@ -310,21 +243,113 @@ class CalculatorData(initialCalculationType: CalculationType, private val accept
         rawInputValue.value = value
         _lastCompletedRawValue.value = value
         editedValue = true
-        hideNumberPad()
+
+        if (autoHideNumberPad) {
+            hideNumberPad()
+        }
+
         acceptValueCallback()
         _acceptEvents.value = Event(value)
     }
 
-    private fun numDecimalPlaces(value: String?): Int? = value?.let { if(value.indexOf('.') == -1) null else value.length - value.indexOf('.') - 1 }
-
-    private fun appendDecimalSymbol(baseString: String): String =
-        if(baseString.last().toString().matches(Regex("[0-9]"))) {
-            baseString + decimalSymbol
-        } else {
-            val suffix = Regex("\\D*$").find(baseString)
-            if(suffix == null || suffix.value.first() == decimalSymbol)
-                baseString
-            else
-                baseString.substring(0, baseString.length - suffix.value.length) + decimalSymbol + suffix.value
+    companion object {
+        private fun numDecimalPlaces(value: String?): Int? = value?.let {
+            if(value.indexOf('.') == -1) null else value.length - value.indexOf('.') - 1
         }
+
+        private fun appendDecimalSymbol(baseString: String): String =
+            if(baseString.last().toString().matches(Regex("[0-9]"))) {
+                baseString + decimalSymbol
+            } else {
+                val suffix = Regex("\\D*$").find(baseString)
+                if(suffix == null || suffix.value.first() == decimalSymbol)
+                    baseString
+                else
+                    baseString.substring(0, baseString.length - suffix.value.length) + decimalSymbol + suffix.value
+            }
+
+        fun formatRawValue(numberPadVisible: Boolean, rawValue: String?, inPercent: Boolean): String =
+            if(numberPadVisible) {
+                if(inPercent) {
+                    val formatter = NumberFormat.getPercentInstance()
+
+                    when(rawValue) {
+                        null -> {
+                            formatter.maximumFractionDigits = 0
+                            formatter.format(0)
+                        }
+                        "." -> {
+                            formatter.maximumFractionDigits = 0
+                            appendDecimalSymbol(formatter.format(0))
+                        }
+                        else -> {
+                            when(val numDecimals = numDecimalPlaces(rawValue)) {
+                                null -> {
+                                    formatter.maximumFractionDigits = 0
+                                    formatter.format(rawValue.toDouble()*0.01)
+                                }
+                                0 -> {
+                                    formatter.maximumFractionDigits = 0
+                                    appendDecimalSymbol(formatter.format(rawValue.toDouble()*0.01))
+                                }
+                                else -> {
+                                    formatter.minimumFractionDigits = numDecimals
+                                    formatter.format(rawValue.toDouble()*0.01)
+                                }
+                            }
+                        }
+                    }
+                } else {
+                    val formatter = NumberFormat.getCurrencyInstance()
+
+                    when(rawValue) {
+                        null -> {
+                            formatter.minimumFractionDigits = 0
+                            formatter.format(0)
+                        }
+                        "." -> {
+                            formatter.minimumFractionDigits = 0
+                            appendDecimalSymbol(formatter.format(0))
+                        }
+                        else -> {
+                            when(val numDecimals = numDecimalPlaces(rawValue)) {
+                                null -> {
+                                    formatter.maximumFractionDigits = 0
+                                    formatter.format(rawValue.toDouble())
+                                }
+                                0 -> {
+                                    formatter.maximumFractionDigits = 0
+                                    appendDecimalSymbol(formatter.format(rawValue.toDouble()))
+                                }
+                                else -> {
+                                    formatter.minimumFractionDigits = numDecimals
+                                    formatter.format(rawValue.toDouble())
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                if(inPercent) {
+                    val formatter = NumberFormat.getPercentInstance()
+
+                    if(rawValue == null || !rawValue.contains(Regex("[1-9]"))) {
+                        formatter.minimumFractionDigits = 0
+                        formatter.format(0)
+                    } else if(rawValue.contains('.')) {
+                        val trimmedValue = rawValue.replace(Regex("0*$"), "").replace(Regex("\\.$"), "")
+                        formatter.minimumFractionDigits = trimmedValue.length - trimmedValue.indexOf('.') - 1
+                        formatter.format(trimmedValue.toDouble()*0.01)
+                    } else {
+                        formatter.minimumFractionDigits = 0
+                        formatter.format(rawValue.toDouble()*0.01)
+                    }
+                } else {
+                    NumberFormat.getCurrencyInstance().format(when(rawValue) {
+                        null, "." -> 0
+                        else -> rawValue.toDouble()
+                    })
+                }
+            }
+    }
 }

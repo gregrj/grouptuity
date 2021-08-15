@@ -23,6 +23,7 @@ class TaxTipFragment: Fragment() {
     private lateinit var taxTipViewModel: TaxTipViewModel
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
+        taxTipViewModel = ViewModelProvider(requireActivity()).get(TaxTipViewModel::class.java)
         binding = FragTaxTipBinding.inflate(inflater, container, false)
         return binding.root
     }
@@ -30,9 +31,6 @@ class TaxTipFragment: Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        taxTipViewModel = ViewModelProvider(requireActivity()).get(TaxTipViewModel::class.java)
-
-        // We use a String here, but any type that can be put in a Bundle is supported
         findNavController().currentBackStackEntry?.savedStateHandle?.getLiveData<Pair<CalculationType, Double>>(
             CALCULATOR_RETURN_KEY)?.observe(viewLifecycleOwner) { pair ->
                 when(pair.first) {
@@ -40,6 +38,7 @@ class TaxTipFragment: Fragment() {
                     CalculationType.TAX_AMOUNT -> { taxTipViewModel.setTaxAmount(pair.second) }
                     CalculationType.TIP_PERCENT -> { taxTipViewModel.setTipPercent(pair.second) }
                     CalculationType.TIP_AMOUNT -> { taxTipViewModel.setTipAmount(pair.second) }
+                    else -> { /* Other CalculationTypes should not be received */ }
                 }
         }
 
@@ -77,9 +76,9 @@ class TaxTipFragment: Fragment() {
                 addTarget(requireParentFragment().requireView())
             }
 
-            findNavController().navigate(BillSplitFragmentDirections.adjustBillSplitTaxTip(
+            findNavController().navigate(BillSplitFragmentDirections.editBillSplitTaxTip(
                 title = resources.getString(
-                    R.string.calculator_toolbar_title_tax_percent,
+                    R.string.calculator_toolbar_title_tax_pct,
                     binding.taxPercent.text.toString()),
                 previousValue = binding.taxPercent.text.toString(),
                 calculationType = CalculationType.TAX_PERCENT),
@@ -97,9 +96,9 @@ class TaxTipFragment: Fragment() {
                 addTarget(requireParentFragment().requireView())
             }
 
-            findNavController().navigate(BillSplitFragmentDirections.adjustBillSplitTaxTip(
+            findNavController().navigate(BillSplitFragmentDirections.editBillSplitTaxTip(
                 title = resources.getString(
-                    R.string.calculator_toolbar_title_tax_amount,
+                    R.string.calculator_toolbar_title_tax_amt,
                     binding.taxAmount.text.toString()),
                 previousValue = binding.taxAmount.text.toString(),
                 calculationType = CalculationType.TAX_AMOUNT),
@@ -117,9 +116,9 @@ class TaxTipFragment: Fragment() {
                 addTarget(requireParentFragment().requireView())
             }
 
-            findNavController().navigate(BillSplitFragmentDirections.adjustBillSplitTaxTip(
+            findNavController().navigate(BillSplitFragmentDirections.editBillSplitTaxTip(
                 title = resources.getString(
-                    R.string.calculator_toolbar_title_tip_percent,
+                    R.string.calculator_toolbar_title_tip_pct,
                     binding.tipPercent.text.toString()),
                 previousValue = binding.tipPercent.text.toString(),
                 calculationType = CalculationType.TIP_PERCENT),
@@ -137,9 +136,9 @@ class TaxTipFragment: Fragment() {
                 addTarget(requireParentFragment().requireView())
             }
 
-            findNavController().navigate(BillSplitFragmentDirections.adjustBillSplitTaxTip(
+            findNavController().navigate(BillSplitFragmentDirections.editBillSplitTaxTip(
                 title = resources.getString(
-                    R.string.calculator_toolbar_title_tip_amount,
+                    R.string.calculator_toolbar_title_tip_amt,
                     binding.tipAmount.text.toString()),
                 previousValue = binding.tipAmount.text.toString(),
                 calculationType = CalculationType.TIP_AMOUNT),

@@ -2,10 +2,8 @@ package com.grouptuity.grouptuity.ui.calculator
 
 import android.animation.Animator
 import android.animation.ValueAnimator
-import android.graphics.Color
+import android.graphics.Typeface
 import android.os.Bundle
-import android.util.Log
-import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -17,14 +15,15 @@ import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
-import androidx.recyclerview.widget.*
 import androidx.transition.Transition
 import androidx.transition.TransitionValues
 import com.google.android.material.transition.Hold
 import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.CalculationType
-import com.grouptuity.grouptuity.databinding.*
-import com.grouptuity.grouptuity.ui.custom.transitions.*
+import com.grouptuity.grouptuity.databinding.FragCalculatorBinding
+import com.grouptuity.grouptuity.ui.custom.transitions.CardViewExpandTransition
+import com.grouptuity.grouptuity.ui.custom.transitions.Revealable
+import com.grouptuity.grouptuity.ui.custom.transitions.RevealableImpl
 import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
 
 // TODO handle inset changes
@@ -76,6 +75,17 @@ class CalculatorFragment: Fragment(), Revealable by RevealableImpl() {
         }
 
         setupNumberPad()
+
+        calculatorViewModel.acceptEvents.observe(viewLifecycleOwner) {
+            it.consume()?.apply {
+                findNavController().previousBackStackEntry?.savedStateHandle?.set(
+                    CALCULATOR_RETURN_KEY, Pair(args.calculationType, this.first)
+                )
+                binding.numberPad.displayTextview.text = this.second
+                binding.fadeOutEditText.setText(this.third)
+                closeFragment()
+            }
+        }
     }
 
     override fun onResume() {
@@ -101,7 +111,7 @@ class CalculatorFragment: Fragment(), Revealable by RevealableImpl() {
     }
 
     private fun setupNumberPad() {
-        calculatorViewModel.formattedPrice.observe(viewLifecycleOwner, {
+        calculatorViewModel.formattedValue.observe(viewLifecycleOwner, {
             binding.numberPad.displayTextview.text = it
         })
 
@@ -146,38 +156,47 @@ class CalculatorFragment: Fragment(), Revealable by RevealableImpl() {
         binding.numberPad.button7.setOnClickListener { calculatorViewModel.addDigitToPrice('7') }
         binding.numberPad.button8.setOnClickListener { calculatorViewModel.addDigitToPrice('8') }
         binding.numberPad.button9.setOnClickListener { calculatorViewModel.addDigitToPrice('9') }
-        binding.numberPad.buttonAccept.setOnClickListener {
-            calculatorViewModel.acceptValue()?.also {
-                findNavController().previousBackStackEntry?.savedStateHandle?.set(
-                    CALCULATOR_RETURN_KEY, Pair(args.calculationType, it)
-                )
-                binding.fadeOutEditText.setText(calculatorViewModel.formattedPrice.value)
-                closeFragment()
-            }
-        }
+        binding.numberPad.buttonAccept.setOnClickListener { calculatorViewModel.tryAcceptValue() }
     }
 
     private fun setupEnterTransition() {
         val propTopInset = "com.grouptuity.grouptuity:CardViewExpandTransition:top_inset"
 
-        when(args.calculationType) {
-            CalculationType.TAX_PERCENT -> {
-                binding.container.transitionName = "taxPercentContainerTransitionName"
-                binding.fadeOutEditText.transitionName = "taxPercentEditTextTransitionName"
+        binding.container.transitionName = when(args.calculationType) {
+            CalculationType.SUBTOTAL -> "subtotalContainerTransitionName"
+            CalculationType.OVERALL_DISCOUNT_PERCENT -> "discountPercentContainerTransitionName"
+            CalculationType.OVERALL_DISCOUNT_AMOUNT -> "discountAmountContainerTransitionName"
+            CalculationType.AFTER_DISCOUNT -> "afterDiscountContainerTransitionName"
+            CalculationType.TAX_PERCENT -> "taxPercentContainerTransitionName"
+            CalculationType.TAX_AMOUNT -> "taxAmountContainerTransitionName"
+            CalculationType.AFTER_TAX -> "afterTaxContainerTransitionName"
+            CalculationType.TIP_PERCENT -> "tipPercentContainerTransitionName"
+            CalculationType.TIP_AMOUNT -> "tipAmountContainerTransitionName"
+            CalculationType.TOTAL -> "totalContainerTransitionName"
+            else -> ""
+        }
+
+        binding.fadeOutEditText.transitionName = when(args.calculationType) {
+            CalculationType.SUBTOTAL -> "subtotalEditTextTransitionName"
+            CalculationType.OVERALL_DISCOUNT_PERCENT -> "discountPercentEditTextTransitionName"
+            CalculationType.OVERALL_DISCOUNT_AMOUNT -> "discountAmountEditTextTransitionName"
+            CalculationType.AFTER_DISCOUNT -> {
+                binding.fadeOutEditText.setTextAppearance(android.R.style.TextAppearance_Material_Medium)
+                "afterDiscountEditTextTransitionName"
             }
-            CalculationType.TAX_AMOUNT -> {
-                binding.container.transitionName = "taxAmountContainerTransitionName"
-                binding.fadeOutEditText.transitionName = "taxAmountEditTextTransitionName"
+            CalculationType.TAX_PERCENT -> "taxPercentEditTextTransitionName"
+            CalculationType.TAX_AMOUNT -> "taxAmountEditTextTransitionName"
+            CalculationType.AFTER_TAX -> {
+                binding.fadeOutEditText.setTextAppearance(android.R.style.TextAppearance_Material_Medium)
+                "afterTaxEditTextTransitionName"
             }
-            CalculationType.TIP_PERCENT -> {
-                binding.container.transitionName = "tipPercentContainerTransitionName"
-                binding.fadeOutEditText.transitionName = "tipPercentEditTextTransitionName"
+            CalculationType.TIP_PERCENT -> "tipPercentEditTextTransitionName"
+            CalculationType.TIP_AMOUNT -> "tipAmountEditTextTransitionName"
+            CalculationType.TOTAL -> {
+                binding.fadeOutEditText.setTypeface(binding.fadeOutEditText.typeface, Typeface.BOLD)
+                "totalEditTextTransitionName"
             }
-            CalculationType.TIP_AMOUNT -> {
-                binding.container.transitionName = "tipAmountContainerTransitionName"
-                binding.fadeOutEditText.transitionName = "tipAmountEditTextTransitionName"
-            }
-            else -> { /* Other CalculationTypes should not be received */ }
+            else -> ""
         }
 
         sharedElementEnterTransition = CardViewExpandTransition(binding.container.transitionName, binding.coordinatorLayout.id, true).addElement(
@@ -258,11 +277,11 @@ class CalculatorFragment: Fragment(), Revealable by RevealableImpl() {
                     }
 
                     animator.addUpdateListener {
-                        val twentyTo80Progress = (1.666667f*AccelerateDecelerateInterpolator()
-                            .getInterpolation(it.animatedFraction) - 0.33333f).coerceIn(0f, 1f)
+                        val twentyTo60Progress = (2.5f*AccelerateDecelerateInterpolator()
+                            .getInterpolation(it.animatedFraction) - 0.5f).coerceIn(0f, 1f)
 
-                        binding.fadeOutEditText.alpha = twentyTo80Progress
-                        binding.coordinatorLayout.alpha = 1f - twentyTo80Progress
+                        binding.fadeOutEditText.alpha = twentyTo60Progress
+                        binding.coordinatorLayout.alpha = 1f - twentyTo60Progress
                     }
 
                     return animator

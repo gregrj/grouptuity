@@ -137,43 +137,43 @@ class CardViewExpandTransition(private val containerTransitionName: String,
                     }
                 }
 
-                sceneRoot.findViewById<CollapsingToolbarLayout>(R.id.collapsing_toolbar)?.apply {
-                    this.setExpandedTitleColor(Color.TRANSPARENT)
-                    this.setCollapsedTitleTextColor(Color.TRANSPARENT)
-
-                    this.setContentScrimColor(Color.TRANSPARENT)
-                    this.setStatusBarScrimColor(Color.TRANSPARENT)
-
-                    this.animate()
-                        .setDuration(duration)
-                        .setUpdateListener {
-                            val progress = AccelerateDecelerateInterpolator().getInterpolation(it.animatedFraction)
-                            this.setContentScrimColor(
-                                ColorUtils.setAlphaComponent(
-                                    TypedValue().also { this.context.theme.resolveAttribute(R.attr.colorPrimary, it, true) }.data,
-                                    (progress*255).toInt()
-                                ))
-                            this.setStatusBarScrimColor(
-                                ColorUtils.setAlphaComponent(
-                                    TypedValue().also { this.context.theme.resolveAttribute(R.attr.colorPrimaryVariant, it, true) }.data,
-                                    (progress*255).toInt()
-                                ))
-
-                            val eightyTo100Progress = (5f*progress - 4f).coerceIn(0f, 1f)
-                            this.setExpandedTitleColor(
-                                ColorUtils.setAlphaComponent(
-                                    TypedValue().also { this.context.theme.resolveAttribute(R.attr.colorOnPrimary, it, true) }.data,
-                                    (eightyTo100Progress*255).toInt()
-                                ))
-                            this.setCollapsedTitleTextColor(
-                                ColorUtils.setAlphaComponent(
-                                    TypedValue().also { this.context.theme.resolveAttribute(R.attr.colorOnPrimary, it, true) }.data,
-                                    (eightyTo100Progress*255).toInt()
-                                ))
-                            sceneRoot.findViewById<Toolbar>(R.id.toolbar)?.alpha = eightyTo100Progress
-                        }
-                        .start()
-                }
+//                sceneRoot.findViewById<CollapsingToolbarLayout>(R.id.collapsing_toolbar)?.apply {
+//                    this.setExpandedTitleColor(Color.TRANSPARENT)
+//                    this.setCollapsedTitleTextColor(Color.TRANSPARENT)
+//
+//                    this.setContentScrimColor(Color.TRANSPARENT)
+//                    this.setStatusBarScrimColor(Color.TRANSPARENT)
+//
+//                    this.animate()
+//                        .setDuration(duration)
+//                        .setUpdateListener {
+//                            val progress = AccelerateDecelerateInterpolator().getInterpolation(it.animatedFraction)
+//                            this.setContentScrimColor(
+//                                ColorUtils.setAlphaComponent(
+//                                    TypedValue().also { this.context.theme.resolveAttribute(R.attr.colorPrimary, it, true) }.data,
+//                                    (progress*255).toInt()
+//                                ))
+//                            this.setStatusBarScrimColor(
+//                                ColorUtils.setAlphaComponent(
+//                                    TypedValue().also { this.context.theme.resolveAttribute(R.attr.colorPrimaryVariant, it, true) }.data,
+//                                    (progress*255).toInt()
+//                                ))
+//
+//                            val eightyTo100Progress = (5f*progress - 4f).coerceIn(0f, 1f)
+//                            this.setExpandedTitleColor(
+//                                ColorUtils.setAlphaComponent(
+//                                    TypedValue().also { this.context.theme.resolveAttribute(R.attr.colorOnPrimary, it, true) }.data,
+//                                    (eightyTo100Progress*255).toInt()
+//                                ))
+//                            this.setCollapsedTitleTextColor(
+//                                ColorUtils.setAlphaComponent(
+//                                    TypedValue().also { this.context.theme.resolveAttribute(R.attr.colorOnPrimary, it, true) }.data,
+//                                    (eightyTo100Progress*255).toInt()
+//                                ))
+//                            sceneRoot.findViewById<Toolbar>(R.id.toolbar)?.alpha = eightyTo100Progress
+//                        }
+//                        .start()
+//                }
 
                 onTransitionStartCallback(transition, sceneRoot, startView, endView)
             }
@@ -249,41 +249,41 @@ class CardViewExpandTransition(private val containerTransitionName: String,
                 val toolbar = startView.findViewById<Toolbar>(R.id.toolbar)
                 val appbarLayout = startView.findViewById<AppBarLayout>(R.id.appbar_layout)
 
-                startView.findViewById<CollapsingToolbarLayout>(R.id.collapsing_toolbar)?.apply {
-                    this.animate().setDuration(duration).setUpdateListener { animator ->
-                        val progress = AccelerateDecelerateInterpolator().getInterpolation(animator.animatedFraction)
-
-                        // Fade out toolbar and status bar backgrounds
-                        this.setContentScrimColor(
-                            ColorUtils.setAlphaComponent(
-                                TypedValue().also { this.context.theme.resolveAttribute(R.attr.colorPrimary, it, true) }.data,
-                                ((1f-progress)*255).toInt()
-                            ))
-                        this.setStatusBarScrimColor(
-                            ColorUtils.setAlphaComponent(
-                                TypedValue().also { this.context.theme.resolveAttribute(R.attr.colorPrimaryVariant, it, true) }.data,
-                                ((1f-progress)*255).toInt()
-                            ))
-
-                        // Fade out toolbar title and icons in the first 20% of transition
-                        val zeroToTwentyProgress = (5f*progress).coerceIn(0f, 1f)
-
-                        this.setExpandedTitleColor(
-                            ColorUtils.setAlphaComponent(
-                                TypedValue().also { this.context.theme.resolveAttribute(R.attr.colorOnPrimary, it, true) }.data,
-                                ((1f - zeroToTwentyProgress)*255).toInt()
-                            ))
-                        this.setCollapsedTitleTextColor(
-                            ColorUtils.setAlphaComponent(
-                                TypedValue().also { this.context.theme.resolveAttribute(R.attr.colorPrimary, it, true) }.data,
-                                ((1f - zeroToTwentyProgress)*255).toInt()
-                            ))
-                        toolbar.alpha = 1f - zeroToTwentyProgress
-
-                        // Elevation
-                        appbarLayout.elevation = 0f
-                    }.start()
-                }
+//                startView.findViewById<CollapsingToolbarLayout>(R.id.collapsing_toolbar)?.apply {
+//                    this.animate().setDuration(duration).setUpdateListener { animator ->
+//                        val progress = AccelerateDecelerateInterpolator().getInterpolation(animator.animatedFraction)
+//
+//                        // Fade out toolbar and status bar backgrounds
+//                        this.setContentScrimColor(
+//                            ColorUtils.setAlphaComponent(
+//                                TypedValue().also { this.context.theme.resolveAttribute(R.attr.colorPrimary, it, true) }.data,
+//                                ((1f-progress)*255).toInt()
+//                            ))
+//                        this.setStatusBarScrimColor(
+//                            ColorUtils.setAlphaComponent(
+//                                TypedValue().also { this.context.theme.resolveAttribute(R.attr.colorPrimaryVariant, it, true) }.data,
+//                                ((1f-progress)*255).toInt()
+//                            ))
+//
+//                        // Fade out toolbar title and icons in the first 20% of transition
+//                        val zeroToTwentyProgress = (5f*progress).coerceIn(0f, 1f)
+//
+//                        this.setExpandedTitleColor(
+//                            ColorUtils.setAlphaComponent(
+//                                TypedValue().also { this.context.theme.resolveAttribute(R.attr.colorOnPrimary, it, true) }.data,
+//                                ((1f - zeroToTwentyProgress)*255).toInt()
+//                            ))
+//                        this.setCollapsedTitleTextColor(
+//                            ColorUtils.setAlphaComponent(
+//                                TypedValue().also { this.context.theme.resolveAttribute(R.attr.colorPrimary, it, true) }.data,
+//                                ((1f - zeroToTwentyProgress)*255).toInt()
+//                            ))
+//                        toolbar.alpha = 1f - zeroToTwentyProgress
+//
+//                        // Elevation
+//                        appbarLayout.elevation = 0f
+//                    }.start()
+//                }
 
                 onTransitionStartCallback(transition, sceneRoot, startView, endView)
             }

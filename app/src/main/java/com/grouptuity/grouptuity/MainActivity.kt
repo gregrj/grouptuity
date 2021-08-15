@@ -3,7 +3,11 @@ package com.grouptuity.grouptuity
 import android.app.SearchManager
 import android.content.Intent
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.util.Log
 import android.util.TypedValue
+import android.view.Gravity
 import android.view.ViewGroup
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
@@ -25,10 +29,6 @@ import com.grouptuity.grouptuity.ui.custom.CustomNavigator
 class MainActivity: AppCompatActivity() {
     private lateinit var appViewModel: AppViewModel
     private lateinit var binding: ActivityMainBinding
-    private lateinit var navigator: CustomNavigator
-    private lateinit var appBarConfiguration: AppBarConfiguration
-    private lateinit var navController: NavController
-
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -77,8 +77,6 @@ class MainActivity: AppCompatActivity() {
         }
     }
 
-    override fun onSupportNavigateUp() = navController.navigateUp(appBarConfiguration) || super.onSupportNavigateUp()
-
     override fun onBackPressed() {
         if (binding.drawerLayout.isDrawerOpen(GravityCompat.START)) {
             binding.drawerLayout.closeDrawer(GravityCompat.START)
@@ -98,28 +96,22 @@ class MainActivity: AppCompatActivity() {
         }
     }
 
-    // TODO Remove this after retrofitting simple calc?
-    fun attachToolbar(toolbar: Toolbar) {
-        setSupportActionBar(toolbar)
-        appBarConfiguration = AppBarConfiguration(setOf(R.id.billSplitFragment), binding.drawerLayout)
-        setupActionBarWithNavController(navController, appBarConfiguration)
-    }
-
     private fun configureNavigation() {
         val navHostFragment = supportFragmentManager.findFragmentById(R.id.fragment_container_view) as NavHostFragment
 
-        navigator = CustomNavigator(this, navHostFragment.childFragmentManager, R.id.fragment_container_view)
-
-        val updateDrawerForDestination: (NavDestination) -> Unit = { destination ->
+        val navController = navHostFragment.navController
+        navController.navigatorProvider.addNavigator(CustomNavigator(this, navHostFragment.childFragmentManager, R.id.fragment_container_view))
+        navController.setGraph(R.navigation.nav_graph)
+        navController.addOnDestinationChangedListener { _, destination, _ ->
             when(destination.id) {
                 R.id.billSplitFragment -> {
                     binding.drawerNavView.menu.findItem(R.id.nav_group_bill_splitter).isChecked = true
-                    binding.drawerNavView.menu.findItem(R.id.nav_simple_calculator).isChecked = false
+                    binding.drawerLayout.closeDrawers()
                     binding.drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED)
                 }
                 R.id.simpleCalcFragment -> {
-                    binding.drawerNavView.menu.findItem(R.id.nav_group_bill_splitter).isChecked = false
                     binding.drawerNavView.menu.findItem(R.id.nav_simple_calculator).isChecked = true
+                    binding.drawerLayout.closeDrawers()
                     binding.drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED)
                 }
                 else -> {
@@ -128,43 +120,52 @@ class MainActivity: AppCompatActivity() {
             }
         }
 
-        navController = navHostFragment.navController
-        navController.navigatorProvider.addNavigator(navigator)
-        navController.setGraph(R.navigation.nav_graph)
-        navController.addOnDestinationChangedListener { _, destination, _ -> updateDrawerForDestination(destination) }
-
-        binding.drawerNavView.setupWithNavController(navController)
         binding.drawerNavView.setNavigationItemSelectedListener { menuItem ->
             when (navController.currentDestination?.id) {
                 R.id.billSplitFragment -> {
                     when (menuItem.itemId) {
-                        R.id.nav_group_bill_splitter -> { }
-                        R.id.nav_simple_calculator -> { navController.navigate(R.id.action_billSplitFragment_to_simpleCalcFragment) }
-                        R.id.nav_settings -> { navController.navigate(R.id.action_global_settingsFragment) }
+                        R.id.nav_group_bill_splitter -> { true }
+                        R.id.nav_simple_calculator -> {
+                            navController.navigate(R.id.action_billSplitFragment_to_simpleCalcFragment)
+//                            binding.drawerLayout.closeDrawers()
+                            true
+                        }
+                        R.id.nav_settings -> {
+                            navController.navigate(R.id.action_global_settingsFragment)
+//                            binding.drawerLayout.closeDrawers()
+                            false
+                        }
+                        else -> {
+                            false
+                        }
                     }
                 }
                 R.id.simpleCalcFragment -> {
                     when (menuItem.itemId) {
-                        R.id.nav_group_bill_splitter -> { navController.popBackStack() }
-                        R.id.nav_simple_calculator -> { }
-                        R.id.nav_settings -> { navController.navigate(R.id.action_global_settingsFragment) }
+                        R.id.nav_group_bill_splitter -> {
+                            navController.popBackStack()
+                            true
+                        }
+                        R.id.nav_simple_calculator -> {
+                            false
+                        }
+                        R.id.nav_settings -> {
+                            navController.navigate(R.id.action_global_settingsFragment)
+                            false
+                        }
+                        else -> {
+                            false
+                        }
                     }
                 }
+                else -> {
+                    false
+                }
             }
-            binding.drawerLayout.closeDrawers()
-            true
-        }
-
-        // HACK: Checkable menu items in navigation drawer reset state when navigating back. This
-        // listener ensures the correct state is shown.
-        binding.drawerNavView.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
-            navController.currentDestination?.apply { updateDrawerForDestination(this) }
         }
     }
 
     fun openNavViewDrawer() {
         binding.drawerLayout.openDrawer(GravityCompat.START)
     }
-
-    fun getNavigator() = navigator
 }

@@ -18,8 +18,7 @@
             android:id="@+id/constraint_layout"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:padding="24dp"
-            tools:context=".views.billsplit.TaxTipFragment">
+            android:padding="24dp">
 
             <TextView
                 android:id="@+id/subtotal_title"

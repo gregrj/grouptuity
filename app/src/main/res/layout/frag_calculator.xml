@@ -39,8 +39,8 @@
             android:focusable="false"
             android:cursorVisible="false"
             style="@android:style/TextAppearance.Material.Large"
-            android:background="?attr/colorSurface"
-            tools:ignore="Autofill,LabelFor"/>
+            tools:ignore="Autofill,LabelFor"
+            android:inputType="numberDecimal" />
 
         <androidx.coordinatorlayout.widget.CoordinatorLayout
             android:id="@+id/coordinator_layout"

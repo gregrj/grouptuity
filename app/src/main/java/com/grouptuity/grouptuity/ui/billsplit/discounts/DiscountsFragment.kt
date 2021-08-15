@@ -73,12 +73,9 @@ class DiscountsFragment: Fragment(), Revealable by RevealableImpl() {
         binding.toolbar.setNavigationIcon(R.drawable.ic_arrow_back)
         binding.toolbar.setNavigationOnClickListener { closeFragment() }
 
-        when ((requireActivity() as MainActivity).getNavigator().previousDestination) {
-            R.id.billSplitFragment -> {
-                // Opening from TaxTipFragment hosted in BillSplitFragment
-                setupEnterTransitionFromTaxTip()
-            }
-        }
+        postponeEnterTransition()
+        setupEnterTransitionFromTaxTip()
+        binding.list.doOnPreDraw { startPostponedEnterTransition() }
 
         setupList()
 
@@ -90,9 +87,6 @@ class DiscountsFragment: Fragment(), Revealable by RevealableImpl() {
                 )
             )
         }
-
-        postponeEnterTransition()
-        binding.list.doOnPreDraw { startPostponedEnterTransition() }
     }
 
     private fun setupList() {
