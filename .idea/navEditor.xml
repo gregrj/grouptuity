@@ -68,6 +68,36 @@
                             <option name="y" value="-99" />
                           </Point>
                         </option>
+                        <option name="myPositions">
+                          <map>
+                            <entry key="create_diner">
+                              <value>
+                                <LayoutPositions />
+                              </value>
+                            </entry>
+                          </map>
+                        </option>
+                      </LayoutPositions>
+                    </value>
+                  </entry>
+                  <entry key="basicTipCalcFragment">
+                    <value>
+                      <LayoutPositions>
+                        <option name="myPosition">
+                          <Point>
+                            <option name="x" value="13" />
+                            <option name="y" value="-475" />
+                          </Point>
+                        </option>
+                        <option name="myPositions">
+                          <map>
+                            <entry key="editSimpleCalcTaxTip">
+                              <value>
+                                <LayoutPositions />
+                              </value>
+                            </entry>
+                          </map>
+                        </option>
                       </LayoutPositions>
                     </value>
                   </entry>
@@ -82,32 +112,37 @@
                         </option>
                         <option name="myPositions">
                           <map>
-                            <entry key="action_billSplitFragment_to_addressBookFragment">
-                              <value>
-                                <LayoutPositions />
-                              </value>
-                            </entry>
-                            <entry key="action_billSplitFragment_to_simpleCalcFragment">
-                              <value>
-                                <LayoutPositions />
-                              </value>
-                            </entry>
-                            <entry key="action_billSplit_to_itemEntry">
-                              <value>
-                                <LayoutPositions />
-                              </value>
-                            </entry>
-                            <entry key="adjustBillSplitTaxTip">
-                              <value>
-                                <LayoutPositions />
-                              </value>
-                            </entry>
                             <entry key="createFirstDiscount">
                               <value>
                                 <LayoutPositions />
                               </value>
                             </entry>
-                            <entry key="manageDiscounts">
+                            <entry key="create_new_item">
+                              <value>
+                                <LayoutPositions />
+                              </value>
+                            </entry>
+                            <entry key="edit_tax_tip">
+                              <value>
+                                <LayoutPositions />
+                              </value>
+                            </entry>
+                            <entry key="manage_discounts">
+                              <value>
+                                <LayoutPositions />
+                              </value>
+                            </entry>
+                            <entry key="open_addressbook">
+                              <value>
+                                <LayoutPositions />
+                              </value>
+                            </entry>
+                            <entry key="switch_to_basic_tip_calc">
+                              <value>
+                                <LayoutPositions />
+                              </value>
+                            </entry>
+                            <entry key="view_diner_details">
                               <value>
                                 <LayoutPositions />
                               </value>
@@ -122,9 +157,47 @@
                       <LayoutPositions>
                         <option name="myPosition">
                           <Point>
-                            <option name="x" value="426" />
-                            <option name="y" value="-531" />
+                            <option name="x" value="430" />
+                            <option name="y" value="-473" />
                           </Point>
+                        </option>
+                      </LayoutPositions>
+                    </value>
+                  </entry>
+                  <entry key="debtEntryFragment">
+                    <value>
+                      <LayoutPositions>
+                        <option name="myPosition">
+                          <Point>
+                            <option name="x" value="1004" />
+                            <option name="y" value="-97" />
+                          </Point>
+                        </option>
+                      </LayoutPositions>
+                    </value>
+                  </entry>
+                  <entry key="dinerDetailsFragment">
+                    <value>
+                      <LayoutPositions>
+                        <option name="myPosition">
+                          <Point>
+                            <option name="x" value="723" />
+                            <option name="y" value="-99" />
+                          </Point>
+                        </option>
+                        <option name="myPositions">
+                          <map>
+                            <entry key="action_dinerDetailsFragment_to_debtEntryFragment">
+                              <value>
+                                <LayoutPositions />
+                              </value>
+                            </entry>
+                            <entry key="popUpToBillSplit">
+                              <value>
+                                <LayoutPositions />
+                              </value>
+                            </entry>
+                          </map>
                         </option>
                       </LayoutPositions>
                     </value>
@@ -134,8 +207,8 @@
                       <LayoutPositions>
                         <option name="myPosition">
                           <Point>
-                            <option name="x" value="431" />
-                            <option name="y" value="262" />
+                            <option name="x" value="430" />
+                            <option name="y" value="213" />
                           </Point>
                         </option>
                       </LayoutPositions>
@@ -146,8 +219,8 @@
                       <LayoutPositions>
                         <option name="myPosition">
                           <Point>
-                            <option name="x" value="675" />
-                            <option name="y" value="260" />
+                            <option name="x" value="263" />
+                            <option name="y" value="525" />
                           </Point>
                         </option>
                         <option name="myPositions">
@@ -167,8 +240,8 @@
                       <LayoutPositions>
                         <option name="myPosition">
                           <Point>
-                            <option name="x" value="104" />
-                            <option name="y" value="440" />
+                            <option name="x" value="18" />
+                            <option name="y" value="524" />
                           </Point>
                         </option>
                       </LayoutPositions>
@@ -182,27 +255,6 @@
                             <option name="x" value="-314" />
                             <option name="y" value="11" />
                           </Point>
-                        </option>
-                      </LayoutPositions>
-                    </value>
-                  </entry>
-                  <entry key="simpleCalcFragment">
-                    <value>
-                      <LayoutPositions>
-                        <option name="myPosition">
-                          <Point>
-                            <option name="x" value="6" />
-                            <option name="y" value="-531" />
-                          </Point>
-                        </option>
-                        <option name="myPositions">
-                          <map>
-                            <entry key="adjustSimpleCalcTaxTip">
-                              <value>
-                                <LayoutPositions />
-                              </value>
-                            </entry>
-                          </map>
                         </option>
                       </LayoutPositions>
                     </value>

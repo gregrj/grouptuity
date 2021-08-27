@@ -175,6 +175,10 @@ class Repository(context: Context) {
     val individualTip: Flow<Map<Diner, Double>> = _individualTip
     val individualTotal: Flow<Map<Diner, Double>> = _individualTotal
 
+    // Other calculation results
+    private val _discountValues = MutableStateFlow(emptyMap<Discount, Double>())
+    val discountValues: StateFlow<Map<Discount, Double>> = _discountValues
+
     private fun <T> getPreferenceFlow(key: Preferences.Key<T>, defaultValue: T, initialValue: T? = null): StateFlow<T> = preferenceDataStore.data.mapLatest { preferences ->
         preferences[key] ?: defaultValue
     }.stateIn(CoroutineScope(Dispatchers.IO), SharingStarted.Eagerly, initialValue ?: defaultValue)
@@ -219,6 +223,8 @@ class Repository(context: Context) {
         _individualSubtotalWithDiscountsAndTax.value = billCalculation.individualSubtotalWithDiscountsAndTax
         _individualTip.value = billCalculation.individualTip
         _individualTotal.value = billCalculation.individualTotal
+
+        _discountValues.value = billCalculation.discountValues
 
         loadInProgress.value = false
     }
@@ -338,7 +344,6 @@ class Repository(context: Context) {
     }
     fun addContactsAsDiners(dinerContacts: Collection<Contact>, includeWithEveryone: Boolean = true) {
         val diners: List<Diner> = if (includeWithEveryone) {
-            Log.e("fewf", "f")
             dinerContacts.map { contact ->
                 Log.e(contact.name, ""+ mBill.id)
                 Diner(newUUID(), mBill.id, contact).also {
@@ -386,14 +391,19 @@ class Repository(context: Context) {
         database.saveItem(item)
     }
     fun editItem(editedItem: Item, price: Double, name: String, diners: Collection<Diner>) {
-        // Remove edited item from the associated diners
+        // Remove edited item from its associated diners and discounts
         editedItem.diners.forEach { it.removeItem(editedItem) }
+        editedItem.discounts.forEach { it.removeItem(editedItem) }
 
-        // Add new item to diners
+        // Add new item to diners and discounts
         val newItem = Item(editedItem.id, editedItem.billId, price, name)
         diners.forEach { diner ->
             newItem.addDiner(diner)
             diner.addItem(newItem)
+        }
+        editedItem.discounts.forEach { discount ->
+            newItem.addDiscount(discount)
+            discount.addItem(newItem)
         }
 
         // Replace old item with new item
@@ -417,8 +427,8 @@ class Repository(context: Context) {
     }
 
     // Debt Functions
-    fun addDebt(amount: Double, debtors: Collection<Diner>, creditors: Collection<Diner>) {
-        val debt = Debt(newUUID(), mBill.id, amount)
+    fun addDebt(amount: Double, name: String, debtors: Collection<Diner>, creditors: Collection<Diner>) {
+        val debt = Debt(newUUID(), mBill.id, amount, name)
         debtors.forEach { debtor ->
             debt.addDebtor(debtor)
             debtor.addOwedDebt(debt)
@@ -512,7 +522,6 @@ class Repository(context: Context) {
                 mBill.id -> { /* Correct bill already loaded */ }
                 else -> {
                     // TODO check if bill is expired
-                    Log.e("Loading bill", billId)
                     loadSavedBill(billId)
                 }
             }

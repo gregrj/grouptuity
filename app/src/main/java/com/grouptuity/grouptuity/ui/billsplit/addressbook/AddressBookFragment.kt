@@ -26,6 +26,7 @@ import androidx.fragment.app.setFragmentResult
 import androidx.fragment.app.setFragmentResultListener
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.*
 import androidx.transition.Transition
@@ -176,9 +177,7 @@ class AddressBookFragment: Fragment(), Revealable by RevealableImpl() {
 
         binding.fab.setOnClickListener {
             if(addressBookViewModel.selections.value.isNullOrEmpty()) {
-                // TODO
-                // Go to DetailedDinerFragment to create a diner
-                // findNavController().navigate(AddressBookFragmentDirections.actionAddressBookToNewDinerEntry())
+                findNavController().navigate(AddressBookFragmentDirections.createDiner(null, CircularRevealTransition.OriginParams(binding.fab)))
             } else {
                 closeFragment(true)
             }

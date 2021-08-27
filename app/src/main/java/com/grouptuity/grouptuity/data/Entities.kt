@@ -418,7 +418,7 @@ class Item(@PrimaryKey val id: String,
 @Entity(tableName = "debt_table",
     foreignKeys = [ForeignKey(entity = Bill::class, parentColumns = ["id"], childColumns = ["billId"], onDelete = ForeignKey.CASCADE)],
     indices = [Index("billId")])
-class Debt(@PrimaryKey val id: String, val billId: String, val amount: Double): Parcelable {
+class Debt(@PrimaryKey val id: String, val billId: String, val amount: Double, val name: String): Parcelable {
 
     @Ignore private val debtorIdsMutable = mutableListOf<String>()
     @Ignore private val creditorIdsMutable = mutableListOf<String>()
@@ -465,6 +465,7 @@ class Debt(@PrimaryKey val id: String, val billId: String, val amount: Double): 
             this.writeString(id)
             this.writeString(billId)
             this.writeDouble(amount)
+            this.writeString(name)
             this.writeStringList(debtorIds)
             this.writeStringList(creditorIds)
         }
@@ -474,7 +475,8 @@ class Debt(@PrimaryKey val id: String, val billId: String, val amount: Double): 
         override fun createFromParcel(parcel: Parcel) = Debt(
             parcel.readString()!!,
             parcel.readString()!!,
-            parcel.readDouble())
+            parcel.readDouble(),
+            parcel.readString()!!)
             .withIdLists(
                 parcel.createStringArrayList() ?: emptyList(),
                 parcel.createStringArrayList() ?: emptyList()

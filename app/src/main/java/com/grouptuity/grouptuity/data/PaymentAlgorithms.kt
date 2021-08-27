@@ -7,6 +7,7 @@ import java.util.*
 import kotlin.math.max
 import kotlin.math.pow
 
+const val PRECISION = 1e-6
 
 class TransactionMap(private val allParticipants: Collection<Diner>, initialMap: Map<Pair<Diner, Diner>, Double>? = null) {
     private val pairMap: MutableMap<Pair<Diner, Diner>, Double> = initialMap?.toMutableMap() ?: mutableMapOf()
@@ -279,7 +280,7 @@ class BillCalculation(private val bill: Bill,
         var remainingSubtotals = transactionMap.getPaymentsToPayee(restaurant).toMutableMap()
         val discountsAcquired = mutableMapOf<Diner, Double>()
 
-        while (totalExcessDiscount > 0.0 && remainingSubtotals.isNotEmpty()) {
+        while (totalExcessDiscount > PRECISION && remainingSubtotals.isNotEmpty()) {
             val share = totalExcessDiscount / remainingSubtotals.size
 
             val newRemainingSubtotals = mutableMapOf<Diner, Double>()

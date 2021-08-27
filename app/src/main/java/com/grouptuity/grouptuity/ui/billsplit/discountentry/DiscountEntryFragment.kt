@@ -534,7 +534,7 @@ class DiscountEntryFragment: Fragment(), Revealable by RevealableImpl() {
 
         sharedElementEnterTransition = CardViewExpandTransition(binding.container.transitionName, binding.revealedLayout.id, true).addElement(
             binding.addDiscountButton.transitionName,
-            object: CardViewExpandTransition.Element{
+            object: CardViewExpandTransition.Element {
                 override fun captureStartValues(transition: Transition, transitionValues: TransitionValues) {
                     val discountButton = transitionValues.view as com.google.android.material.button.MaterialButton
                     transitionValues.values[propTopInset] = discountButton.insetTop

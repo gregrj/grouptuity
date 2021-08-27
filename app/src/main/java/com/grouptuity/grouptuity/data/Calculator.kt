@@ -31,7 +31,8 @@ enum class CalculationType(val isPercent: Boolean,
     SUBTOTAL(false, true, currencyMaxDecimals, currencyMaxIntegers),
     AFTER_DISCOUNT(false, true, currencyMaxDecimals, currencyMaxIntegers),
     AFTER_TAX(false, true, currencyMaxDecimals, currencyMaxIntegers),
-    TOTAL(false, true, currencyMaxDecimals, currencyMaxIntegers)
+    TOTAL(false, true, currencyMaxDecimals, currencyMaxIntegers),
+    DEBT_AMOUNT(false, false, currencyMaxDecimals, currencyMaxIntegers),
 }
 
 class CalculatorData(initialCalculationType: CalculationType, val autoHideNumberPad: Boolean=true, private val acceptValueCallback: () -> Unit = {}) {

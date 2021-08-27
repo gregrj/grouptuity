@@ -20,11 +20,14 @@ import com.grouptuity.grouptuity.ui.custom.transitions.Revealable
 @Navigator.Name("nav_fragment")
 class CustomNavigator(private val context: Context, private val manager: FragmentManager, private val containerId: Int): FragmentNavigator(context, manager, containerId) {
     private val mBackStack = ArrayDeque<Int>()
+    var lastNavigationWasBackward = false
+        private set
 
     override fun popBackStack(): Boolean {
         if (mBackStack.isEmpty() || manager.isStateSaved) {
             return false
         }
+        lastNavigationWasBackward = true
 
         manager.popBackStack(generateBackStackName(mBackStack.size, mBackStack.last()), FragmentManager.POP_BACK_STACK_INCLUSIVE)
         mBackStack.removeLast()
@@ -36,6 +39,7 @@ class CustomNavigator(private val context: Context, private val manager: Fragmen
         if (manager.isStateSaved) {
             return null
         }
+        lastNavigationWasBackward = false
 
         var className = destination.className
         if (className[0] == '.') {

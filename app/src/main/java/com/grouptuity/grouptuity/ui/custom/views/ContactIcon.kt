@@ -40,7 +40,8 @@ class ContactIcon @JvmOverloads constructor(context: Context, attrs: AttributeSe
     private var loadFinishedCallback: ((Boolean) -> Unit)? = null
 
     private var displayedContact: Contact? = null
-    private var photoShowing = false
+    var isPhotoVisible = false
+        private set
 
     private lateinit var selectionAnimation: AnimatorSet
     private var selectionState = DESELECTED
@@ -101,7 +102,7 @@ class ContactIcon @JvmOverloads constructor(context: Context, attrs: AttributeSe
     private fun applyContactToView(initials: String, photoUri: String?, visibility: Int) {
         if(photoUri.isNullOrBlank()) {
             Glide.with(this).clear(binding.image)
-            photoShowing = false
+            isPhotoVisible = false
 
             binding.image.strokeWidth = 0f
 
@@ -156,7 +157,7 @@ class ContactIcon @JvmOverloads constructor(context: Context, attrs: AttributeSe
                                 binding.image.clearColorFilter()
                             }
 
-                            photoShowing = true
+                            isPhotoVisible = true
                             loadFinishedCallback?.let { it(true) }
                             return false
                         }

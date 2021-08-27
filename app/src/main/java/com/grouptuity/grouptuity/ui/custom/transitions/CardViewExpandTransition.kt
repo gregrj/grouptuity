@@ -3,19 +3,13 @@ package com.grouptuity.grouptuity.ui.custom.transitions
 import android.animation.Animator
 import android.animation.ValueAnimator
 import android.graphics.Color
-import android.util.Log
-import android.util.TypedValue
 import android.view.View
 import android.view.ViewGroup
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.FrameLayout
-import androidx.appcompat.widget.Toolbar
-import androidx.core.graphics.ColorUtils
 import androidx.transition.Transition
 import androidx.transition.TransitionListenerAdapter
 import androidx.transition.TransitionValues
-import com.google.android.material.appbar.AppBarLayout
-import com.google.android.material.appbar.CollapsingToolbarLayout
 import com.grouptuity.grouptuity.R
 
 
@@ -137,44 +131,6 @@ class CardViewExpandTransition(private val containerTransitionName: String,
                     }
                 }
 
-//                sceneRoot.findViewById<CollapsingToolbarLayout>(R.id.collapsing_toolbar)?.apply {
-//                    this.setExpandedTitleColor(Color.TRANSPARENT)
-//                    this.setCollapsedTitleTextColor(Color.TRANSPARENT)
-//
-//                    this.setContentScrimColor(Color.TRANSPARENT)
-//                    this.setStatusBarScrimColor(Color.TRANSPARENT)
-//
-//                    this.animate()
-//                        .setDuration(duration)
-//                        .setUpdateListener {
-//                            val progress = AccelerateDecelerateInterpolator().getInterpolation(it.animatedFraction)
-//                            this.setContentScrimColor(
-//                                ColorUtils.setAlphaComponent(
-//                                    TypedValue().also { this.context.theme.resolveAttribute(R.attr.colorPrimary, it, true) }.data,
-//                                    (progress*255).toInt()
-//                                ))
-//                            this.setStatusBarScrimColor(
-//                                ColorUtils.setAlphaComponent(
-//                                    TypedValue().also { this.context.theme.resolveAttribute(R.attr.colorPrimaryVariant, it, true) }.data,
-//                                    (progress*255).toInt()
-//                                ))
-//
-//                            val eightyTo100Progress = (5f*progress - 4f).coerceIn(0f, 1f)
-//                            this.setExpandedTitleColor(
-//                                ColorUtils.setAlphaComponent(
-//                                    TypedValue().also { this.context.theme.resolveAttribute(R.attr.colorOnPrimary, it, true) }.data,
-//                                    (eightyTo100Progress*255).toInt()
-//                                ))
-//                            this.setCollapsedTitleTextColor(
-//                                ColorUtils.setAlphaComponent(
-//                                    TypedValue().also { this.context.theme.resolveAttribute(R.attr.colorOnPrimary, it, true) }.data,
-//                                    (eightyTo100Progress*255).toInt()
-//                                ))
-//                            sceneRoot.findViewById<Toolbar>(R.id.toolbar)?.alpha = eightyTo100Progress
-//                        }
-//                        .start()
-//                }
-
                 onTransitionStartCallback(transition, sceneRoot, startView, endView)
             }
 
@@ -245,45 +201,6 @@ class CardViewExpandTransition(private val containerTransitionName: String,
                 sceneRoot.overlay.add(scrim)
                 sceneRoot.overlay.add(startView)
                 endView.alpha = 0f
-
-                val toolbar = startView.findViewById<Toolbar>(R.id.toolbar)
-                val appbarLayout = startView.findViewById<AppBarLayout>(R.id.appbar_layout)
-
-//                startView.findViewById<CollapsingToolbarLayout>(R.id.collapsing_toolbar)?.apply {
-//                    this.animate().setDuration(duration).setUpdateListener { animator ->
-//                        val progress = AccelerateDecelerateInterpolator().getInterpolation(animator.animatedFraction)
-//
-//                        // Fade out toolbar and status bar backgrounds
-//                        this.setContentScrimColor(
-//                            ColorUtils.setAlphaComponent(
-//                                TypedValue().also { this.context.theme.resolveAttribute(R.attr.colorPrimary, it, true) }.data,
-//                                ((1f-progress)*255).toInt()
-//                            ))
-//                        this.setStatusBarScrimColor(
-//                            ColorUtils.setAlphaComponent(
-//                                TypedValue().also { this.context.theme.resolveAttribute(R.attr.colorPrimaryVariant, it, true) }.data,
-//                                ((1f-progress)*255).toInt()
-//                            ))
-//
-//                        // Fade out toolbar title and icons in the first 20% of transition
-//                        val zeroToTwentyProgress = (5f*progress).coerceIn(0f, 1f)
-//
-//                        this.setExpandedTitleColor(
-//                            ColorUtils.setAlphaComponent(
-//                                TypedValue().also { this.context.theme.resolveAttribute(R.attr.colorOnPrimary, it, true) }.data,
-//                                ((1f - zeroToTwentyProgress)*255).toInt()
-//                            ))
-//                        this.setCollapsedTitleTextColor(
-//                            ColorUtils.setAlphaComponent(
-//                                TypedValue().also { this.context.theme.resolveAttribute(R.attr.colorPrimary, it, true) }.data,
-//                                ((1f - zeroToTwentyProgress)*255).toInt()
-//                            ))
-//                        toolbar.alpha = 1f - zeroToTwentyProgress
-//
-//                        // Elevation
-//                        appbarLayout.elevation = 0f
-//                    }.start()
-//                }
 
                 onTransitionStartCallback(transition, sceneRoot, startView, endView)
             }

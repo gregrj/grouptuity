@@ -1,0 +1,204 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.grouptuity.grouptuity.ui.custom.views.LockableFrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/root_layout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:theme="@style/Theme.Grouptuity.Secondary">
+
+    <ImageView
+        android:id="@+id/covered_fragment"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        tools:ignore="ContentDescription" />
+
+    <View
+        android:id="@+id/scrim"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#000000"
+        android:alpha="0"/>
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/debt_entry_container"
+        android:transitionName="add_debt_container_transition_name"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:cardCornerRadius="0dp"
+        app:cardElevation="0dp">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/add_debt_button"
+            android:transitionName="add_debt_button_transition_name"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:insetTop="0dp"
+            android:insetBottom="0dp"
+            android:gravity="center"
+            android:text="@string/dinerdetails_debts_add"
+            android:textSize="18sp"
+            android:textColor="?attr/colorOnSecondary"
+            app:backgroundTint="?attr/colorSecondary"
+            app:strokeColor="?attr/colorSecondary"
+            app:rippleColor="?attr/colorSecondaryHighlight"
+            android:visibility="gone"
+            style="@style/Widget.MaterialComponents.Button.UnelevatedButton"/>
+
+        <androidx.coordinatorlayout.widget.CoordinatorLayout
+            android:id="@+id/coordinator_layout"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:theme="@style/AppThemeSecondaryEditTextActionView"
+            tools:context=".views.billsplit.debts.DebtEntryFragment">
+
+            <com.google.android.material.appbar.AppBarLayout
+                android:id="@+id/appbar_layout"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content">
+
+                <View
+                    android:id="@+id/status_bar_background_view"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/status_bar_height"
+                    android:background="?attr/colorSecondaryVariant"/>
+
+                <androidx.appcompat.widget.Toolbar
+                    android:id="@+id/toolbar"
+                    android:layout_width="match_parent"
+                    android:layout_height="?attr/actionBarSize"
+                    style="@style/Widget.MaterialComponents.Toolbar.Primary"/>
+            </com.google.android.material.appbar.AppBarLayout>
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:orientation="vertical"
+                app:layout_behavior="@string/appbar_scrolling_view_behavior">
+
+                <FrameLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="?attr/colorBackground">
+
+                    <TextView
+                        android:id="@+id/price_textview"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:paddingVertical="16dp"
+                        android:paddingStart="52dp"
+                        android:paddingEnd="52dp"
+                        android:gravity="center"
+                        android:textSize="40sp"
+                        android:maxLines="1"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        style="@android:style/TextAppearance.Material.Large"/>
+
+                    <ImageButton
+                        android:id="@+id/button_backspace"
+                        android:layout_width="32dp"
+                        android:layout_height="32dp"
+                        android:scaleType="fitXY"
+                        android:layout_gravity="end|center_vertical"
+                        android:layout_marginEnd="16dp"
+                        app:tint="?attr/colorOnBackgroundLowEmphasis"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:src="@drawable/ic_backspace"/>
+
+                    <ImageView
+                        android:id="@+id/button_edit"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:layout_gravity="end|center_vertical"
+                        android:layout_marginEnd="16dp"
+                        app:tint="?attr/colorOnBackgroundLowEmphasis"
+                        android:src="@drawable/ic_edit"
+                        android:visibility="gone"/>
+                </FrameLayout>
+
+                <androidx.coordinatorlayout.widget.CoordinatorLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1">
+
+                    <androidx.coordinatorlayout.widget.CoordinatorLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="match_parent"
+                            android:orientation="vertical">
+
+                            <androidx.constraintlayout.widget.ConstraintLayout
+                                android:id="@+id/debt_details"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:orientation="vertical"
+                                android:paddingHorizontal="8dp"
+                                android:paddingBottom="8dp"
+                                android:elevation="4dp"
+                                android:background="?attr/colorBackground">
+
+                                <com.google.android.material.checkbox.MaterialCheckBox
+                                    android:id="@+id/select_all_creditors"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    app:layout_constraintTop_toTopOf="parent"
+                                    app:layout_constraintStart_toStartOf="parent"
+                                    app:layout_constraintBottom_toBottomOf="parent"
+                                    android:layout_marginStart="8dp"/>
+
+                                <com.google.android.material.checkbox.MaterialCheckBox
+                                    android:id="@+id/select_all_debtors"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    app:layout_constraintTop_toTopOf="parent"
+                                    app:layout_constraintEnd_toEndOf="parent"
+                                    app:layout_constraintBottom_toBottomOf="parent"/>
+
+                            </androidx.constraintlayout.widget.ConstraintLayout>
+
+                            <androidx.recyclerview.widget.RecyclerView
+                                android:id="@+id/diner_list"
+                                android:layout_width="match_parent"
+                                android:layout_height="0dp"
+                                android:layout_weight="1.0"
+                                android:orientation="vertical"
+                                android:background="?attr/colorBackground"
+                                app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+                                tools:listitem="@layout/frag_debtentry_listdiner"/>
+
+                        </LinearLayout>
+
+                        <com.google.android.material.floatingactionbutton.FloatingActionButton
+                            android:id="@+id/fab"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_gravity="end|bottom"
+                            android:layout_margin="@dimen/fab_margin"
+                            android:src="@drawable/ic_arrow_forward"
+                            android:visibility="invisible"
+                            app:layout_behavior="com.google.android.material.behavior.HideBottomViewOnScrollBehavior"
+                            android:contentDescription="TODO" />
+                    </androidx.coordinatorlayout.widget.CoordinatorLayout>
+
+                    <include
+                        android:id="@+id/calculator"
+                        layout="@layout/calculator_collapsible"
+                        android:elevation="4dp"/>
+
+                </androidx.coordinatorlayout.widget.CoordinatorLayout>
+
+            </LinearLayout>
+
+            <View
+                android:id="@+id/edit_name_scrim"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="#000000"
+                android:alpha="0"/>
+        </androidx.coordinatorlayout.widget.CoordinatorLayout>
+    </com.google.android.material.card.MaterialCardView>
+</com.grouptuity.grouptuity.ui.custom.views.LockableFrameLayout>

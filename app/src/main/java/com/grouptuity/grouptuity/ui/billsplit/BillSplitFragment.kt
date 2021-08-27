@@ -129,10 +129,10 @@ class BillSplitFragment: Fragment() {
         binding.fab.setOnClickListener {
             when(binding.viewPager.currentItem) {
                 0 -> {  // Show address book for contact selection
-                    findNavController().navigate(BillSplitFragmentDirections.actionBillSplitFragmentToAddressBookFragment(CircularRevealTransition.OriginParams(binding.fab)))
+                    findNavController().navigate(BillSplitFragmentDirections.openAddressbook(CircularRevealTransition.OriginParams(binding.fab)))
                 }
                 1 -> {  // Show fragment for item entry
-                    findNavController().navigate(BillSplitFragmentDirections.actionBillSplitToItemEntry(editedItem = null, CircularRevealTransition.OriginParams(binding.fab)))
+                    findNavController().navigate(BillSplitFragmentDirections.createNewItem(editedItem = null, CircularRevealTransition.OriginParams(binding.fab)))
                 }
             }
         }

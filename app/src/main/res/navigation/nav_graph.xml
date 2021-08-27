@@ -16,16 +16,17 @@
         android:label="@string/app_name"
         tools:layout="@layout/frag_bill_split">
 
-        <action android:id="@+id/action_billSplitFragment_to_simpleCalcFragment" app:destination="@id/simpleCalcFragment" />
-        <action android:id="@+id/action_billSplitFragment_to_addressBookFragment" app:destination="@id/addressBookFragment" />
-        <action android:id="@+id/action_billSplit_to_itemEntry" app:destination="@id/itemEntryFragment"/>
+        <action android:id="@+id/switch_to_basic_tip_calc" app:destination="@id/basicTipCalcFragment" />
+        <action android:id="@+id/open_addressbook" app:destination="@id/addressBookFragment" />
+        <action android:id="@+id/view_diner_details" app:destination="@id/dinerDetailsFragment"/>
+        <action android:id="@+id/create_new_item" app:destination="@id/itemEntryFragment"/>
         <action android:id="@+id/createFirstDiscount" app:destination="@id/discountEntryFragment"/>
-        <action android:id="@+id/manageDiscounts" app:destination="@id/discountsFragment"/>
-        <action android:id="@+id/editBillSplitTaxTip" app:destination="@id/calculator" />
+        <action android:id="@+id/manage_discounts" app:destination="@id/discountsFragment"/>
+        <action android:id="@+id/edit_tax_tip" app:destination="@id/calculator" />
     </nav_fragment>
 
     <nav_fragment
-        android:id="@+id/simpleCalcFragment"
+        android:id="@+id/basicTipCalcFragment"
         android:name="com.grouptuity.grouptuity.ui.basictipcalc.BasicTipCalcFragment"
         android:label="@string/basic_tip_calc_toolbar_title"
         tools:layout="@layout/frag_basic_tip_calc">
@@ -41,10 +42,35 @@
     <nav_fragment
         android:id="@+id/addressBookFragment"
         android:name="com.grouptuity.grouptuity.ui.billsplit.addressbook.AddressBookFragment"
-        android:label="AddressBookFragment">
+        android:label="AddressBookFragment"
+        tools:layout="@layout/frag_address_book">
         <argument
             android:name="origin_params"
             app:argType="com.grouptuity.grouptuity.ui.custom.transitions.CircularRevealTransition$OriginParams"/>
+        <action android:id="@+id/create_diner" app:destination="@id/dinerDetailsFragment"/>
+    </nav_fragment>
+
+    <nav_fragment
+        android:id="@+id/dinerDetailsFragment"
+        android:name="com.grouptuity.grouptuity.ui.billsplit.dinerdetails.DinerDetailsFragment"
+        android:label="DinerDetailsFragment"
+        tools:layout="@layout/frag_diner_details">
+        <argument
+            android:name="diner"
+            app:nullable="true"
+            app:argType="com.grouptuity.grouptuity.data.Diner"/>
+        <argument
+            android:name="origin_params"
+            app:nullable="true"
+            app:argType="com.grouptuity.grouptuity.ui.custom.transitions.CircularRevealTransition$OriginParams"/>
+        <action
+            android:id="@+id/popUpToBillSplit"
+            app:destination="@id/billSplitFragment"
+            app:popUpTo="@+id/billSplitFragment"
+            app:popUpToInclusive="true"/>
+        <action
+            android:id="@+id/add_debt"
+            app:destination="@id/debtEntryFragment" />
     </nav_fragment>
 
     <nav_fragment
@@ -65,7 +91,8 @@
     <nav_fragment
         android:id="@+id/discountsFragment"
         android:name="com.grouptuity.grouptuity.ui.billsplit.discounts.DiscountsFragment"
-        android:label="DiscountsFragment">
+        android:label="DiscountsFragment"
+        tools:layout="@layout/frag_discounts">
         <argument
             android:name="newDiscount"
             app:nullable="true"
@@ -77,7 +104,8 @@
     <nav_fragment
         android:id="@+id/discountEntryFragment"
         android:name="com.grouptuity.grouptuity.ui.billsplit.discountentry.DiscountEntryFragment"
-        android:label="DiscountEntryFragment">
+        android:label="DiscountEntryFragment"
+        tools:layout="@layout/frag_discount_entry">
         <argument
             android:name="edited_discount"
             app:nullable="true"
@@ -101,5 +129,16 @@
         <argument
             android:name="calculation_type"
             app:argType="com.grouptuity.grouptuity.data.CalculationType"/>
+    </nav_fragment>
+
+    <nav_fragment
+        android:id="@+id/debtEntryFragment"
+        android:name="com.grouptuity.grouptuity.ui.billsplit.debtentry.DebtEntryFragment"
+        android:label="@string/app_name"
+        tools:layout="@layout/frag_debtentry">
+        <argument
+            android:name="loaded_diner"
+            app:nullable="true"
+            app:argType="com.grouptuity.grouptuity.data.Diner"/>
     </nav_fragment>
 </navigation>

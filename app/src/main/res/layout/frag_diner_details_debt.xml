@@ -1,0 +1,61 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.constraintlayout.widget.ConstraintLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:paddingVertical="8dp"
+    android:paddingStart="6dp"
+    android:paddingEnd="24dp"
+    android:background="@drawable/rounded_corners_list_background">
+
+    <ImageButton
+        android:id="@+id/remove"
+        android:layout_width="48dp"
+        android:layout_height="48dp"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintEnd_toStartOf="@+id/debt_name"
+        android:background="?attr/selectableItemBackgroundBorderless"
+        android:src="@drawable/ic_close"
+        app:tint="?attr/colorOnSurface" />
+
+    <TextView
+        android:id="@+id/debt_name"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintStart_toEndOf="@+id/remove"
+        app:layout_constraintBottom_toTopOf="@+id/debt_description"
+        app:layout_constraintEnd_toStartOf="@+id/debt_share"
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:textColor="?attr/colorOnSurface"
+        style="@android:style/TextAppearance.Material.Medium" />
+
+    <TextView
+        android:id="@+id/debt_description"
+        android:layout_width="0dp"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        android:maxLines="1"
+        app:layout_constraintTop_toBottomOf="@+id/debt_name"
+        app:layout_constraintStart_toStartOf="@+id/debt_name"
+        app:layout_constraintEnd_toEndOf="@+id/debt_name"
+        app:layout_constraintBottom_toBottomOf="parent"
+        style="@android:style/TextAppearance.Material.Small" />
+
+    <TextView
+        android:id="@+id/debt_share"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:gravity="center_vertical"
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toEndOf="@id/debt_name"
+        app:layout_constraintEnd_toEndOf="parent"
+        android:textColor="?attr/colorOnSurface"
+        style="@android:style/TextAppearance.Material.Medium" />
+</androidx.constraintlayout.widget.ConstraintLayout>

@@ -3,24 +3,13 @@ package com.grouptuity.grouptuity
 import android.app.SearchManager
 import android.content.Intent
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
-import android.util.Log
 import android.util.TypedValue
-import android.view.Gravity
 import android.view.ViewGroup
 import androidx.appcompat.app.AppCompatActivity
-import androidx.appcompat.widget.Toolbar
 import androidx.core.view.*
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.ViewModelProvider
-import androidx.navigation.NavController
-import androidx.navigation.NavDestination
 import androidx.navigation.fragment.NavHostFragment
-import androidx.navigation.ui.AppBarConfiguration
-import androidx.navigation.ui.navigateUp
-import androidx.navigation.ui.setupActionBarWithNavController
-import androidx.navigation.ui.setupWithNavController
 import com.google.android.material.switchmaterial.SwitchMaterial
 import com.grouptuity.grouptuity.databinding.ActivityMainBinding
 import com.grouptuity.grouptuity.ui.custom.CustomNavigator
@@ -109,7 +98,7 @@ class MainActivity: AppCompatActivity() {
                     binding.drawerLayout.closeDrawers()
                     binding.drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED)
                 }
-                R.id.simpleCalcFragment -> {
+                R.id.basicTipCalcFragment -> {
                     binding.drawerNavView.menu.findItem(R.id.nav_simple_calculator).isChecked = true
                     binding.drawerLayout.closeDrawers()
                     binding.drawerLayout.setDrawerLockMode(DrawerLayout.LOCK_MODE_UNLOCKED)
@@ -126,7 +115,7 @@ class MainActivity: AppCompatActivity() {
                     when (menuItem.itemId) {
                         R.id.nav_group_bill_splitter -> { true }
                         R.id.nav_simple_calculator -> {
-                            navController.navigate(R.id.action_billSplitFragment_to_simpleCalcFragment)
+                            navController.navigate(R.id.switch_to_basic_tip_calc)
 //                            binding.drawerLayout.closeDrawers()
                             true
                         }
@@ -140,7 +129,7 @@ class MainActivity: AppCompatActivity() {
                         }
                     }
                 }
-                R.id.simpleCalcFragment -> {
+                R.id.basicTipCalcFragment -> {
                     when (menuItem.itemId) {
                         R.id.nav_group_bill_splitter -> {
                             navController.popBackStack()

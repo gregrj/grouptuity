@@ -9,6 +9,8 @@ import android.view.ViewGroup
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.FragmentNavigatorExtras
+import androidx.navigation.fragment.findNavController
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -16,8 +18,10 @@ import androidx.recyclerview.widget.SimpleItemAnimator
 import com.google.android.material.transition.Hold
 import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.Diner
+import com.grouptuity.grouptuity.data.Item
 import com.grouptuity.grouptuity.databinding.FragDinersBinding
 import com.grouptuity.grouptuity.databinding.FragDinersListitemBinding
+import com.grouptuity.grouptuity.databinding.FragItemsListitemBinding
 import com.grouptuity.grouptuity.ui.custom.views.RecyclerViewBottomOffset
 import com.grouptuity.grouptuity.ui.custom.views.RecyclerViewListener
 import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
@@ -59,14 +63,15 @@ class DinersFragment : Fragment() {
                     addTarget(requireParentFragment().requireView())
                 }
 
-//                ViewModelProvider(requireActivity()).get(DinerDetailsViewModel::class.java).loadDiner(view.tag as Diner)
-//                  TODO
-//                val viewBinding = FragDinersListitemBinding.bind(view)
-//                findNavController().navigate(
-//                    BillSplitFragmentDirections.actionViewDinerDetails(view.tag as Diner),
-//                    FragmentNavigatorExtras(
-//                        viewBinding.cardBackground to viewBinding.cardBackground.transitionName,
-//                        viewBinding.contactIcon.image to viewBinding.contactIcon.image.transitionName))
+                val viewBinding = FragDinersListitemBinding.bind(view)
+
+                findNavController().navigate(
+                    BillSplitFragmentDirections.viewDinerDetails(view.tag as Diner, null),
+                    FragmentNavigatorExtras(
+                        viewBinding.cardBackground to viewBinding.cardBackground.transitionName,
+                        viewBinding.contactIcon.image to viewBinding.contactIcon.image.transitionName
+                    )
+                )
             }
             override fun onLongClick(view: View): Boolean { return false }
         })

@@ -5,7 +5,6 @@ import android.animation.ValueAnimator
 import android.content.Context
 import android.graphics.Color
 import android.os.Bundle
-import android.util.Log
 import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
@@ -27,7 +26,6 @@ import androidx.recyclerview.widget.SimpleItemAnimator
 import androidx.transition.Transition
 import androidx.transition.TransitionValues
 import com.google.android.material.transition.Hold
-import com.grouptuity.grouptuity.MainActivity
 import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.Discount
 import com.grouptuity.grouptuity.databinding.FragDiscountsBinding
@@ -63,7 +61,6 @@ class DiscountsFragment: Fragment(), Revealable by RevealableImpl() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-
         // Intercept user interactions while while fragment transitions and animations are running
         binding.rootLayout.attachLock(discountsViewModel.isInputLocked)
 

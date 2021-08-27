@@ -76,7 +76,7 @@ class TaxTipFragment: Fragment() {
                 addTarget(requireParentFragment().requireView())
             }
 
-            findNavController().navigate(BillSplitFragmentDirections.editBillSplitTaxTip(
+            findNavController().navigate(BillSplitFragmentDirections.editTaxTip(
                 title = resources.getString(
                     R.string.calculator_toolbar_title_tax_pct,
                     binding.taxPercent.text.toString()),
@@ -96,7 +96,7 @@ class TaxTipFragment: Fragment() {
                 addTarget(requireParentFragment().requireView())
             }
 
-            findNavController().navigate(BillSplitFragmentDirections.editBillSplitTaxTip(
+            findNavController().navigate(BillSplitFragmentDirections.editTaxTip(
                 title = resources.getString(
                     R.string.calculator_toolbar_title_tax_amt,
                     binding.taxAmount.text.toString()),
@@ -116,7 +116,7 @@ class TaxTipFragment: Fragment() {
                 addTarget(requireParentFragment().requireView())
             }
 
-            findNavController().navigate(BillSplitFragmentDirections.editBillSplitTaxTip(
+            findNavController().navigate(BillSplitFragmentDirections.editTaxTip(
                 title = resources.getString(
                     R.string.calculator_toolbar_title_tip_pct,
                     binding.tipPercent.text.toString()),
@@ -136,7 +136,7 @@ class TaxTipFragment: Fragment() {
                 addTarget(requireParentFragment().requireView())
             }
 
-            findNavController().navigate(BillSplitFragmentDirections.editBillSplitTaxTip(
+            findNavController().navigate(BillSplitFragmentDirections.editTaxTip(
                 title = resources.getString(
                     R.string.calculator_toolbar_title_tip_amt,
                     binding.tipAmount.text.toString()),

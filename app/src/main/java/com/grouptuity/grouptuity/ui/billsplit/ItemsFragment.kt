@@ -69,7 +69,7 @@ class ItemsFragment : Fragment() {
                 val viewBinding = FragItemsListitemBinding.bind(view)
 
                 findNavController().navigate(
-                    BillSplitFragmentDirections.actionBillSplitToItemEntry(view.tag as Item, null),
+                    BillSplitFragmentDirections.createNewItem(view.tag as Item, null),
                     FragmentNavigatorExtras(
                         viewBinding.cardBackground to viewBinding.cardBackground.transitionName,
                     )
