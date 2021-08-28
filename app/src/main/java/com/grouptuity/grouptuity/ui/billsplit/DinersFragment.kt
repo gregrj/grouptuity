@@ -66,7 +66,7 @@ class DinersFragment : Fragment() {
                 val viewBinding = FragDinersListitemBinding.bind(view)
 
                 findNavController().navigate(
-                    BillSplitFragmentDirections.viewDinerDetails(view.tag as Diner, null),
+                    BillSplitFragmentDirections.viewDinerDetails(view.tag as Diner),
                     FragmentNavigatorExtras(
                         viewBinding.cardBackground to viewBinding.cardBackground.transitionName,
                         viewBinding.contactIcon.image to viewBinding.contactIcon.image.transitionName

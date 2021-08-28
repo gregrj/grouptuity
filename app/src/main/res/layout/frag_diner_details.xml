@@ -27,6 +27,19 @@
         android:layout_height="match_parent"
         app:cardCornerRadius="0dp">
 
+        <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+            android:id="@+id/new_contact_button"
+            android:transitionName="new_contact_button_transition_name"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            app:iconGravity="textStart"
+            android:visibility="gone"
+            android:text="@string/addressbook_fab_new_contact"
+            app:icon="@drawable/ic_add_person"
+            android:textColor="?attr/colorOnSecondary"
+            app:backgroundTint="?attr/colorSecondary" />
+
         <androidx.coordinatorlayout.widget.CoordinatorLayout
             android:id="@+id/coordinator_layout"
             android:layout_width="match_parent"
@@ -82,6 +95,13 @@
                         android:id="@+id/biographics"
                         android:layout_width="match_parent"
                         android:layout_height="100dp">
+
+                        <com.google.android.material.textfield.TextInputEditText
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            app:layout_constraintTop_toTopOf="parent"
+                            app:layout_constraintStart_toStartOf="parent"
+                            android:hint="Email"/>
 
                         <View
                             android:layout_width="match_parent"

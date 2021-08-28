@@ -1,4 +1,4 @@
-package com.grouptuity.grouptuity.ui.billsplit.dinerdetails
+package com.grouptuity.grouptuity.ui.billsplit.contactentry
 
 import android.animation.Animator
 import android.animation.ValueAnimator
@@ -41,7 +41,6 @@ import com.google.android.material.appbar.AppBarLayout
 import com.google.android.material.appbar.CollapsingToolbarLayout
 import com.google.android.material.imageview.ShapeableImageView
 import com.google.android.material.shape.CornerFamily
-import com.google.android.material.shape.RelativeCornerSize
 import com.google.android.material.transition.Hold
 import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.*
@@ -62,7 +61,7 @@ import kotlin.math.abs
 
 class DinerDetailsFragment: Fragment(), Revealable by RevealableImpl() {
     private var binding by setNullOnDestroy<FragDinerDetailsBinding>()
-    private val args: DinerDetailsFragmentArgs by navArgs()
+//    private val args: DinerDetailsFragmentArgs by navArgs()
     private lateinit var viewModel: DinerDetailsViewModel
     private lateinit var backPressedCallback: OnBackPressedCallback
     private var isToolBarCollapsed = false
@@ -79,7 +78,6 @@ class DinerDetailsFragment: Fragment(), Revealable by RevealableImpl() {
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-        postponeEnterTransition()
 
         // Intercept user interactions while while fragment transitions are running
         binding.rootLayout.attachLock(viewModel.isInputLocked)
@@ -108,51 +106,34 @@ class DinerDetailsFragment: Fragment(), Revealable by RevealableImpl() {
                 }
             })
 
-        val loadedDiner = args.diner
-        if (loadedDiner == null) {
-            // Creating a Diner using a new Contact
-            viewModel.initializeForDiner(null)
-            binding.toolbar.title = getString(R.string.dinerdetails_toolbar_title_new_diner)
+        val loadedDiner: Diner? = null //args.diner
 
-            binding.appbarLayout.setExpanded(false, false)
-            binding.nestedScrollView.isNestedScrollingEnabled = false
+        when {
+            loadedDiner == null -> {
+                // Creating a Diner using a new Contact
+                viewModel.initializeForDiner(null)
+                binding.toolbar.title = getString(R.string.dinerdetails_toolbar_title_new_diner)
 
-            if (findNavController().navigatorProvider.getNavigator(CustomNavigator::class.java).lastNavigationWasBackward) {
-                // Returning from DebtEntryFragment
-                findNavController().currentBackStackEntry?.savedStateHandle?.getLiveData<Boolean>(
-                    "DebtEntryNavBack")?.observe(viewLifecycleOwner) {
-
-                    if (it) {
-                        startTransitionPending = true
-                    } else {
-                        view.doOnPreDraw { startPostponedEnterTransition() }
-                    }
-                }
-            } else {
-                // Opening fragment from AddressBookFragment
                 setupNewEnterTransition()
-                view.doOnPreDraw { startPostponedEnterTransition() }
             }
-        } else {
-            // Inspecting details for existing diner
-            viewModel.initializeForDiner(loadedDiner)
-            binding.toolbar.title = loadedDiner.name
-
-            if (findNavController().navigatorProvider.getNavigator(CustomNavigator::class.java).lastNavigationWasBackward) {
-                // Returning from DebtEntryFragment
+            findNavController().navigatorProvider.getNavigator(CustomNavigator::class.java).lastNavigationWasBackward -> {
+                // Navigating back from DebtEntryFragment
+                viewModel.initializeForDiner(loadedDiner)
+                binding.toolbar.title = loadedDiner.name
                 binding.appbarLayout.setExpanded(false, false)
 
                 if (loadedDiner.photoUri == null) {
                     binding.nestedScrollView.isNestedScrollingEnabled = false
                 } else {
-                    binding.nestedScrollView.isNestedScrollingEnabled = true
-
                     Glide.with(this)
                         .load(Uri.parse(loadedDiner.photoUri))
                         .apply(RequestOptions().dontTransform())
                         .into(binding.dinerImage)
                 }
 
+                postponeEnterTransition()
+                view.doOnPreDraw { startPostponedEnterTransition() }
+
                 findNavController().currentBackStackEntry?.savedStateHandle?.getLiveData<Boolean>(
                     "DebtEntryNavBack")?.observe(viewLifecycleOwner) {
 
@@ -162,31 +143,24 @@ class DinerDetailsFragment: Fragment(), Revealable by RevealableImpl() {
                         view.doOnPreDraw { startPostponedEnterTransition() }
                     }
                 }
-            } else {
-                // Opening fragment from DinerFragment
+            }
+            else -> {
+                // Inspecting details for existing diner
+                viewModel.initializeForDiner(loadedDiner)
+                binding.toolbar.title = loadedDiner.name
 
                 if (loadedDiner.photoUri == null) {
-                    binding.nestedScrollView.isNestedScrollingEnabled = false
-                    binding.appbarLayout.setExpanded(false, false)
-
                     setupCollapsedEnterTransition(loadedDiner)
-                    view.doOnPreDraw { startPostponedEnterTransition() }
                 } else {
-                    binding.nestedScrollView.isNestedScrollingEnabled = true
-                    binding.appbarLayout.setExpanded(true, false)
                     setupExpandedEnterTransition(loadedDiner)
                 }
             }
         }
 
         setupSubtotalSection()
-
         setupDiscountSection()
-
         setupTaxTipSection()
-
         setupReimbursementsSection()
-
         setupDebtSection()
     }
 
@@ -220,7 +194,7 @@ class DinerDetailsFragment: Fragment(), Revealable by RevealableImpl() {
         val loadedDiner = viewModel.loadedDiner.value
         when {
             loadedDiner == null -> {
-                setupNewReturnTransition()
+                // TODO
             }
             isToolBarCollapsed -> {
                 setupCollapsedReturnTransition(loadedDiner)
@@ -488,19 +462,25 @@ class DinerDetailsFragment: Fragment(), Revealable by RevealableImpl() {
                 addTarget(requireView())
             }
 
-            findNavController().navigate(
-                DinerDetailsFragmentDirections.addDebt(args.diner),
-                FragmentNavigatorExtras(
-                    binding.addDebtContainer to binding.addDebtContainer.transitionName,
-                    binding.addDebtButton to binding.addDebtButton.transitionName
-                )
-            )
+//            findNavController().navigate(
+//                DinerDetailsFragmentDirections.addDebt(args.diner),
+//                FragmentNavigatorExtras(
+//                    binding.addDebtContainer to binding.addDebtContainer.transitionName,
+//                    binding.addDebtButton to binding.addDebtButton.transitionName
+//                )
+//            )
         }
     }
 
     private fun setupNewEnterTransition() {
-        binding.coveredFragment.setImageBitmap(coveredFragmentBitmap)
+        postponeEnterTransition()
+        requireView().doOnPreDraw { startPostponedEnterTransition() }
+
         binding.newContactButton.visibility = View.VISIBLE
+        binding.coveredFragment.setImageBitmap(coveredFragmentBitmap)
+        binding.nestedScrollView.isNestedScrollingEnabled = false
+        binding.appbarLayout.setExpanded(false, false)
+
         binding.container.transitionName = "new_contact_container_transition_name"
 
         val propCornerRadius = "com.grouptuity.grouptuity:CardViewExpandTransition:button_corner_radius"
@@ -509,7 +489,8 @@ class DinerDetailsFragment: Fragment(), Revealable by RevealableImpl() {
             .addElement(binding.newContactButton.transitionName,
                 object: CardViewExpandTransition.Element {
                     override fun captureStartValues(transition: Transition, transitionValues: TransitionValues) {
-                        transitionValues.values[propCornerRadius] = 0.5
+                        val button = transitionValues.view as com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+                        transitionValues.values[propCornerRadius] = resources.getDimension(R.dimen.material_card_corner_radius)
                     }
 
                     override fun captureEndValues(transition: Transition, transitionValues: TransitionValues) {
@@ -521,31 +502,27 @@ class DinerDetailsFragment: Fragment(), Revealable by RevealableImpl() {
 
                         val animator = ValueAnimator.ofFloat(0f, 1f)
                         animator.doOnStart {
-                            // Button is smaller than the container initially so start with the card background hidden
-                            binding.container.setCardBackgroundColor(Color.TRANSPARENT)
-                            binding.container.elevation = 0f
-
                             // Container content will be hidden initially and fade in later
                             binding.coordinatorLayout.alpha = 0f
                         }
-
-                        val surfaceColor = TypedValue().also { requireContext().theme.resolveAttribute(R.attr.colorSurface, it, true) }.data
-
                         animator.addUpdateListener {
                             val progress = AccelerateDecelerateInterpolator().getInterpolation(it.animatedFraction)
 
                             // Adjust shape of button to match background container
                             val zeroTo20Progress = (5f*progress).coerceIn(0f, 1f)
-                            button.shapeAppearanceModel = button.shapeAppearanceModel.withCornerSize(RelativeCornerSize(0.5f * (1f - zeroTo20Progress)))
+                            val cornerRadius = (startValues.values[propCornerRadius] as Float)*(1f - zeroTo20Progress)
 
-                            // Restore card background once the button starts fading out
-                            if(progress >= 0.2) {
-                                binding.container.setCardBackgroundColor(surfaceColor)
+                            button.shapeAppearanceModel =
+                                button.shapeAppearanceModel
+                                    .toBuilder()
+                                    .setAllCorners(CornerFamily.ROUNDED, cornerRadius)
+                                    .build()
 
-                                val twentyTo80Progress = (1.666667f*progress - 0.33333f).coerceIn(0f, 1f)
-                                button.alpha = 1f - twentyTo80Progress
-                                binding.coordinatorLayout.alpha = twentyTo80Progress
-                            }
+                            binding.newContactButton.cornerRadius = 100
+
+                            val twentyTo80Progress = (1.666667f*progress - 0.33333f).coerceIn(0f, 1f)
+                            button.alpha = 1f - twentyTo80Progress
+                            binding.coordinatorLayout.alpha = twentyTo80Progress
                         }
                         animator.doOnEnd {
                             button.visibility = View.GONE
@@ -565,7 +542,10 @@ class DinerDetailsFragment: Fragment(), Revealable by RevealableImpl() {
     }
 
     private fun setupExpandedEnterTransition(diner: Diner) {
+        postponeEnterTransition()
         binding.coveredFragment.setImageBitmap(coveredFragmentBitmap)
+        binding.nestedScrollView.isNestedScrollingEnabled = true
+        binding.appbarLayout.setExpanded(true, false)
 
         Glide.with(this)
             .load(Uri.parse(diner.photoUri))
@@ -679,7 +659,11 @@ class DinerDetailsFragment: Fragment(), Revealable by RevealableImpl() {
     }
 
     private fun setupCollapsedEnterTransition(diner: Diner) {
+        postponeEnterTransition()
         binding.coveredFragment.setImageBitmap(coveredFragmentBitmap)
+        binding.nestedScrollView.isNestedScrollingEnabled = false
+        binding.appbarLayout.setExpanded(false, false)
+
         binding.container.transitionName = "container" + diner.lookupKey
 
         sharedElementEnterTransition = CardViewExpandTransition(binding.container.transitionName, binding.coordinatorLayout.id, true)
@@ -725,6 +709,9 @@ class DinerDetailsFragment: Fragment(), Revealable by RevealableImpl() {
                 override fun onTransitionPause(transition: Transition) {}
                 override fun onTransitionResume(transition: Transition) {}
             })
+
+
+        requireView().doOnPreDraw { startPostponedEnterTransition() }
     }
 
     private fun setupNewExitTransition() {
@@ -841,8 +828,6 @@ class DinerDetailsFragment: Fragment(), Revealable by RevealableImpl() {
     private fun setupCollapsedReturnTransition(diner: Diner) {
         binding.container.transitionName = "container" + diner.lookupKey
 
-        binding.dinerImage.visibility = View.INVISIBLE
-
         sharedElementReturnTransition = CardViewExpandTransition(binding.container.transitionName, binding.coordinatorLayout.id, false).apply {
             this.setOnTransitionStartCallback { transition, _, startView, _ ->
                 val toolbar = startView.findViewById<Toolbar>(R.id.toolbar)
@@ -885,65 +870,7 @@ class DinerDetailsFragment: Fragment(), Revealable by RevealableImpl() {
     }
 
     private fun setupNewReturnTransition() {
-        binding.container.transitionName = "new_contact_container_transition_name"
-        val propCornerRadius = "com.grouptuity.grouptuity:CardViewExpandTransition:button_corner_radius"
-
-        binding.newContactButton.alpha = 0f
-        binding.newContactButton.visibility = View.VISIBLE
-
-        sharedElementReturnTransition = CardViewExpandTransition(binding.container.transitionName, binding.coordinatorLayout.id, false)
-            .addElement(binding.newContactButton.transitionName, object: CardViewExpandTransition.Element{
-                override fun captureStartValues(transition: Transition, transitionValues: TransitionValues) {
-                    transitionValues.values[propCornerRadius] = 0
-                }
-
-                override fun captureEndValues(transition: Transition, transitionValues: TransitionValues) {
-                    transitionValues.values[propCornerRadius] = 0.5
-                }
-
-                override fun createAnimator(transition: Transition, sceneRoot: ViewGroup, startValues: TransitionValues, endValues: TransitionValues): Animator? {
-                    val animator = ValueAnimator.ofFloat(0f, 1f)
-                    animator.doOnStart {
-                        val surfaceColor = TypedValue().also { requireContext().theme.resolveAttribute(R.attr.colorSurface, it, true) }.data
-                        binding.container.setCardBackgroundColor(surfaceColor)
-                        binding.container.elevation = 0f
-
-                        binding.coordinatorLayout.alpha = 1f
-
-                        sceneRoot.findViewById<View>(R.id.fade_view)?.apply {
-                            this.visibility = View.GONE
-                        }
-                    }
-
-                    animator.addUpdateListener {
-                        val progress = AccelerateDecelerateInterpolator().getInterpolation(it.animatedFraction)
-
-                        // Fade out discount button after its shape matches background container
-                        val twentyTo80Progress = (1.666667f*progress - 0.33333f).coerceIn(0f, 1f)
-                        binding.newContactButton.alpha = twentyTo80Progress
-                        binding.coordinatorLayout.alpha = 1f - twentyTo80Progress
-
-                        if(progress >= 0.8) {
-                            binding.container.setCardBackgroundColor(Color.TRANSPARENT)
-                            binding.coordinatorLayout.visibility = View.GONE
-                        }
-
-                        // Adjust shape of discount button to final state
-                        val eightyTo100Progress = (5f*progress - 4f).coerceIn(0f, 1f)
-                        binding.newContactButton.shapeAppearanceModel = binding.newContactButton.shapeAppearanceModel
-                            .withCornerSize(RelativeCornerSize(0.5f * eightyTo100Progress))
-                    }
-
-                    return animator
-                }
-            }
-        ).setOnTransitionStartCallback { _, _, _, _ -> viewModel.notifyTransitionStarted() }
-
-        // Return transition is needed to prevent next fragment from appearing immediately
-        returnTransition = Hold().apply {
-            duration = 0L
-            addTarget(requireView())
-        }
+        // TODO
     }
 }
 

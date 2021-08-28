@@ -18,25 +18,31 @@ import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.SearchView
+import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.os.bundleOf
 import androidx.core.view.doOnPreDraw
+import androidx.core.view.marginLeft
+import androidx.core.view.marginStart
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.setFragmentResult
 import androidx.fragment.app.setFragmentResultListener
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.FragmentNavigatorExtras
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.*
 import androidx.transition.Transition
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
+import com.google.android.material.transition.Hold
 import com.grouptuity.grouptuity.AppViewModel
 import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.Contact
 import com.grouptuity.grouptuity.databinding.FragAddressBookBinding
 import com.grouptuity.grouptuity.databinding.FragAddressBookListitemBinding
+import com.grouptuity.grouptuity.ui.billsplit.dinerdetails.DinerDetailsFragmentDirections
 import com.grouptuity.grouptuity.ui.custom.views.RecyclerViewListener
 import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
 import com.grouptuity.grouptuity.ui.custom.transitions.CircularRevealTransition
@@ -175,9 +181,39 @@ class AddressBookFragment: Fragment(), Revealable by RevealableImpl() {
 
         setupContactList()
 
+        binding.fab.doOnPreDraw {
+            // For return transitions, set the size of the container so it matches the FAB
+            binding.newContactButtonContainer.layoutParams = CoordinatorLayout.LayoutParams(
+                binding.fab.width,
+                binding.fab.height
+            ).also {
+                it.leftMargin = binding.fab.x.toInt()
+                it.topMargin = binding.fab.y.toInt()
+            }
+        }
+
         binding.fab.setOnClickListener {
             if(addressBookViewModel.selections.value.isNullOrEmpty()) {
-                findNavController().navigate(AddressBookFragmentDirections.createDiner(null, CircularRevealTransition.OriginParams(binding.fab)))
+                // Exit transition is needed to prevent next fragment from appearing immediately
+                exitTransition = Hold().apply {
+                    duration = 0L
+                    addTarget(requireView())
+                }
+
+                // Set the size of the container for the fragment transition to match the FAB
+                binding.newContactButtonContainer.layoutParams = CoordinatorLayout.LayoutParams(
+                    binding.fab.width,
+                    binding.fab.height
+                ).also {
+                    it.leftMargin = binding.fab.x.toInt()
+                    it.topMargin = binding.fab.y.toInt()
+                }
+
+                findNavController().navigate(AddressBookFragmentDirections.createDiner(null),
+                    FragmentNavigatorExtras(
+                        binding.newContactButtonContainer to binding.newContactButtonContainer.transitionName,
+                        binding.fab to binding.fab.transitionName
+                    ))
             } else {
                 closeFragment(true)
             }
