@@ -51,7 +51,7 @@ abstract class ContactDao: BaseDao<Contact>() {
     @Query("SELECT contact_lookupKey FROM diner_table WHERE billId = :billId")
     abstract fun getContactLookupKeysOnBill(billId: Long): Flow<List<String>>
 
-    @Query("SELECT * FROM contact_table WHERE lookupKey!='grouptuity_restaurant_contact_lookupKey'")
+    @Query("SELECT * FROM contact_table WHERE lookupKey!='grouptuity_cash_pool_contact_lookupKey' AND lookupKey!='grouptuity_restaurant_contact_lookupKey'")
     abstract suspend fun getSavedContacts(): List<Contact>
 
     @Query("SELECT COUNT(1) FROM contact_table WHERE lookupKey = :lookupKey")
@@ -97,11 +97,14 @@ abstract class BillDao: BaseDao<Bill>() {
 
 @Dao
 abstract class DinerDao: BaseDao<Diner>() {
-    @Query("SELECT id FROM diner_table WHERE billId = :billId AND contact_lookupKey!='grouptuity_restaurant_contact_lookupKey'")
+    @Query("SELECT id FROM diner_table WHERE billId = :billId AND contact_lookupKey!='grouptuity_cash_pool_contact_lookupKey' AND contact_lookupKey!='grouptuity_restaurant_contact_lookupKey'")
     abstract suspend fun _getDinerIdsOnBill(billId: String): List<String>
 
     @Query("SELECT * FROM diner_table WHERE id = :dinerId")
     abstract suspend fun _getBaseDiner(dinerId: String): Diner?
+
+    @Query("SELECT * FROM diner_table WHERE billId = :billId AND contact_lookupKey='grouptuity_cash_pool_contact_lookupKey' LIMIT 1")
+    abstract suspend fun _getBaseCashPool(billId: String): Diner?
 
     @Query("SELECT * FROM diner_table WHERE billId = :billId AND contact_lookupKey='grouptuity_restaurant_contact_lookupKey' LIMIT 1")
     abstract suspend fun _getBaseRestaurant(billId: String): Diner?
@@ -181,6 +184,19 @@ abstract class DinerDao: BaseDao<Diner>() {
                 _getPaymentIdsReceivedByDiner(dinerId)
             )
         }
+    }
+
+    @Transaction
+    open suspend fun getCashPoolOnBill(billId: String): Diner? = _getBaseCashPool(billId)?.let{
+        it.withIdLists(
+            emptyList(),
+            emptyList(),
+            emptyList(),
+            emptyList(),
+            emptyList(),
+            _getPaymentIdsSentByDiner(it.id),
+            _getPaymentIdsReceivedByDiner(it.id)
+        )
     }
 
     @Transaction

@@ -13,7 +13,7 @@ class DinersViewModel(application: Application): UIViewModel(application) {
 
     // Diners paired with their individual subtotals as currency strings
     val dinerData: LiveData<List<Pair<Diner, String>>> = combineTransform(repository.diners, repository.individualSubtotals) { diners, subtotals ->
-        if (diners.size == subtotals.size - 1) {
+        if (diners.size + 2 == subtotals.size) {
             emit(diners.map { diner ->
                 diner to formatter.format(subtotals.getOrDefault(diner, 0.0))
             })

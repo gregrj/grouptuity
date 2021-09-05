@@ -1,15 +1,16 @@
 package com.grouptuity.grouptuity.ui.custom.views
 
 import android.animation.Animator
-import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
 import android.content.Context
 import android.content.res.Configuration
 import android.os.Bundle
 import android.os.Parcelable
 import android.util.AttributeSet
+import android.util.Log
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.LinearLayout
+import androidx.core.animation.doOnEnd
 import com.grouptuity.grouptuity.R
 import kotlin.math.roundToInt
 
@@ -26,50 +27,105 @@ class ExpandableLayout @JvmOverloads constructor(context: Context,
 
     private var mExpansionState = COLLAPSED
     private var mFractionExpanded = 0f
+    private var mTargetExpansion: Int? = null
     private var activeAnimation: ValueAnimator? = null
 
-    private val duration = resources.getInteger(R.integer.viewprop_animation_duration).toLong()
-    private val parallaxMultiplier = 0.5f
+    var parallaxMultiplier = 0.5f
+    var duration = resources.getInteger(R.integer.card_flip_time_full).toLong()
 
-    init {
-        orientation = VERTICAL
-    }
-
-    fun toggleExpansion() {
-        activeAnimation?.apply { this.cancel() }
-
-        mExpansionState = when(mExpansionState) {
-            COLLAPSED, COLLAPSING -> { EXPANDING }
-            else -> { COLLAPSING }
+    fun setExpanded(targetExpansion: Int?=null) {
+        activeAnimation?.apply {
+            if (this.isRunning) {
+                this.cancel()
+            }
         }
 
-        val animation = ValueAnimator.ofFloat(
-            mFractionExpanded,
-            if (mExpansionState == COLLAPSING) 0f else 1f
-        )
+        mExpansionState = EXPANDED
+
+        mTargetExpansion = targetExpansion
+
+        mFractionExpanded = 1f
+
+        requestLayout()
+    }
+
+    fun expand(targetExpansion: Int?=null) {
+        when(mExpansionState) {
+            COLLAPSED, COLLAPSING -> { toggleExpansion(targetExpansion=targetExpansion) }
+            else -> {  }
+        }
+    }
+
+    fun setCollapsed() {
+        activeAnimation?.apply {
+            if (this.isRunning) {
+                this.cancel()
+            }
+        }
+
+        mExpansionState = COLLAPSED
+
+        mFractionExpanded = 0f
+
+        requestLayout()
+    }
+
+    fun collapse() {
+        when(mExpansionState) {
+            EXPANDED, EXPANDING -> { toggleExpansion() }
+            else -> {  }
+        }
+    }
+
+    fun toggleExpansion(targetExpansion: Int?=null) {
+        activeAnimation?.apply {
+            if (this.isRunning) {
+                this.cancel()
+            }
+        }
+
+        mExpansionState = when(mExpansionState) {
+            COLLAPSED, COLLAPSING -> {
+                mTargetExpansion = targetExpansion
+                EXPANDING
+            }
+            else -> {
+                COLLAPSING
+            }
+        }
+
+        val animation = ValueAnimator.ofFloat(mFractionExpanded, if (mExpansionState == COLLAPSING) 0f else 1f)
         animation.interpolator = AccelerateDecelerateInterpolator()
         animation.duration = duration
         animation.addUpdateListener {
-            mFractionExpanded = it.animatedValue as Float
+            mFractionExpanded = (it.animatedValue as Float)
             requestLayout()
         }
-        animation.addListener(object: AnimatorListenerAdapter() {
-            override fun onAnimationEnd(animation: Animator) {
-                mExpansionState = if (mExpansionState == COLLAPSING) COLLAPSED else EXPANDED
-            }
-        })
+        animation.doOnEnd {
+            mExpansionState = if (mExpansionState == COLLAPSING) COLLAPSED else EXPANDED
+        }
+        activeAnimation = animation
         animation.start()
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec)
 
-        for (i in 0 until childCount) {
-            val child = getChildAt(i)
-            child.translationY = parallaxMultiplier * measuredHeight*(mFractionExpanded - 1f)
-        }
+        if (orientation == VERTICAL) {
+            for (i in 0 until childCount) {
+                val child = getChildAt(i)
+                child.translationY = parallaxMultiplier * (mTargetExpansion ?: measuredHeight) * (mFractionExpanded - 1f)
+            }
 
-        setMeasuredDimension(measuredWidth, (mFractionExpanded*measuredHeight).roundToInt())
+            setMeasuredDimension(measuredWidth, (mFractionExpanded*(mTargetExpansion ?: measuredHeight)).roundToInt())
+        } else {
+            for (i in 0 until childCount) {
+                val child = getChildAt(i)
+                child.translationX = parallaxMultiplier * (mTargetExpansion ?: measuredWidth) *(mFractionExpanded - 1f)
+            }
+
+            setMeasuredDimension((mFractionExpanded*(mTargetExpansion ?: measuredWidth)).roundToInt(), measuredHeight)
+        }
     }
 
     override fun onSaveInstanceState(): Parcelable {

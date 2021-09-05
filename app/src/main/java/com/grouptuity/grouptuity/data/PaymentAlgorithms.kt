@@ -1,11 +1,6 @@
 package com.grouptuity.grouptuity.data
 
-import android.util.Log
-import java.lang.Exception
-import java.text.NumberFormat
-import java.util.*
 import kotlin.math.max
-import kotlin.math.pow
 
 const val PRECISION = 1e-6
 
@@ -38,6 +33,10 @@ class TransactionMap(private val allParticipants: Collection<Diner>, initialMap:
         newTransactionMap.pairMap.forEach { combinedTransactionMap.pairMap.merge(it.key, it.value) { oldValue, newValue -> oldValue + newValue } }
         return combinedTransactionMap
     }
+
+    internal fun getTransactionAmount(payer: Diner, payee: Diner): Double = pairMap.getOrDefault(Pair(payer, payee), 0.0)
+
+    internal fun getPaymentsFromPayer(payer: Diner): Map<Diner, Double> = pairMap.filterKeys { it.first === payer }.mapKeys { it.key.second }
 
     internal fun getPaymentsToPayee(payee: Diner): Map<Diner, Double> = pairMap.filterKeys { it.second === payee }.mapKeys { it.key.first }
 
@@ -73,11 +72,7 @@ class TransactionMap(private val allParticipants: Collection<Diner>, initialMap:
                 }
             }
         }
-        return this
-    }
-
-    internal fun dropBelowMinimum(minimum: Double): TransactionMap {
-        pairMap.filter { it.value >= minimum }
+        pairMap.entries.removeIf { it.value == 0.0 }
         return this
     }
 
@@ -85,17 +80,19 @@ class TransactionMap(private val allParticipants: Collection<Diner>, initialMap:
 }
 
 class BillCalculation(private val bill: Bill,
+                      private val cashPool: Diner,
                       private val restaurant: Diner,
                       private val diners: Collection<Diner>,
                       private val items: Collection<Item>,
                       private val debts: Collection<Debt>,
                       private val discounts: Collection<Discount>,
-                      private val payments: Collection<Payment>) {
+                      private val oldPayments: Collection<Payment>) {
 
-    private val allParticipants = diners.plus(restaurant)
+    private val allParticipants = diners.plus(cashPool).plus(restaurant)
 
     //    val dinerRoundingAdjustments: Map<String, Double>? = null // TODO
     var newPaymentsMap: Map<Diner, List<Payment>> = emptyMap()
+    var sortedPayments: List<Payment> = emptyList()
 
     var discountValues: Map<Discount, Double> = emptyMap()
 
@@ -142,11 +139,39 @@ class BillCalculation(private val bill: Bill,
         processIndividualTaxAndTip(netTransactionMap)
 
         // Add inverted committed payments
-        payments.filter{ it.committed }.map { payment ->
+        val committedPayments = oldPayments.filter{ it.committed }
+
+        committedPayments.map { payment ->
             netTransactionMap.addTransaction(payment.payee, payment.payer, payment.amount)
         }
 
         newPaymentsMap = generateNewPayments(netTransactionMap)
+
+        sortedPayments = (committedPayments + newPaymentsMap.flatMap { it.value }).sortedWith { a, b ->
+            val firstDiner = if (a.payer == cashPool) a.payee else a.payer
+            val secondDiner = if (b.payer == cashPool) b.payee else b.payer
+
+            when {
+                firstDiner != secondDiner -> {
+                    diners.indexOf(firstDiner) - diners.indexOf(secondDiner)
+                }
+                a.payee == restaurant && b.payee != restaurant -> {
+                    -1
+                }
+                a.payee != restaurant && b.payee == restaurant -> {
+                    1
+                }
+                a.payee == cashPool && b.payee != cashPool -> {
+                    -1
+                }
+                a.payee != cashPool && b.payee == cashPool -> {
+                    1
+                }
+                else -> {
+                    diners.indexOf(a.payee) - diners.indexOf(b.payee)
+                }
+            }
+        }
     }
 
     private fun processItems(): TransactionMap {
@@ -319,7 +344,7 @@ class BillCalculation(private val bill: Bill,
         individualSubtotalWithDiscountsAndTax = individualSubtotalsWithDiscounts.mapValues { it.value + individualTax[it.key]!! }
 
         individualTip = (if(bill.discountsReduceTip) individualSubtotalsWithDiscounts else individualSubtotals).mapValues { (diner, baseValueToTip) ->
-            val tip = (baseValueToTip + (if(bill.isTaxTipped) individualTax[diner]!! else 0.0)) * groupTaxPercent / 100.0
+            val tip = (baseValueToTip + (if(bill.isTaxTipped) individualTax[diner]!! else 0.0)) * groupTipPercent / 100.0
             transactionMap.addTransaction(diner, restaurant, tip)
             tip
         }
@@ -330,102 +355,109 @@ class BillCalculation(private val bill: Bill,
     }
 
     private fun generateNewPayments(transactionMap: TransactionMap): Map<Diner, List<Payment>> {
+        val paymentsMap = diners.associateWith { mutableListOf<Payment>() }.toMutableMap()
 
-        val payments = diners.associateWith { mutableListOf<Payment>() }
+        // Insert surrogate transactions for indirect payments to restaurant via peer-to-peer
+        transactionMap.getPaymentsToPayee(restaurant).forEach { (payer, amount) ->
+            payer.paymentPreferences.getForRecipient(restaurant).also { (method, surrogateId) ->
+                if (surrogateId != null) {
+                    diners.find { it.id == surrogateId }?.also { surrogate ->
+                        transactionMap.removeTransaction(payer, restaurant)
+                        paymentsMap[payer]!!.add(createPayment(amount, method, payer, restaurant, surrogate))
 
-//        transactionMap.getPaymentsToPayee(restaurantId).forEach { (payerId, amount) ->
-//            diners[payerId]!!.paymentPreferences.forRecipient(restaurantId)?.second?.apply {
-//                transactionMap.removeTransaction(payerId, restaurantId)
-//                transactionMap.addTransaction(payerId, it.second, it.third)
-//                transactionMap.addTransaction(it.second, restaurantId, it.third)
-//
-//            }
-//        }
-//
-//        restaurantPeerToPeerUsers.forEach {
-//
-//        }
-
-        val numDecimals = NumberFormat.getCurrencyInstance().maximumFractionDigits
-        val transactionList = transactionMap.consolidate().dropBelowMinimum(0.9 * 10.0.pow(-numDecimals)).toList()
-
-        transactionList.forEach { (payer, payee, amount) ->
-            try{
-                payments[payer]!!.add(Payment(
-                    UUID.randomUUID().toString(),
-                    billId = bill.id,
-                    amount,
-                    PaymentMethod.CASH.name,
-                    false,
-                    payer.id,
-                    payee.id)) } catch (e: Exception) { // TODO attach entitity objects
-                Log.e("transcat", Triple(payer, payee, amount).toString())
-                Log.e("map entry is null", (payments[payer] == null).toString())
+                        transactionMap.addTransaction(surrogate, restaurant, amount)
+                    }
+                }
             }
         }
 
-//        val targetNetCashFlows = transactionMap.netCashFlows
+        transactionMap.consolidate()
 
+        // Determine if a credit card pool exists
+        val poolCreditCardUsers = mutableListOf<Diner>()
+        val poolCashContributors = mutableListOf<Diner>()
+        val nonPoolCreditCardUsers = mutableListOf<Diner>()
+        var poolAmount = 0.0
+        diners.forEach { payer ->
+            payer.paymentPreferences.getForRecipient(restaurant).also { (method, _) ->
+                if (method == PaymentMethod.CREDIT_CARD_SPLIT) {
+                    poolCreditCardUsers.add(payer)
+                    poolAmount += transactionMap.getTransactionAmount(payer, restaurant)
+                } else if (transactionMap.getTransactionAmount(payer, restaurant) > 0.0)  {
+                    when (method) {
+                        PaymentMethod.CASH -> {
+                            poolCashContributors.add(payer)
+                            poolAmount += transactionMap.getTransactionAmount(payer, restaurant)
+                        }
+                        PaymentMethod.CREDIT_CARD_INDIVIDUAL -> {
+                            nonPoolCreditCardUsers.add(payer)
+                        }
+                        else -> { }
+                    }
+                }
+            }
+        }
 
+        // Create payments for restaurant
+        if (poolCreditCardUsers.isNotEmpty()) {
+            val poolCreditCardAmount = poolAmount / poolCreditCardUsers.size
+            poolCreditCardUsers.forEach { payer ->
+                paymentsMap[payer]!!.add(createPayment(poolCreditCardAmount, PaymentMethod.CREDIT_CARD_SPLIT, payer, restaurant, null))
 
-        // Identify payment methods for all transactions with the restaurant
-        val restaurantCashUsers = mutableListOf<Pair<String, Double>>()
-        val restaurantIndividualsCreditCardUsers = mutableListOf<Pair<String, Double>>()
-        val restaurantSplitCreditCardUsers = mutableListOf<Pair<String, Double>>()
-        val restaurantPeerToPeerUsers = mutableListOf<Triple<String, String, Double>>()
-        var splitAmount = 0.0
-//        transactionList.forEach { (payerId, payeeId, amount) ->
-//            if(payeeId == restaurantId) {
-//                // Default to paying restaurant with cash if no preference has been defined
-//                val (method, surrogateId) = diners[payerId]!!.paymentPreferences.forRecipient(payeeId) ?: Pair<PaymentMethod, String?>(PaymentMethod.CASH, null)
-//
-//                when(method) {
-//                    PaymentMethod.CASH -> {
-//                        restaurantCashUsers.add(Pair(payerId, amount))
-//                        splitAmount += 0.0
-//                    }
-//                    PaymentMethod.CREDIT_CARD_INDIVIDUAL -> { restaurantIndividualsCreditCardUsers.add(Pair(payerId, amount)) }
-//                    PaymentMethod.CREDIT_CARD_SPLIT -> {
-//                        restaurantSplitCreditCardUsers.add(Pair(payerId, amount))
-//                        splitAmount += 0.0
-//                    }
-//                    else -> {
-//                        if(surrogateId == null) {
-//                            // Peer-to-peer payment not possible so use cash as fallback
-//                            restaurantCashUsers.add(Pair(payerId, amount))
-//                        } else {
-//                            // Surrogate diner exists so route restaurant payment through them
-//                            restaurantPeerToPeerUsers.add(Triple(payerId, surrogateId, amount))
-//                        }
-//                        splitAmount += 0.0
-//                    }
-//                }
-//            }
-//        }
+                val remainingBalance = transactionMap.getTransactionAmount(payer, restaurant) - poolCreditCardAmount
+                if (remainingBalance > 0) {
+                    paymentsMap[payer]!!.add(createPayment(remainingBalance, PaymentMethod.CASH, payer, cashPool, null))
+                } else if (remainingBalance < 0) {
+                    paymentsMap[payer]!!.add(createPayment(-remainingBalance, PaymentMethod.CASH, cashPool, payer, null))
+                }
+            }
 
-//        if(restaurantSplitCreditCardUsers.isEmpty()) {
-//
-//        } else {
-//            val splitShare = splitAmount / restaurantSplitCreditCardUsers.size
-//
-//            restaurantPeerToPeerUsers.forEach {
-//                transactionMap.removeTransaction(it.first, restaurantId)
-//                transactionMap.addTransaction(it.first, it.second, it.third)
-//                transactionMap.addTransaction(it.second, restaurantId, it.third)
-//            }
-//
-//
-//            restaurantPeerToPeerUsers.forEach {
-//                transactionMap.removeTransaction(it.first, restaurantId)
-//                transactionMap.addTransaction(it.first, it.second, it.third)
-//                transactionMap.addTransaction(it.second, restaurantId, it.third)
-//            }
-//
-//
-//            restaurantSplitCreditCardUsers.map { payerId ->
-//                payments[payerId]!!.add(Triple(restaurantId, splitAmount, PaymentMethod.CREDIT_CARD_SPLIT))
-//            }
-//        }
+            poolCashContributors.forEach { payer->
+                paymentsMap[payer]!!.add(
+                    createPayment(
+                        transactionMap.getTransactionAmount(payer, restaurant),
+                        PaymentMethod.CASH,
+                        payer,
+                        restaurant,
+                        cashPool)
+                )
+            }
+
+            nonPoolCreditCardUsers.forEach { payer->
+                paymentsMap[payer]!!.add(
+                    createPayment(
+                        transactionMap.getTransactionAmount(payer, restaurant),
+                        PaymentMethod.CREDIT_CARD_INDIVIDUAL,
+                        payer,
+                        restaurant,
+                        null)
+                )
+            }
+        } else {
+            transactionMap.getPaymentsToPayee(restaurant).forEach { (payer, amount) ->
+                payer.paymentPreferences.getForRecipient(restaurant).also { (method, _) ->
+                    paymentsMap[payer]!!.add(createPayment(amount, method, payer, restaurant, null))
+                }
+            }
+        }
+
+        // Create payments for peer-to-peer transactions
+        diners.forEach { payer ->
+            transactionMap.getPaymentsFromPayer(payer).forEach { (payee, amount) ->
+                if (payee != restaurant) {
+                    paymentsMap[payer]!!.add(
+                        createPayment(
+                            amount,
+                            payer.paymentPreferences.getForRecipient(payee).first,
+                            payer,
+                            payee,
+                            null)
+                    )
+                }
+            }
+        }
+
+        // Reconcile rounding errors TODO
 
         //        val roundedAmount = BigDecimal(amount.toString()).setScale(numDecimals, RoundingMode.HALF_EVEN).toDouble()
 //            val amount = BigDecimal(value.toString()).setScale(numDecimals, RoundingMode.HALF_EVEN).toDouble()
@@ -440,8 +472,16 @@ class BillCalculation(private val bill: Bill,
 //            }
 //        }
 
-        return payments
+        return paymentsMap
     }
+
+    private fun createPayment(amount: Double, method: PaymentMethod, payer: Diner, payee: Diner, surrogate: Diner?) =
+        Payment(newUUID(), bill.id, amount, method.name, false, payer.id, payee.id, surrogate?.id).also {
+            it.payer = payer
+            it.payee = payee
+            it.surrogate = surrogate
+            it.method = method
+        }
 }
 
 fun getDiscountedItemPrices(discountValue: Double,

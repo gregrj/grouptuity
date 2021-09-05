@@ -6,11 +6,14 @@ import androidx.room.*
 import org.json.JSONArray
 import org.json.JSONObject
 import java.util.*
+import com.grouptuity.grouptuity.R
 
 
 class Converters {
     @TypeConverter
-    fun jsonToPreferences(json: String?): PaymentPreferences = json?.let { PaymentPreferences.fromJson(it) } ?: PaymentPreferences()
+    fun jsonToPreferences(json: String?): PaymentPreferences = json?.let {
+        PaymentPreferences.fromJson(it)
+    } ?: PaymentPreferences()
 
     @TypeConverter
     fun preferencesToJson(preferences: PaymentPreferences?): String = preferences?.toJson() ?: ""
@@ -21,30 +24,68 @@ private fun nameToInitials(name: String?): String {
     if(name.isNullOrBlank())
         return "!"
 
-    val words = name.trim().split("\\s+".toRegex()).map { word -> word.replace("""^[,.]|[,.]$""".toRegex(), "")}
+    val words = name.trim().split("\\s+".toRegex()).map {
+            word -> word.replace("""^[,.]|[,.]$""".toRegex(), "")
+    }
 
     return when(words.size) {
         0 -> { "" }
-        1 -> { words[0].first().toUpperCase().toString() }
-        else -> { words[0].first().toUpperCase().toString() + words[1].toUpperCase(Locale.getDefault()).first() }
+        1 -> { words[0].first().uppercaseChar().toString() }
+        else -> {
+            words[0].first().uppercaseChar().toString() +
+                    words[1].uppercase(Locale.getDefault()).first()
+        }
     }
 }
 
 
-//TODO add more payment options as needed
-enum class PaymentMethod(val acceptedByRestaurant: Boolean, val peerToPeer: Boolean) {
-    CASH(true, true),
-    CREDIT_CARD_SPLIT(true, false),
-    CREDIT_CARD_INDIVIDUAL(true, false),
-    IOU_EMAIL(false, true),
-    VENMO(false, true)
+enum class PaymentMethod(val acceptedByRestaurant: Boolean,
+                         val isPeerToPeer: Boolean,
+                         val paymentInstructionStringId: Int,
+                         val paymentIconId: Int,
+                         val isIconColorless: Boolean) {
+    CASH(
+        true,
+        true,
+        R.string.payments_instruction_cash,
+        R.drawable.ic_payment_cash,
+        true),
+    CREDIT_CARD_SPLIT(
+        true,
+        false,
+        R.string.payments_instruction_credit_card_split,
+        R.drawable.ic_payment_credit_card_split,
+        true),
+    CREDIT_CARD_INDIVIDUAL(
+        true,
+        false,
+        R.string.payments_instruction_credit_card_individual,
+        R.drawable.ic_payment_credit_card,
+        true),
+    IOU_EMAIL(
+        false,
+        true,
+        R.string.payments_instruction_iou_email,
+        R.drawable.ic_payment_iou_email,
+        true),
+    VENMO(
+        false,
+        true,
+        R.string.payments_instruction_venmo,
+        R.drawable.ic_payment_venmo,
+        false)
 }
 
 
-class PaymentPreferences(private val preferenceMap: Map<String, Pair<PaymentMethod, String?>>) {
-    constructor(): this(emptyMap())
+class PaymentPreferences(private val preferenceMap: MutableMap<String, Pair<PaymentMethod, String?>>) {
+    constructor(): this(mutableMapOf<String, Pair<PaymentMethod, String?>>())
 
-    fun forRecipient(id: String): Pair<PaymentMethod, String?>? = preferenceMap[id]
+    fun getForRecipient(recipient: Diner): Pair<PaymentMethod, String?> =
+        preferenceMap.getOrDefault(recipient.id, Pair(PaymentMethod.CASH, null))
+
+    fun setForRecipient(recipient: Diner, method: PaymentMethod, surrogate: Diner?) {
+        preferenceMap[recipient.id] = Pair(method, surrogate?.id)
+    }
 
     fun toJson(): String {
         val obj = JSONObject()
@@ -63,14 +104,14 @@ class PaymentPreferences(private val preferenceMap: Map<String, Pair<PaymentMeth
             val surrogates = obj.getJSONArray("surrogates")
 
             if (payeeIds.length() == 0) {
-                return PaymentPreferences(emptyMap())
+                return PaymentPreferences(mutableMapOf())
             }
 
             val newMap = mutableMapOf<String, Pair<PaymentMethod, String?>>()
-            for (i in 0..payeeIds.length()) {
-                newMap[payeeIds[i] as String] = Pair(
-                    PaymentMethod.valueOf(methods[i] as String),
-                    surrogates[i] as String,
+            for (i in 0 until payeeIds.length()) {
+                newMap[payeeIds[i].toString()] = Pair(
+                    PaymentMethod.valueOf(methods[i].toString()),
+                    if (surrogates[i].toString() == "null") null else surrogates[i].toString(),
                 )
             }
 
@@ -108,6 +149,7 @@ class Contact(@PrimaryKey val lookupKey: String,
         }
 
         val dummy = Contact("grouptuity_dummy_contact_lookupKey", "", null, VISIBLE)
+        val cashPool = Contact("grouptuity_cash_pool_contact_lookupKey", "cash pool", null, VISIBLE)
         val restaurant = Contact("grouptuity_restaurant_contact_lookupKey", "restaurant", null, VISIBLE)
         val self: Contact get() = Contact("grouptuity_self_contact_lookupKey", selfName, selfPhotoUri, VISIBLE)
 
@@ -175,9 +217,9 @@ class Bill(@PrimaryKey val id: String,
         ForeignKey(entity = Contact::class, parentColumns = ["lookupKey"], childColumns = ["contact_lookupKey"], onDelete = ForeignKey.NO_ACTION, deferred = true)],
     indices = [Index("billId")])
 class Diner(@PrimaryKey val id: String,
-                 val billId: String,
-                 @Embedded(prefix = "contact_") val contact: Contact,
-                 var paymentPreferences: PaymentPreferences = PaymentPreferences()): Parcelable {
+            val billId: String,
+            @Embedded(prefix = "contact_") val contact: Contact,
+            var paymentPreferences: PaymentPreferences = PaymentPreferences()): Parcelable {
 
     @Ignore val lookupKey = contact.lookupKey
     @Ignore val name = contact.name
@@ -212,6 +254,14 @@ class Diner(@PrimaryKey val id: String,
     @Ignore val discountsPurchased: List<Discount> = discountsPurchasedMutable
     @Ignore val paymentsSent: List<Payment> = paymentsSentMutable
     @Ignore val paymentsReceived: List<Payment> = paymentsReceivedMutable
+
+    fun isRestaurant(): Boolean {
+        return contact.lookupKey == Contact.restaurant.lookupKey
+    }
+
+    fun isCashPool(): Boolean {
+        return contact.lookupKey == Contact.cashPool.lookupKey
+    }
 
     fun addItem(item: Item) {
         itemIdsMutable.add(item.id)
@@ -269,6 +319,10 @@ class Diner(@PrimaryKey val id: String,
     fun removeReceivedPayment(payment: Payment) {
         paymentReceivedIdsMutable.remove(payment.id)
         paymentsReceivedMutable.remove(payment)
+    }
+
+    fun setPaymentPreference(payee: Diner, method: PaymentMethod, surrogate: Diner?) {
+        paymentPreferences.setForRecipient(payee, method, surrogate)
     }
 
     fun withIdLists(newItemIds: List<String>,
@@ -344,9 +398,9 @@ class Diner(@PrimaryKey val id: String,
     foreignKeys = [ForeignKey(entity = Bill::class, parentColumns = ["id"], childColumns = ["billId"], onDelete = ForeignKey.CASCADE)],
     indices = [Index("billId")])
 class Item(@PrimaryKey val id: String,
-                val billId: String,
-                val price: Double,
-                val name: String): Parcelable {
+           val billId: String,
+           val price: Double,
+           val name: String): Parcelable {
 
     @Ignore private val dinerIdsMutable = mutableListOf<String>()
     @Ignore private val discountIdsMutable = mutableListOf<String>()
@@ -587,22 +641,28 @@ class Discount(@PrimaryKey val id: String,
 @Entity(tableName = "payment_table",
     foreignKeys = [ForeignKey(entity = Bill::class, parentColumns = ["id"], childColumns = ["billId"], onDelete = ForeignKey.CASCADE),
         ForeignKey(entity = Diner::class, parentColumns = ["id"], childColumns = ["payerId"], onDelete = ForeignKey.CASCADE),
-        ForeignKey(entity = Diner::class, parentColumns = ["id"], childColumns = ["payeeId"], onDelete = ForeignKey.CASCADE)],
+        ForeignKey(entity = Diner::class, parentColumns = ["id"], childColumns = ["payeeId"], onDelete = ForeignKey.CASCADE),
+        ForeignKey(entity = Diner::class, parentColumns = ["id"], childColumns = ["surrogateId"], onDelete = ForeignKey.CASCADE)],
     indices = [Index("billId"), Index("payerId"), Index("payeeId")])
 class Payment(@PrimaryKey val id: String,
-                   val billId: String,
-                   val amount: Double,
-                   val method: String,
-                   val committed: Boolean,
-                   val payerId: String,
-                   val payeeId: String) {
+              val billId: String,
+              val amount: Double,
+              val methodString: String,
+              val committed: Boolean,
+              val payerId: String,
+              val payeeId: String,
+              val surrogateId: String?) {
 
     @Ignore lateinit var payer: Diner
     @Ignore lateinit var payee: Diner
+    @Ignore var surrogate: Diner? = null
+    @Ignore lateinit var method: PaymentMethod
 
     fun populateEntities(dinerMap: Map<String, Diner>) {
         payer = dinerMap[payerId]!!
         payee = dinerMap[payeeId]!!
+        surrogate = dinerMap[surrogateId]!!
+        method = PaymentMethod.valueOf(methodString)
     }
 }
 

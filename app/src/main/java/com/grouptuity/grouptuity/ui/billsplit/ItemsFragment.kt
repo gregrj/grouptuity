@@ -31,7 +31,7 @@ import kotlinx.coroutines.withContext
 import java.text.NumberFormat
 
 
-class ItemsFragment : Fragment() {
+class ItemsFragment: Fragment() {
     companion object {
         @JvmStatic
         fun newInstance() = ItemsFragment()
@@ -41,8 +41,8 @@ class ItemsFragment : Fragment() {
     private lateinit var itemsViewModel: ItemsViewModel
     private var suppressAutoScroll = false
 
-    //TODO align text in each list item based on max length of price to avoid offsets due to different numbers?
-    //TODO Contact Chips text alignment
+    // TODO align text in each list item based on max length of price to avoid offsets due to different numbers?
+    // TODO Contact Chips text alignment
     // TODO snackbar note when removing item
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {

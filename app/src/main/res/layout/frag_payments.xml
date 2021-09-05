@@ -1,13 +1,44 @@
 <?xml version="1.0" encoding="utf-8"?>
-<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:tools="http://schemas.android.com/tools"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    tools:context=".ui.billsplit.PaymentsFragment">
+    android:background="?attr/colorBackgroundVariant">
 
-    <TextView
+    <LinearLayout
+        android:id="@+id/no_payments_hint"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_gravity="center"
+        android:orientation="vertical"
+        android:visibility="visible">
+
+        <ImageView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            app:tint="?attr/colorOnBackgroundMediumEmphasis"
+            android:src="@drawable/ic_cutlery"/>
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="center_horizontal"
+            android:gravity="center"
+            style="@android:style/TextAppearance.Material.Large"
+            android:textColor="?attr/colorOnBackgroundMediumEmphasis"
+            android:text="@string/items_add_items_hint"/>
+    </LinearLayout>
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/list"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:text="Hello" />
-
+        android:orientation="vertical"
+        app:layoutManager="androidx.recyclerview.widget.LinearLayoutManager"
+        tools:listitem="@layout/frag_payments_listitem"
+        tools:context=".ui.billsplit.payments.PaymentFragment">
+    </androidx.recyclerview.widget.RecyclerView>
 </FrameLayout>

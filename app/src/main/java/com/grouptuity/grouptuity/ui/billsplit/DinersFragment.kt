@@ -30,7 +30,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 
-class DinersFragment : Fragment() {
+class DinersFragment: Fragment() {
     companion object {
         @JvmStatic
         fun newInstance() = DinersFragment()

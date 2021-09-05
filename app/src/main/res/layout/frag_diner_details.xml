@@ -167,7 +167,8 @@
                     <com.grouptuity.grouptuity.ui.custom.views.ExpandableLayout
                         android:id="@+id/items_expanding_layout"
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content">
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
 
                         <androidx.recyclerview.widget.RecyclerView
                             android:id="@+id/item_list"
@@ -232,7 +233,8 @@
                     <com.grouptuity.grouptuity.ui.custom.views.ExpandableLayout
                         android:id="@+id/discounts_expanding_layout"
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content">
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
 
                         <androidx.recyclerview.widget.RecyclerView
                             android:id="@+id/discount_list"
@@ -502,7 +504,8 @@
                     <com.grouptuity.grouptuity.ui.custom.views.ExpandableLayout
                         android:id="@+id/reimbursements_expanding_layout"
                         android:layout_width="match_parent"
-                        android:layout_height="wrap_content">
+                        android:layout_height="wrap_content"
+                        android:orientation="vertical">
 
                         <androidx.recyclerview.widget.RecyclerView
                             android:id="@+id/reimbursements_list"

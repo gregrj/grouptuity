@@ -9,6 +9,7 @@ import android.graphics.*
 import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.util.AttributeSet
+import android.util.Log
 import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.ViewGroup
@@ -43,7 +44,7 @@ class ContactIcon @JvmOverloads constructor(context: Context, attrs: AttributeSe
     var isPhotoVisible = false
         private set
 
-    private lateinit var selectionAnimation: AnimatorSet
+    private var selectionAnimation = AnimatorSet()
     private var selectionState = DESELECTED
 
     init {
@@ -69,9 +70,11 @@ class ContactIcon @JvmOverloads constructor(context: Context, attrs: AttributeSe
         attributes.recycle()
     }
 
-    override fun setLayoutParams(params: ViewGroup.LayoutParams?) {
-        super.setLayoutParams(params)
-        params?.apply { binding.text.setPadding((params.height * params.height * paddingScalingFactor).toInt()) }
+    override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
+        super.onMeasure(widthMeasureSpec, heightMeasureSpec)
+        layoutParams?.apply {
+            binding.text.setPadding((measuredHeight * measuredHeight * paddingScalingFactor).toInt())
+        }
     }
 
     fun setSelectable(enabled: Boolean) { selectable = enabled }
@@ -233,6 +236,7 @@ class ContactIcon @JvmOverloads constructor(context: Context, attrs: AttributeSe
                         ANIMATING_DESELECTION -> DESELECTED
                         else -> SELECTED // should never be called
                     }
+                    active = false
                 }
             }
 
