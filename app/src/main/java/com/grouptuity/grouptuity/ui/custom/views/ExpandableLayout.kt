@@ -49,9 +49,11 @@ class ExpandableLayout @JvmOverloads constructor(context: Context,
         requestLayout()
     }
 
-    fun expand(targetExpansion: Int?=null) {
+    fun expand(targetExpansion: Int?=null, initialProgress: Float?=null) {
         when(mExpansionState) {
-            COLLAPSED, COLLAPSING -> { toggleExpansion(targetExpansion=targetExpansion) }
+            COLLAPSED, COLLAPSING -> {
+                toggleExpansion(targetExpansion=targetExpansion, initialProgress=initialProgress)
+            }
             else -> {  }
         }
     }
@@ -70,14 +72,14 @@ class ExpandableLayout @JvmOverloads constructor(context: Context,
         requestLayout()
     }
 
-    fun collapse() {
+    fun collapse(initialProgress: Float?=null) {
         when(mExpansionState) {
-            EXPANDED, EXPANDING -> { toggleExpansion() }
+            EXPANDED, EXPANDING -> { toggleExpansion(initialProgress=initialProgress) }
             else -> {  }
         }
     }
 
-    fun toggleExpansion(targetExpansion: Int?=null) {
+    fun toggleExpansion(targetExpansion: Int?=null, initialProgress: Float? = null) {
         activeAnimation?.apply {
             if (this.isRunning) {
                 this.cancel()
@@ -91,6 +93,14 @@ class ExpandableLayout @JvmOverloads constructor(context: Context,
             }
             else -> {
                 COLLAPSING
+            }
+        }
+
+        if (initialProgress != null) {
+            mFractionExpanded = if (mExpansionState == EXPANDING) {
+                AccelerateDecelerateInterpolator().getInterpolation(initialProgress)
+            } else {
+                AccelerateDecelerateInterpolator().getInterpolation(1f - initialProgress)
             }
         }
 

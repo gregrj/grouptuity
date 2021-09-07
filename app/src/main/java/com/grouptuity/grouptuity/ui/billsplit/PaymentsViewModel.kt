@@ -1,7 +1,6 @@
 package com.grouptuity.grouptuity.ui.billsplit
 
 import android.app.Application
-import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.asLiveData
 import com.grouptuity.grouptuity.data.Diner
@@ -10,6 +9,7 @@ import com.grouptuity.grouptuity.data.PaymentMethod
 import com.grouptuity.grouptuity.data.UIViewModel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.mapLatest
 
 class PaymentsViewModel(app: Application): UIViewModel(app) {
 
@@ -19,53 +19,74 @@ class PaymentsViewModel(app: Application): UIViewModel(app) {
         const val SHOWING_SURROGATE_INSTRUCTIONS = 2
         const val CANDIDATE_SURROGATE = 3
         const val INELIGIBLE_SURROGATE = 4
+        val INITIAL_STABLE_ID_AND_STATE: Pair<Long?, Int> = Pair(null, DEFAULT)
     }
 
     private val activePaymentAndMethod = MutableStateFlow<Pair<Payment?, PaymentMethod?>>(Pair(null, null))
+    private val paymentsWithStableIds = repository.payments.mapLatest { payments ->
+        payments.map { Pair(it, repository.getPaymentStableId(it)) }
+    }
 
     val diners = repository.diners.asLiveData()
-    val payments: LiveData<List<Pair<Payment, Int>>> = combine(repository.payments, activePaymentAndMethod){ payments, active ->
+    val paymentsData: LiveData<Pair<List<Triple<Payment, Long?, Int>>, Pair<Long?, Int>>> =
+        combine(paymentsWithStableIds, activePaymentAndMethod){ paymentsAndStableIds, active ->
+
         if (active.first == null) {
-            Log.e("combine", "no payment")
-            payments.map { Pair(it, DEFAULT) }
+            // All items in default state
+            Pair(
+                paymentsAndStableIds.map { Triple(it.first, it.second, DEFAULT) },
+                INITIAL_STABLE_ID_AND_STATE
+            )
         } else {
             val activePaymentStableId = repository.getPaymentStableId(active.first)
             if (active.second == null) {
-                Log.e("combine", active.first!!.payer.name +" "+ active.first!!.payee.name)
-                payments.map {
-                    Pair(
-                        it,
-                        if (repository.getPaymentStableId(it) == activePaymentStableId) {
-                            SELECTING_METHOD
-                        } else {
-                            DEFAULT
-                        }
-                    )
-                }
+                // Selecting payment method on one of the items
+                Pair(
+                    paymentsAndStableIds.map {
+                        Triple(
+                            it.first,
+                            it.second,
+                            if (it.second == activePaymentStableId) {
+                                SELECTING_METHOD
+                            } else {
+                                DEFAULT
+                            }
+                        )
+                    },
+                    Pair(activePaymentStableId, SELECTING_METHOD)
+                )
             } else {
-                Log.e("combine", active.first!!.payer.name +" "+ active.first!!.payer.name +" "+active.second)
-                payments.map {
-                    Pair(it, when {
-                        repository.getPaymentStableId(it) == activePaymentStableId -> {
-                            SHOWING_SURROGATE_INSTRUCTIONS
-                        }
-                        cannotActAsSurrogate(it.payer, payments) -> { INELIGIBLE_SURROGATE }
-                        else -> { CANDIDATE_SURROGATE }
-                    })
-                }.filter { it.first.payee.isRestaurant() }
+                // Selecting surrogate payer for one of the items
+                Pair(
+                    paymentsAndStableIds.map {
+                        Triple(
+                            it.first,
+                            it.second,
+                            when {
+                                (it.second == activePaymentStableId) -> {
+                                    SHOWING_SURROGATE_INSTRUCTIONS
+                                }
+                                cannotActAsSurrogate(it.first.payer) -> {
+                                    INELIGIBLE_SURROGATE
+                                }
+                                else -> { CANDIDATE_SURROGATE }
+                            }
+                        )
+                    }.filter { it.first.payee.isRestaurant() },
+                    Pair(activePaymentStableId, SHOWING_SURROGATE_INSTRUCTIONS)
+                )
             }
         }
     }.asLiveData()
 
-    private fun cannotActAsSurrogate(diner: Diner, payments: List<Payment>) =
-        payments.any {
-            it.payerId == diner.id && it.payee.isRestaurant() && (it.surrogate != null && !it.surrogate!!.isCashPool())
+    private fun cannotActAsSurrogate(diner: Diner) =
+        diner.paymentsSent.any {
+            it.payee.isRestaurant() && it.surrogate?.isCashPool() == false
         }
 
     fun getPaymentStableId(payment: Payment?) = repository.getPaymentStableId(payment)
 
     fun setActivePayment(payment: Payment?) {
-        Log.e("set activePaymentAndMethod", payment?.payer?.name ?: "f")
         activePaymentAndMethod.value = Pair(payment, null) }
 
     fun setPaymentMethodPreference(payment: Payment, method: PaymentMethod) {
