@@ -1,6 +1,5 @@
 package com.grouptuity.grouptuity.ui.custom.views
 
-import android.animation.Animator
 import android.animation.ValueAnimator
 import android.content.Context
 import android.content.res.Configuration
@@ -8,7 +7,6 @@ import android.os.Bundle
 import android.os.Parcelable
 import android.util.AttributeSet
 import android.util.Log
-import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.LinearLayout
 import androidx.core.animation.doOnEnd
 import com.grouptuity.grouptuity.R
@@ -23,116 +21,132 @@ class ExpandableLayout @JvmOverloads constructor(context: Context,
         const val EXPANDED = 1
         const val COLLAPSING = 2
         const val EXPANDING = 3
+        const val STALLED = 4
     }
 
-    private var mExpansionState = COLLAPSED
+    var df = false
+    var mExpansionState = COLLAPSED
+        private set
     private var mFractionExpanded = 0f
     private var mTargetExpansion: Int? = null
-    private var activeAnimation: ValueAnimator? = null
-
-    var parallaxMultiplier = 0.5f
-    var duration = resources.getInteger(R.integer.card_flip_time_full).toLong()
-
-    fun setExpanded(targetExpansion: Int?=null) {
-        activeAnimation?.apply {
-            if (this.isRunning) {
-                this.cancel()
+    private val animation: ValueAnimator = ValueAnimator.ofFloat(0f, 1f).also { animator ->
+        animator.duration = resources.getInteger(R.integer.card_flip_time_full).toLong()
+        animator.addUpdateListener {
+            mFractionExpanded = (it.animatedValue as Float)
+            requestLayout()
+        }
+        animator.doOnEnd {
+            mExpansionState = when (mFractionExpanded) {
+                0f -> {
+                    COLLAPSED
+                }
+                1f -> {
+                    EXPANDED
+                }
+                else -> {
+                    STALLED
+                }
             }
         }
-
-        mExpansionState = EXPANDED
-
-        mTargetExpansion = targetExpansion
-
-        mFractionExpanded = 1f
-
-        requestLayout()
     }
 
-    fun expand(targetExpansion: Int?=null, initialProgress: Float?=null) {
-        when(mExpansionState) {
-            COLLAPSED, COLLAPSING -> {
-                toggleExpansion(targetExpansion=targetExpansion, initialProgress=initialProgress)
+    var parallaxMultiplier = 0.5f
+
+    fun collapse(initialProgress: Float?=null) {
+        when (initialProgress) {
+            null -> {
+                if (mFractionExpanded != 0f) {
+                    mExpansionState = COLLAPSING
+                    animation.reverse()
+                }
             }
-            else -> {  }
+            1f -> {
+                animation.cancel()
+                mFractionExpanded = 0f
+                mExpansionState = COLLAPSED
+                requestLayout()
+            }
+            else -> {
+                animation.setCurrentFraction(1f - initialProgress)
+                mExpansionState = COLLAPSING
+                animation.reverse()
+            }
+        }
+    }
+
+    fun expand(initialProgress: Float?=null) {
+        animation.cancel()
+        when (initialProgress) {
+            null -> {
+                if (mFractionExpanded != 1f) {
+                    mExpansionState = EXPANDING
+                    animation.setCurrentFraction(mFractionExpanded)
+                    animation.start()
+                }
+            }
+            1f -> {
+                mExpansionState = EXPANDED
+                mFractionExpanded = 1f
+                requestLayout()
+            }
+            else -> {
+                mExpansionState = EXPANDING
+                animation.setCurrentFraction(initialProgress)
+                animation.start()
+            }
         }
     }
 
     fun setCollapsed() {
-        activeAnimation?.apply {
-            if (this.isRunning) {
-                this.cancel()
-            }
-        }
-
-        mExpansionState = COLLAPSED
-
+        animation.cancel()
         mFractionExpanded = 0f
-
+        mExpansionState = COLLAPSED
         requestLayout()
     }
 
-    fun collapse(initialProgress: Float?=null) {
-        when(mExpansionState) {
-            EXPANDED, EXPANDING -> { toggleExpansion(initialProgress=initialProgress) }
-            else -> {  }
+    fun setExpanded() {
+        animation.cancel()
+        mFractionExpanded = 1f
+        mExpansionState = EXPANDED
+        requestLayout()
+    }
+
+    fun toggleExpansion() {
+        when (mExpansionState){
+            COLLAPSED, COLLAPSING -> {
+                expand()
+            }
+            else -> {
+                collapse()
+            }
         }
     }
 
-    fun toggleExpansion(targetExpansion: Int?=null, initialProgress: Float? = null) {
-        activeAnimation?.apply {
-            if (this.isRunning) {
-                this.cancel()
-            }
-        }
-
-        mExpansionState = when(mExpansionState) {
-            COLLAPSED, COLLAPSING -> {
-                mTargetExpansion = targetExpansion
-                EXPANDING
-            }
-            else -> {
-                COLLAPSING
-            }
-        }
-
-        if (initialProgress != null) {
-            mFractionExpanded = if (mExpansionState == EXPANDING) {
-                AccelerateDecelerateInterpolator().getInterpolation(initialProgress)
-            } else {
-                AccelerateDecelerateInterpolator().getInterpolation(1f - initialProgress)
-            }
-        }
-
-        val animation = ValueAnimator.ofFloat(mFractionExpanded, if (mExpansionState == COLLAPSING) 0f else 1f)
-        animation.interpolator = AccelerateDecelerateInterpolator()
-        animation.duration = duration
-        animation.addUpdateListener {
-            mFractionExpanded = (it.animatedValue as Float)
+    fun setExpandedSize(size: Int?) {
+        if(mTargetExpansion != size) {
+            mTargetExpansion = size
             requestLayout()
         }
-        animation.doOnEnd {
-            mExpansionState = if (mExpansionState == COLLAPSING) COLLAPSED else EXPANDED
-        }
-        activeAnimation = animation
-        animation.start()
     }
 
     override fun onMeasure(widthMeasureSpec: Int, heightMeasureSpec: Int) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec)
 
         if (orientation == VERTICAL) {
-            for (i in 0 until childCount) {
-                val child = getChildAt(i)
-                child.translationY = parallaxMultiplier * (mTargetExpansion ?: measuredHeight) * (mFractionExpanded - 1f)
-            }
+//            for (i in 0 until childCount) {
+//                val child = getChildAt(i)
+//                child.translationY = parallaxMultiplier * (mTargetExpansion ?: measuredHeight) * (mFractionExpanded - 1f)
+//            }
 
             setMeasuredDimension(measuredWidth, (mFractionExpanded*(mTargetExpansion ?: measuredHeight)).roundToInt())
         } else {
-            for (i in 0 until childCount) {
-                val child = getChildAt(i)
-                child.translationX = parallaxMultiplier * (mTargetExpansion ?: measuredWidth) *(mFractionExpanded - 1f)
-            }
+//            for (i in 0 until childCount) {
+////                val child = getChildAt(i)
+////                child.translationX = parallaxMultiplier * (mTargetExpansion ?: measuredWidth) * (mFractionExpanded - 1f)
+////            }
+
+            if (df)
+                Log.e("width", (mFractionExpanded*(mTargetExpansion ?: measuredWidth)).roundToInt().toString())
 
             setMeasuredDimension((mFractionExpanded*(mTargetExpansion ?: measuredWidth)).roundToInt(), measuredHeight)
         }
@@ -146,6 +160,10 @@ class ExpandableLayout @JvmOverloads constructor(context: Context,
                     it.putInt("KEY_mExpansionState", COLLAPSED)
                     it.putFloat("KEY_mFractionExpanded", 0f)
                 }
+                else -> {
+                    it.putInt("KEY_mExpansionState", EXPANDED)
+                    it.putFloat("KEY_mFractionExpanded", 1f)
+                }
             }
         }
     }
@@ -158,7 +176,7 @@ class ExpandableLayout @JvmOverloads constructor(context: Context,
     }
 
     override fun onConfigurationChanged(newConfig: Configuration) {
-        activeAnimation?.apply { cancel() }
+        animation.cancel()
         super.onConfigurationChanged(newConfig)
     }
 }

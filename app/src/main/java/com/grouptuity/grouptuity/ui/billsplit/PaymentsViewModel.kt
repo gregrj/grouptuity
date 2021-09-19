@@ -3,6 +3,7 @@ package com.grouptuity.grouptuity.ui.billsplit
 import android.app.Application
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.asLiveData
+import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.Diner
 import com.grouptuity.grouptuity.data.Payment
 import com.grouptuity.grouptuity.data.PaymentMethod
@@ -14,12 +15,7 @@ import kotlinx.coroutines.flow.mapLatest
 class PaymentsViewModel(app: Application): UIViewModel(app) {
 
     companion object {
-        const val DEFAULT = 0
-        const val SELECTING_METHOD = 1
-        const val SHOWING_SURROGATE_INSTRUCTIONS = 2
-        const val CANDIDATE_SURROGATE = 3
-        const val INELIGIBLE_SURROGATE = 4
-        val INITIAL_STABLE_ID_AND_STATE: Pair<Long?, Int> = Pair(null, DEFAULT)
+        val INITIAL_STABLE_ID_AND_STATE: Pair<Long?, Int> = Pair(null, R.id.default_state)
     }
 
     private val activePaymentAndMethod = MutableStateFlow<Pair<Payment?, PaymentMethod?>>(Pair(null, null))
@@ -34,7 +30,7 @@ class PaymentsViewModel(app: Application): UIViewModel(app) {
         if (active.first == null) {
             // All items in default state
             Pair(
-                paymentsAndStableIds.map { Triple(it.first, it.second, DEFAULT) },
+                paymentsAndStableIds.map { Triple(it.first, it.second, R.id.default_state) },
                 INITIAL_STABLE_ID_AND_STATE
             )
         } else {
@@ -47,13 +43,13 @@ class PaymentsViewModel(app: Application): UIViewModel(app) {
                             it.first,
                             it.second,
                             if (it.second == activePaymentStableId) {
-                                SELECTING_METHOD
+                                R.id.selecting_method_state
                             } else {
-                                DEFAULT
+                                R.id.default_state
                             }
                         )
                     },
-                    Pair(activePaymentStableId, SELECTING_METHOD)
+                    Pair(activePaymentStableId, R.id.selecting_method_state)
                 )
             } else {
                 // Selecting surrogate payer for one of the items
@@ -64,16 +60,16 @@ class PaymentsViewModel(app: Application): UIViewModel(app) {
                             it.second,
                             when {
                                 (it.second == activePaymentStableId) -> {
-                                    SHOWING_SURROGATE_INSTRUCTIONS
+                                    R.id.showing_instructions_state
                                 }
                                 cannotActAsSurrogate(it.first.payer) -> {
-                                    INELIGIBLE_SURROGATE
+                                    R.id.ineligible_state
                                 }
-                                else -> { CANDIDATE_SURROGATE }
+                                else -> { R.id.candidate_state }
                             }
                         )
                     }.filter { it.first.payee.isRestaurant() },
-                    Pair(activePaymentStableId, SHOWING_SURROGATE_INSTRUCTIONS)
+                    Pair(activePaymentStableId, R.id.showing_instructions_state)
                 )
             }
         }

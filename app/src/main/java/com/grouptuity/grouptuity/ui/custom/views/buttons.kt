@@ -4,10 +4,10 @@ import android.animation.Animator
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.content.Context
+import android.graphics.Color
 import android.os.Handler
 import android.os.Looper
 import android.util.AttributeSet
-import android.util.Log
 import android.view.View
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.FrameLayout
@@ -46,8 +46,6 @@ class FlipButton @JvmOverloads constructor(context: Context, attrs: AttributeSet
         private const val ANIMATING_DESELECTION = 3
     }
 
-    var df = false
-
     private val animationDuration = resources.getInteger(R.integer.card_flip_time_full).toLong()
 
     private var selectionAnimation = AnimatorSet()
@@ -62,7 +60,6 @@ class FlipButton @JvmOverloads constructor(context: Context, attrs: AttributeSet
     override fun onAttachedToWindow() {
         super.onAttachedToWindow()
         buildAnimation()
-        setSelectionState(false)
     }
 
     private fun buildAnimation() {
@@ -121,10 +118,6 @@ class FlipButton @JvmOverloads constructor(context: Context, attrs: AttributeSet
                         else -> SELECTED // should never be called
                     }
 
-                    if (df) {
-                        Log.e("onAnimationEnd", ""+selectionState)
-                    }
-
                     if (selectionState == SELECTED) {
                         frontView.visibility = View.GONE
                     }
@@ -148,48 +141,45 @@ class FlipButton @JvmOverloads constructor(context: Context, attrs: AttributeSet
         })
     }
 
-    fun setSelectionState(selected: Boolean) {
+    fun setSelected() {
         selectionAnimation.cancel()
 
-        val childViews = children.toList()
-
-        if(selected) {
-            if (df) {
-                Log.e("setSelectionState", ""+true)
-            }
-
-            childViews.getOrNull(0)?.also { frontView ->
+        children.toList().also {
+            it.getOrNull(0)?.also { frontView ->
                 frontView.rotationY = -180f
                 frontView.alpha = 0f
                 frontView.visibility = View.GONE
             }
-            childViews.getOrNull(1)?.also { backView ->
+            it.getOrNull(1)?.also { backView ->
                 backView.rotationY = 0f
                 backView.alpha = 1f
                 backView.visibility = View.VISIBLE
             }
-            selectionState = SELECTED
         }
-        else {
-            childViews.getOrNull(0)?.also { frontView ->
+
+        selectionState = SELECTED
+    }
+
+    fun setDeselected() {
+        selectionAnimation.cancel()
+
+        children.toList().also {
+            it.getOrNull(0)?.also { frontView ->
                 frontView.rotationY = 0f
                 frontView.alpha = 1f
                 frontView.visibility = View.VISIBLE
             }
-            childViews.getOrNull(1)?.also { backView ->
+            it.getOrNull(1)?.also { backView ->
                 backView.rotationY = 180f
                 backView.alpha = 0f
                 backView.visibility = View.GONE
             }
-            selectionState = DESELECTED
         }
+
+        selectionState = DESELECTED
     }
 
     fun animateSelection(initialProgress: Float?) {
-        if (df) {
-            Log.e("animSelection", ""+initialProgress)
-        }
-
         when (selectionState) {
             SELECTED -> {
                 if (initialProgress != null) {
@@ -226,11 +216,6 @@ class FlipButton @JvmOverloads constructor(context: Context, attrs: AttributeSet
     }
 
     fun animateDeselection(initialProgress: Float?) {
-
-        if (df) {
-            Log.e("animateDeselection", ""+initialProgress)
-        }
-
         when (selectionState) {
             DESELECTED -> {
                 if (initialProgress != null) {

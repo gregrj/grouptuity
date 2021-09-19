@@ -11,22 +11,28 @@
     app:cardElevation="2dp"
     app:cardCornerRadius="4dp">
 
-    <androidx.constraintlayout.motion.widget.MotionLayout
-        android:id="@+id/payment_motion_layout"
+    <androidx.constraintlayout.widget.ConstraintLayout
+        android:id="@+id/background_view"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        app:layoutDescription="@xml/motionscene_payments_listitem">
+        android:layout_height="wrap_content">
 
-        <View
-            android:id="@+id/backgroundView"
-            android:layout_width="match_parent"
-            android:layout_height="0dp"
-            app:layout_constraintTop_toTopOf="parent"
+        <TextView
+            android:id="@+id/selection_instruction"
+            style="@android:style/TextAppearance.Large"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginEnd="12dp"
+            android:gravity="center"
+            android:text="@string/payments_selection_instruction"
+            android:textColor="?attr/colorOnTertiary"
+            android:alpha="0"
             app:layout_constraintBottom_toBottomOf="parent"
-            android:background="?attr/colorSurface"/>
+            app:layout_constraintEnd_toEndOf="parent"
+            app:layout_constraintStart_toEndOf="@+id/payment_method_flip_button"
+            app:layout_constraintTop_toTopOf="parent"/>
 
-        <FrameLayout
-            android:id="@+id/payment_method_button_placeholder"
+        <com.grouptuity.grouptuity.ui.custom.views.FlipButton
+            android:id="@+id/payment_method_flip_button"
             android:layout_width="48dp"
             android:layout_height="48dp"
             android:layout_marginStart="8dp"
@@ -35,42 +41,32 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent">
-        </FrameLayout>
 
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/active_payment_method_icon"
-            style="@style/Widget.MaterialComponents.Button.OutlinedButton"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            app:layout_constraintBottom_toBottomOf="@+id/payment_method_button_placeholder"
-            app:layout_constraintEnd_toEndOf="@+id/payment_method_button_placeholder"
-            app:layout_constraintStart_toStartOf="@+id/payment_method_button_placeholder"
-            app:layout_constraintTop_toTopOf="@+id/payment_method_button_placeholder"
-            android:insetTop="0dp"
-            android:insetBottom="0dp"
-            android:padding="8dp"
-            app:icon="@drawable/ic_payment_cash"
-            app:iconSize="32dp"
-            app:iconTint="?attr/colorOnBackgroundMediumEmphasis"
-            app:rippleColor="?attr/colorOnBackgroundLowEmphasis"
-            app:strokeColor="?attr/colorOnBackgroundLowEmphasis" />
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/active_payment_method_icon"
+                style="@style/Widget.MaterialComponents.Button.OutlinedButton"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                android:padding="8dp"
+                app:icon="@drawable/ic_payment_cash"
+                app:iconSize="32dp"
+                app:iconTint="?attr/colorOnBackgroundMediumEmphasis"
+                app:rippleColor="?attr/colorOnBackgroundLowEmphasis"
+                app:strokeColor="?attr/colorOnBackgroundLowEmphasis" />
 
-        <ImageView
-            android:id="@+id/close_payment_method_list_button"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            app:layout_constraintBottom_toBottomOf="@+id/payment_method_button_placeholder"
-            app:layout_constraintEnd_toEndOf="@+id/payment_method_button_placeholder"
-            app:layout_constraintStart_toStartOf="@+id/payment_method_button_placeholder"
-            app:layout_constraintTop_toTopOf="@+id/payment_method_button_placeholder"
-            android:background="?attr/selectableItemBackgroundBorderless"
-            android:padding="8dp"
-            android:src="@drawable/ic_close"
-            android:rotationY="180"
-            android:alpha="0"
-            android:visibility="gone"
-            app:tint="?attr/colorOnTertiary"
-            android:contentDescription="@string/payments_close_selection_list" />
+            <ImageView
+                android:id="@+id/close_payment_method_list_button"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:padding="8dp"
+                android:src="@drawable/ic_close"
+                android:visibility="gone"
+                app:tint="?attr/colorOnTertiary"
+                android:contentDescription="@string/payments_close_selection_list" />
+        </com.grouptuity.grouptuity.ui.custom.views.FlipButton>
 
         <com.grouptuity.grouptuity.ui.custom.views.ExpandableLayout
             android:id="@+id/payment_methods_expanding_layout"
@@ -87,10 +83,12 @@
             android:layout_width="0dp"
             android:layout_height="0dp"
             android:layout_marginStart="8dp"
-            app:layout_constraintBottom_toBottomOf="@+id/payer"
+            android:layout_marginTop="8dp"
+            android:layout_marginBottom="8dp"
             app:layout_constraintDimensionRatio="W,1:1"
-            app:layout_constraintStart_toEndOf="@+id/payment_method_flip_button"
-            app:layout_constraintTop_toTopOf="@+id/payer"
+            app:layout_constraintStart_toEndOf="@+id/payment_method_button_placeholder"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toTopOf="@+id/pay_instructions_placeholder"
             app:selectable="false" />
 
         <TextView
@@ -99,16 +97,16 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_marginStart="4dp"
-            android:layout_marginTop="8dp"
             android:layout_marginEnd="8dp"
-            app:layout_goneMarginBottom="8dp"
             android:ellipsize="end"
             android:gravity="center_vertical"
             android:maxLines="1"
-            app:layout_constraintBottom_toTopOf="@id/pay_instructions"
-            app:layout_constraintEnd_toStartOf="@+id/amount"
+            app:layout_constraintTop_toTopOf="@+id/payer_contact_icon"
+            app:layout_constraintBottom_toBottomOf="@+id/payer_contact_icon"
+            app:layout_constraintEnd_toStartOf="@+id/amount_placeholder"
             app:layout_constraintStart_toEndOf="@id/payer_contact_icon"
-            app:layout_constraintTop_toTopOf="parent"/>
+            android:transformPivotX="0dp"
+            android:transformPivotY="22sp"/>
 
         <TextView
             android:id="@+id/pay_instructions"
@@ -124,7 +122,7 @@
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toStartOf="@+id/amount"
             app:layout_constraintStart_toEndOf="@+id/payment_method_flip_button"
-            app:layout_constraintTop_toBottomOf="@id/payer"/>
+            app:layout_constraintTop_toBottomOf="@id/payer_contact_icon_reference"/>
 
         <TextView
             android:id="@+id/amount"
@@ -138,21 +136,74 @@
             android:text="@string/null_price"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintTop_toTopOf="parent"/>
+
+        <View
+            android:id="@+id/payment_method_button_placeholder"
+            android:layout_width="56dp"
+            android:layout_height="48dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintStart_toStartOf="parent"
+            app:layout_constraintTop_toTopOf="parent"
+            android:visibility="invisible"/>
 
         <TextView
-            android:id="@+id/selection_instruction"
-            style="@android:style/TextAppearance.Large"
-            android:layout_width="wrap_content"
+            android:id="@+id/payer_reference"
+            style="@android:style/TextAppearance.Medium"
+            android:layout_width="0dp"
             android:layout_height="wrap_content"
+            android:layout_marginStart="4dp"
+            android:layout_marginEnd="8dp"
+            android:gravity="center_vertical"
+            android:maxLines="1"
+            android:text="@string/placeholder_text"
+            app:layout_constraintTop_toTopOf="@+id/payer_contact_icon_reference"
+            app:layout_constraintBottom_toBottomOf="@+id/payer_contact_icon_reference"
+            app:layout_constraintEnd_toStartOf="@+id/amount"
+            app:layout_constraintStart_toEndOf="@id/payer_contact_icon_reference"
+            android:visibility="invisible"/>
+
+        <com.grouptuity.grouptuity.ui.custom.views.ContactIcon
+            android:id="@+id/payer_contact_icon_reference"
+            android:layout_width="0dp"
+            android:layout_height="0dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginTop="8dp"
+            app:layout_constraintDimensionRatio="W,1:1"
+            app:layout_constraintStart_toEndOf="@+id/payment_method_flip_button"
+            app:layout_constraintTop_toTopOf="parent"
+            app:layout_constraintBottom_toTopOf="@+id/pay_instructions"
+            app:selectable="false"
+            android:visibility="invisible"/>
+
+        <TextView
+            android:id="@+id/pay_instructions_placeholder"
+            style="@android:style/TextAppearance.Small"
+            android:layout_width="0dp"
+            android:layout_height="1dp"
+            android:gravity="center_vertical"
+            android:maxLines="1"
+            android:text="@string/placeholder_text"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintEnd_toStartOf="@+id/amount_placeholder"
+            app:layout_constraintStart_toEndOf="@+id/payment_method_button_placeholder"
+            android:visibility="invisible"/>
+
+        <TextView
+            android:id="@+id/amount_placeholder"
+            style="@android:style/TextAppearance.Large"
+            android:layout_width="1dp"
+            android:layout_height="0dp"
+            android:layout_marginTop="8dp"
             android:layout_marginEnd="12dp"
-            android:gravity="center"
-            android:text="@string/payments_selection_instruction"
-            android:textColor="?attr/colorOnTertiary"
-            android:visibility="invisible"
+            android:layout_marginBottom="8dp"
+            android:gravity="center_vertical"
+            android:text="@string/null_price"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintEnd_toEndOf="parent"
-            app:layout_constraintStart_toEndOf="@+id/payment_method_flip_button"
-            app:layout_constraintTop_toTopOf="parent"/>
-    </androidx.constraintlayout.motion.widget.MotionLayout>
+            app:layout_constraintTop_toTopOf="parent"
+            android:visibility="invisible" />
+    </androidx.constraintlayout.widget.ConstraintLayout>
 </com.google.android.material.card.MaterialCardView>
