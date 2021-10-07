@@ -1,5 +1,6 @@
 package com.grouptuity.grouptuity.data
 
+import android.util.Log
 import kotlin.math.max
 
 const val PRECISION = 1e-6
@@ -146,6 +147,8 @@ class BillCalculation(private val bill: Bill,
         }
 
         newPaymentsMap = generateNewPayments(netTransactionMap)
+
+
 
         sortedPayments = (committedPayments + newPaymentsMap.flatMap { it.value }).sortedWith { a, b ->
             val firstDiner = if (a.payer == cashPool) a.payee else a.payer
@@ -356,6 +359,7 @@ class BillCalculation(private val bill: Bill,
 
     private fun generateNewPayments(transactionMap: TransactionMap): Map<Diner, List<Payment>> {
         val paymentsMap = diners.associateWith { mutableListOf<Payment>() }.toMutableMap()
+        val dinersWithoutBills = diners.toMutableSet()
 
         // Insert surrogate transactions for indirect payments to restaurant via peer-to-peer
         transactionMap.getPaymentsToPayee(restaurant).forEach { (payer, amount) ->
@@ -363,6 +367,7 @@ class BillCalculation(private val bill: Bill,
                 if (surrogateId != null) {
                     diners.find { it.id == surrogateId }?.also { surrogate ->
                         transactionMap.removeTransaction(payer, restaurant)
+                        dinersWithoutBills.remove(payer)
                         paymentsMap[payer]!!.add(createPayment(amount, method, payer, restaurant, surrogate))
 
                         transactionMap.addTransaction(surrogate, restaurant, amount)
@@ -402,6 +407,7 @@ class BillCalculation(private val bill: Bill,
         if (poolCreditCardUsers.isNotEmpty()) {
             val poolCreditCardAmount = poolAmount / poolCreditCardUsers.size
             poolCreditCardUsers.forEach { payer ->
+                dinersWithoutBills.remove(payer)
                 paymentsMap[payer]!!.add(createPayment(poolCreditCardAmount, PaymentMethod.CREDIT_CARD_SPLIT, payer, restaurant, null))
 
                 val remainingBalance = transactionMap.getTransactionAmount(payer, restaurant) - poolCreditCardAmount
@@ -413,6 +419,7 @@ class BillCalculation(private val bill: Bill,
             }
 
             poolCashContributors.forEach { payer->
+                dinersWithoutBills.remove(payer)
                 paymentsMap[payer]!!.add(
                     createPayment(
                         transactionMap.getTransactionAmount(payer, restaurant),
@@ -424,6 +431,7 @@ class BillCalculation(private val bill: Bill,
             }
 
             nonPoolCreditCardUsers.forEach { payer->
+                dinersWithoutBills.remove(payer)
                 paymentsMap[payer]!!.add(
                     createPayment(
                         transactionMap.getTransactionAmount(payer, restaurant),
@@ -436,6 +444,7 @@ class BillCalculation(private val bill: Bill,
         } else {
             transactionMap.getPaymentsToPayee(restaurant).forEach { (payer, amount) ->
                 payer.paymentPreferences.getForRecipient(restaurant).also { (method, _) ->
+                    dinersWithoutBills.remove(payer)
                     paymentsMap[payer]!!.add(createPayment(amount, method, payer, restaurant, null))
                 }
             }
@@ -471,6 +480,20 @@ class BillCalculation(private val bill: Bill,
 ////                    payeeId))
 //            }
 //        }
+
+        /* Insert zero amount payments to restaurant for diners without bills. This is needed for
+        the diner to appear as a candidate for acting as a surrogate. These transactions should not
+        appear when the PaymentFragment is in the default state. */
+        for (diner in dinersWithoutBills) {
+            paymentsMap[diner]!!.add(
+                createPayment(
+                    0.0,
+                    PaymentMethod.CASH,
+                    diner,
+                    restaurant,
+                    null)
+            )
+        }
 
         return paymentsMap
     }

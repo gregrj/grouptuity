@@ -12,14 +12,11 @@ import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.ImageView
 import android.widget.LinearLayout
 import android.widget.Space
 import androidx.activity.OnBackPressedCallback
 import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.core.animation.doOnEnd
-import androidx.core.animation.doOnStart
 import androidx.core.content.ContextCompat
 import androidx.core.view.*
 import androidx.fragment.app.Fragment
@@ -30,16 +27,21 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.RecyclerView.NO_ID
 import com.grouptuity.grouptuity.R
+import com.grouptuity.grouptuity.data.Diner
 import com.grouptuity.grouptuity.data.Payment
 import com.grouptuity.grouptuity.data.PaymentMethod
 import com.grouptuity.grouptuity.databinding.FragPaymentsBinding
 import com.grouptuity.grouptuity.databinding.FragPaymentsListitemBinding
+import com.grouptuity.grouptuity.ui.billsplit.PaymentsViewModel.Companion.CANDIDATE_STATE
+import com.grouptuity.grouptuity.ui.billsplit.PaymentsViewModel.Companion.DEFAULT_STATE
+import com.grouptuity.grouptuity.ui.billsplit.PaymentsViewModel.Companion.INELIGIBLE_STATE
+import com.grouptuity.grouptuity.ui.billsplit.PaymentsViewModel.Companion.SELECTING_METHOD_STATE
+import com.grouptuity.grouptuity.ui.billsplit.PaymentsViewModel.Companion.SHOWING_INSTRUCTIONS_STATE
 import com.grouptuity.grouptuity.ui.custom.views.RecyclerViewBottomOffset
 import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.text.NumberFormat
 
 
 class PaymentsFragment: Fragment() {
@@ -75,21 +77,21 @@ class PaymentsFragment: Fragment() {
 
         val recyclerAdapter = PaymentRecyclerViewAdapter(
             requireContext(),
-            paymentsViewModel,
             object: PaymentRecyclerViewAdapter.PaymentRecyclerViewListener {
                 override fun onClickActivePaymentMethodIcon(payment: Payment) {
-                    Log.e("onClickActivePaymentMethodIcon", payment.payer.name +" "+ payment.payee.name)
                     paymentsViewModel.setActivePayment(payment)
                 }
 
                 override fun onClickCloseButton(payment: Payment) {
-                    Log.e("onClickCloseButton", payment.payer.name +" "+ payment.payee.name)
                     paymentsViewModel.setActivePayment(null)
                 }
 
                 override fun onClickPaymentMethod(payment: Payment, paymentMethod: PaymentMethod) {
-                    Log.e("onClickPaymentMethod", payment.payer.name +" "+ payment.payee.name)
                     paymentsViewModel.setPaymentMethodPreference(payment, paymentMethod)
+                }
+
+                override fun onClickSurrogate(diner: Diner) {
+                    paymentsViewModel.setSurrogate(diner)
                 }
             }
         )
@@ -127,9 +129,8 @@ class PaymentsFragment: Fragment() {
 
 
 private class PaymentRecyclerViewAdapter(val context: Context,
-                                         val paymentViewModel: PaymentsViewModel,
                                          val listener: PaymentRecyclerViewListener): RecyclerView.Adapter<PaymentRecyclerViewAdapter.ViewHolder>() {
-    var mPaymentList = emptyList<Triple<Payment, Long?, Int>>()
+    var mPaymentDataSet = emptyList<PaymentData>()
     var mActivePaymentIdAndState = PaymentsViewModel.INITIAL_STABLE_ID_AND_STATE
     var animationStartFlag = false
     var listAnimationStartTime = 0L
@@ -141,9 +142,13 @@ private class PaymentRecyclerViewAdapter(val context: Context,
     private val iconColorOnBackgroundTint = ColorStateList.valueOf(
         TypedValue().also { context.theme.resolveAttribute(R.attr.colorOnBackgroundMediumEmphasis, it, true) }.data)
 
+    // TODO move hardcoded values to xml and also use in layout
     private val surfaceBackground = TypedValue().also { context.theme.resolveAttribute(R.attr.colorSurface, it, true) }.data
     private val tertiaryBackground = TypedValue().also { context.theme.resolveAttribute(R.attr.colorTertiary, it, true) }.data
     private val selectableBackground = TypedValue().also { context.theme.resolveAttribute(android.R.attr.selectableItemBackgroundBorderless, it, true) }.data
+    private val payInstructionsVerticalPx = (TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 14F, context.resources.displayMetrics) +
+            TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 8F, context.resources.displayMetrics)).toInt()
+    private val paymentMethodFlipButtonHorizontalPx = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 56F, context.resources.displayMetrics).toInt()
     private val paymentMethodIconPx = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 36F, context.resources.displayMetrics).toInt()
     private val enlargedPayerTextSizeSpFrac = 1.22f
     private val animationDuration = context.resources.getInteger(R.integer.card_flip_time_full).toLong()
@@ -154,13 +159,16 @@ private class PaymentRecyclerViewAdapter(val context: Context,
         fun onClickActivePaymentMethodIcon(payment: Payment)
         fun onClickCloseButton(payment: Payment)
         fun onClickPaymentMethod(payment: Payment, paymentMethod: PaymentMethod)
+        fun onClickSurrogate(diner: Diner)
     }
 
     inner class ViewHolder(val viewBinding: FragPaymentsListitemBinding): RecyclerView.ViewHolder(viewBinding.root) {
-        val peerToPeerMethodButtons = mutableListOf<Triple<Int, Int, Int>>()
-        val nonPeerToPeerMethodButtons = mutableListOf<Triple<Int, Int, Int>>()
+        val paymentMethodButtonsAcceptedByPeers = mutableListOf<Triple<Int, Int, Int>>()
+        val paymentMethodButtonsNotAcceptedByPeers = mutableListOf<Triple<Int, Int, Int>>()
+        val paymentMethodButtonsAcceptedByRestaurant = mutableListOf<Triple<Int, Int, Int>>()
+        val paymentMethodButtonsNeedsSurrogate = mutableListOf<Triple<Int, Int, Int>>()
         var viewHolderPaymentStableId: Long? = null
-        var viewHolderState: Int = R.id.default_state
+        var viewHolderState: Int = DEFAULT_STATE
         var viewHolderAnimationStartTime = 0L
 
         lateinit var backgroundAnimator: ObjectAnimator
@@ -170,6 +178,44 @@ private class PaymentRecyclerViewAdapter(val context: Context,
         lateinit var fadeInSelectionInstructionAnimator: ObjectAnimator
         lateinit var fadeOutContactAnimator: ValueAnimator
         lateinit var enlargeContactAnimator: ValueAnimator
+
+        fun setEnlargedPlaceholders() {
+            viewBinding.payInstructionsPlaceholder.updateLayoutParams<ConstraintLayout.LayoutParams> { height = 1 }
+            viewBinding.amountPlaceholder.updateLayoutParams<ConstraintLayout.LayoutParams> { width = 1 }
+            viewBinding.paymentMethodButtonPlaceholder.updateLayoutParams<ConstraintLayout.LayoutParams> { width = 1 }
+
+            viewBinding.payer.updateLayoutParams<ConstraintLayout.LayoutParams> {
+                marginStart = 2 * viewBinding.payerReference.marginStart
+            }
+            viewBinding.payer.scaleX = enlargedPayerTextSizeSpFrac
+            viewBinding.payer.scaleY = enlargedPayerTextSizeSpFrac
+        }
+
+        fun setShrunkenPlaceholders() {
+            itemView.doOnPreDraw {
+                viewBinding.amountPlaceholder.updateLayoutParams<ConstraintLayout.LayoutParams> {
+                    width = viewBinding.amount.width
+                }
+            }
+
+            viewBinding.payInstructionsPlaceholder.updateLayoutParams<ConstraintLayout.LayoutParams> {
+                height = payInstructionsVerticalPx
+            }
+
+            viewBinding.amountPlaceholder.updateLayoutParams<ConstraintLayout.LayoutParams> {
+                width = viewBinding.amount.width
+            }
+
+            viewBinding.paymentMethodButtonPlaceholder.updateLayoutParams<ConstraintLayout.LayoutParams> {
+                width = paymentMethodFlipButtonHorizontalPx
+            }
+
+            viewBinding.payer.updateLayoutParams<ConstraintLayout.LayoutParams> {
+                marginStart = viewBinding.payerReference.marginStart
+            }
+            viewBinding.payer.scaleX = 1f
+            viewBinding.payer.scaleY = 1f
+        }
 
         fun applyState(newState: Int) {
             backgroundAnimator.cancel()
@@ -181,7 +227,8 @@ private class PaymentRecyclerViewAdapter(val context: Context,
             enlargeContactAnimator.cancel()
 
             when (newState) {
-                R.id.default_state -> {
+                DEFAULT_STATE -> {
+                    viewBinding.surrogateSelection.visibility = View.GONE
                     viewBinding.backgroundView.setBackgroundColor(surfaceBackground)
                     viewBinding.paymentMethodsExpandingLayout.setCollapsed()
                     viewBinding.paymentMethodFlipButton.setDeselected()
@@ -192,25 +239,10 @@ private class PaymentRecyclerViewAdapter(val context: Context,
                     viewBinding.payerContactIcon.alpha = 1f
                     viewBinding.payer.alpha = 1f
 
-                    viewBinding.paymentMethodButtonPlaceholder.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                        width = viewBinding.paymentMethodFlipButton.width + viewBinding.paymentMethodFlipButton.marginStart
-                    }
-
-                    viewBinding.payInstructionsPlaceholder.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                        height = viewBinding.payInstructions.height + viewBinding.payInstructions.marginBottom
-                    }
-
-                    viewBinding.amountPlaceholder.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                        width = viewBinding.amount.width
-                    }
-
-                    viewBinding.payer.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                        marginStart = viewBinding.payerReference.marginStart
-                    }
-                    viewBinding.payer.scaleX = 1f
-                    viewBinding.payer.scaleY = 1f
+                    setShrunkenPlaceholders()
                 }
-                R.id.selecting_method_state -> {
+                SELECTING_METHOD_STATE -> {
+                    viewBinding.surrogateSelection.visibility = View.GONE
                     viewBinding.backgroundView.setBackgroundColor(tertiaryBackground)
                     viewBinding.paymentMethodsExpandingLayout.setExpanded()
                     viewBinding.paymentMethodsExpandingLayout.alpha = 1f
@@ -222,25 +254,10 @@ private class PaymentRecyclerViewAdapter(val context: Context,
                     viewBinding.payerContactIcon.alpha = 0f
                     viewBinding.payer.alpha = 0f
 
-                    viewBinding.paymentMethodButtonPlaceholder.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                        width = viewBinding.paymentMethodFlipButton.width + viewBinding.paymentMethodFlipButton.marginStart
-                    }
-
-                    viewBinding.payInstructionsPlaceholder.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                        height = viewBinding.payInstructions.height + viewBinding.payInstructions.marginBottom
-                    }
-
-                    viewBinding.amountPlaceholder.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                        width = viewBinding.amount.width
-                    }
-
-                    viewBinding.payer.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                        marginStart = viewBinding.payerReference.marginStart
-                    }
-                    viewBinding.payer.scaleX = 1f
-                    viewBinding.payer.scaleY = 1f
+                    setShrunkenPlaceholders()
                 }
-                R.id.showing_instructions_state -> {
+                SHOWING_INSTRUCTIONS_STATE -> {
+                    viewBinding.surrogateSelection.visibility = View.GONE
                     viewBinding.backgroundView.setBackgroundColor(tertiaryBackground)
                     viewBinding.paymentMethodsExpandingLayout.setCollapsed()
                     viewBinding.paymentMethodFlipButton.setSelected()
@@ -250,8 +267,11 @@ private class PaymentRecyclerViewAdapter(val context: Context,
                     viewBinding.selectionInstruction.alpha = 1f
                     viewBinding.payerContactIcon.alpha = 0f
                     viewBinding.payer.alpha = 0f
+
+                    setShrunkenPlaceholders()
                 }
-                R.id.candidate_state -> {
+                CANDIDATE_STATE -> {
+                    viewBinding.surrogateSelection.visibility = View.VISIBLE
                     viewBinding.backgroundView.setBackgroundColor(surfaceBackground)
                     viewBinding.paymentMethodsExpandingLayout.setCollapsed()
                     viewBinding.paymentMethodFlipButton.setDeselected()
@@ -262,25 +282,10 @@ private class PaymentRecyclerViewAdapter(val context: Context,
                     viewBinding.payerContactIcon.alpha = 1f
                     viewBinding.payer.alpha = 1f
 
-                    viewBinding.paymentMethodButtonPlaceholder.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                        width = 1
-                    }
-
-                    viewBinding.payInstructionsPlaceholder.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                        height = 1
-                    }
-
-                    viewBinding.amountPlaceholder.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                        width = 1
-                    }
-
-                    viewBinding.payer.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                        marginStart = 2 * viewBinding.payerReference.marginStart
-                    }
-                    viewBinding.payer.scaleX = enlargedPayerTextSizeSpFrac
-                    viewBinding.payer.scaleY = enlargedPayerTextSizeSpFrac
+                    setEnlargedPlaceholders()
                 }
-                R.id.ineligible_state -> {
+                INELIGIBLE_STATE -> {
+                    viewBinding.surrogateSelection.visibility = View.GONE
                     viewBinding.backgroundView.setBackgroundColor(surfaceBackground)
                     viewBinding.paymentMethodsExpandingLayout.setCollapsed()
                     viewBinding.paymentMethodFlipButton.setDeselected()
@@ -291,23 +296,7 @@ private class PaymentRecyclerViewAdapter(val context: Context,
                     viewBinding.payerContactIcon.alpha = 1f
                     viewBinding.payer.alpha = 1f
 
-                    viewBinding.paymentMethodButtonPlaceholder.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                        width = 1
-                    }
-
-                    viewBinding.payInstructionsPlaceholder.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                        height = 1
-                    }
-
-                    viewBinding.amountPlaceholder.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                        width = 1
-                    }
-
-                    viewBinding.payer.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                        marginStart = 2 * viewBinding.payerReference.marginStart
-                    }
-                    viewBinding.payer.scaleX = enlargedPayerTextSizeSpFrac
-                    viewBinding.payer.scaleY = enlargedPayerTextSizeSpFrac
+                    setEnlargedPlaceholders()
                 }
             }
         }
@@ -322,9 +311,10 @@ private class PaymentRecyclerViewAdapter(val context: Context,
             enlargeContactAnimator.cancel()
 
             when (newState) {
-                R.id.default_state -> {
+                DEFAULT_STATE -> {
+                    viewBinding.surrogateSelection.visibility = View.GONE
                     when (oldState) {
-                        R.id.selecting_method_state -> {
+                        SELECTING_METHOD_STATE -> {
                             backgroundAnimator.setCurrentFraction(1f - initialProgress)
                             backgroundAnimator.reverse()
 
@@ -340,27 +330,11 @@ private class PaymentRecyclerViewAdapter(val context: Context,
                             fadeOutContactAnimator.setCurrentFraction(1f - initialProgress)
                             fadeOutContactAnimator.reverse()
 
-                            viewBinding.paymentMethodButtonPlaceholder.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                                width = viewBinding.paymentMethodFlipButton.width + viewBinding.paymentMethodFlipButton.marginStart
-                            }
-
-                            viewBinding.payInstructionsPlaceholder.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                                height = viewBinding.payInstructions.height + viewBinding.payInstructions.marginBottom
-                            }
-
-                            viewBinding.amountPlaceholder.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                                width = viewBinding.amount.width
-                            }
-
-                            viewBinding.payer.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                                marginStart = viewBinding.payerReference.marginStart
-                            }
-                            viewBinding.payer.scaleX = 1f
-                            viewBinding.payer.scaleY = 1f
+                            setShrunkenPlaceholders()
 
                             viewBinding.selectionInstruction.alpha = 0f
                         }
-                        R.id.showing_instructions_state -> {
+                        SHOWING_INSTRUCTIONS_STATE -> {
                             backgroundAnimator.setCurrentFraction(1f - initialProgress)
                             backgroundAnimator.reverse()
 
@@ -375,28 +349,12 @@ private class PaymentRecyclerViewAdapter(val context: Context,
                             fadeOutContactAnimator.setCurrentFraction(1f - initialProgress)
                             fadeOutContactAnimator.reverse()
 
-                            viewBinding.paymentMethodButtonPlaceholder.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                                width = viewBinding.paymentMethodFlipButton.width + viewBinding.paymentMethodFlipButton.marginStart
-                            }
-
-                            viewBinding.payInstructionsPlaceholder.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                                height = viewBinding.payInstructions.height + viewBinding.payInstructions.marginBottom
-                            }
-
-                            viewBinding.amountPlaceholder.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                                width = viewBinding.amount.width
-                            }
-
-                            viewBinding.payer.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                                marginStart = viewBinding.payerReference.marginStart
-                            }
-                            viewBinding.payer.scaleX = 1f
-                            viewBinding.payer.scaleY = 1f
+                            setShrunkenPlaceholders()
 
                             fadeInSelectionInstructionAnimator.setCurrentFraction(1f - initialProgress)
                             fadeInSelectionInstructionAnimator.reverse()
                         }
-                        R.id.candidate_state -> {
+                        CANDIDATE_STATE -> {
                             viewBinding.backgroundView.setBackgroundColor(surfaceBackground)
 
                             viewBinding.paymentMethodsExpandingLayout.setCollapsed()
@@ -416,7 +374,7 @@ private class PaymentRecyclerViewAdapter(val context: Context,
 
                             viewBinding.selectionInstruction.alpha = 0f
                         }
-                        R.id.ineligible_state -> {
+                        INELIGIBLE_STATE -> {
                             viewBinding.backgroundView.setBackgroundColor(surfaceBackground)
 
                             viewBinding.paymentMethodsExpandingLayout.setCollapsed()
@@ -438,7 +396,8 @@ private class PaymentRecyclerViewAdapter(val context: Context,
                         }
                     }
                 }
-                R.id.selecting_method_state -> {
+                SELECTING_METHOD_STATE -> {
+                    viewBinding.surrogateSelection.visibility = View.GONE
                     backgroundAnimator.setCurrentFraction(initialProgress)
                     backgroundAnimator.start()
 
@@ -454,27 +413,12 @@ private class PaymentRecyclerViewAdapter(val context: Context,
                     fadeOutContactAnimator.setCurrentFraction(initialProgress)
                     fadeOutContactAnimator.start()
 
-                    viewBinding.paymentMethodButtonPlaceholder.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                        width = viewBinding.paymentMethodFlipButton.width + viewBinding.paymentMethodFlipButton.marginStart
-                    }
-
-                    viewBinding.payInstructionsPlaceholder.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                        height = viewBinding.payInstructions.height + viewBinding.payInstructions.marginBottom
-                    }
-
-                    viewBinding.amountPlaceholder.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                        width = viewBinding.amount.width
-                    }
-
-                    viewBinding.payer.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                        marginStart = viewBinding.payerReference.marginStart
-                    }
-                    viewBinding.payer.scaleX = 1f
-                    viewBinding.payer.scaleY = 1f
+                    setShrunkenPlaceholders()
 
                     viewBinding.selectionInstruction.alpha = 0f
                 }
-                R.id.showing_instructions_state -> {
+                SHOWING_INSTRUCTIONS_STATE -> {
+                    viewBinding.surrogateSelection.visibility = View.GONE
                     viewBinding.backgroundView.setBackgroundColor(tertiaryBackground)
 
                     viewBinding.paymentMethodsExpandingLayout.setExpanded()
@@ -490,10 +434,13 @@ private class PaymentRecyclerViewAdapter(val context: Context,
                     viewBinding.payerContactIcon.alpha = 0f
                     viewBinding.payer.alpha = 0f
 
+                    setShrunkenPlaceholders()
+
                     fadeInSelectionInstructionAnimator.setCurrentFraction(initialProgress)
                     fadeInSelectionInstructionAnimator.start()
                 }
-                R.id.candidate_state -> {
+                CANDIDATE_STATE -> {
+                    viewBinding.surrogateSelection.visibility = View.VISIBLE
                     viewBinding.backgroundView.setBackgroundColor(surfaceBackground)
 
                     viewBinding.paymentMethodsExpandingLayout.setCollapsed()
@@ -513,7 +460,8 @@ private class PaymentRecyclerViewAdapter(val context: Context,
 
                     viewBinding.selectionInstruction.alpha = 0f
                 }
-                R.id.ineligible_state -> {
+                INELIGIBLE_STATE -> {
+                    viewBinding.surrogateSelection.visibility = View.GONE
                     viewBinding.backgroundView.setBackgroundColor(surfaceBackground)
 
                     viewBinding.paymentMethodsExpandingLayout.setCollapsed()
@@ -537,25 +485,31 @@ private class PaymentRecyclerViewAdapter(val context: Context,
         }
     }
 
-    override fun getItemCount() = mPaymentList.size
+    override fun getItemCount() = mPaymentDataSet.size
 
-    override fun getItemId(position: Int) = paymentViewModel.getPaymentStableId(mPaymentList[position].first) ?: NO_ID
+    override fun getItemId(position: Int) = mPaymentDataSet[position].stableId ?: NO_ID
 
     @SuppressLint("Recycle")
     override fun onCreateViewHolder(parent: ViewGroup, viewType: Int): ViewHolder {
         val viewHolder = ViewHolder(FragPaymentsListitemBinding.inflate(LayoutInflater.from(context), parent, false))
 
         viewHolder.viewBinding.apply {
+            surrogateSelection.setOnClickListener {
+                if (viewHolder.viewHolderState == CANDIDATE_STATE) {
+                    listener.onClickSurrogate((viewHolder.itemView.tag as PaymentData).payment.payer)
+                }
+            }
+
             activePaymentMethodIcon.setOnClickListener {
-                if (viewHolder.viewHolderState == R.id.default_state) {
-                    listener.onClickActivePaymentMethodIcon((viewHolder.itemView.tag as Triple<*, *, *>).first as Payment)
+                if (viewHolder.viewHolderState == DEFAULT_STATE) {
+                    listener.onClickActivePaymentMethodIcon((viewHolder.itemView.tag as PaymentData).payment)
                 }
             }
 
             closePaymentMethodListButton.setOnClickListener {
-                if (viewHolder.viewHolderState == R.id.selecting_method_state ||
-                    viewHolder.viewHolderState == R.id.showing_instructions_state) {
-                    listener.onClickCloseButton((viewHolder.itemView.tag as Triple<*, *, *>).first as Payment)
+                if (viewHolder.viewHolderState == SELECTING_METHOD_STATE ||
+                    viewHolder.viewHolderState == SHOWING_INSTRUCTIONS_STATE) {
+                    listener.onClickCloseButton((viewHolder.itemView.tag as PaymentData).payment)
                 }
             }
 
@@ -649,7 +603,7 @@ private class PaymentRecyclerViewAdapter(val context: Context,
                     }
                     it.setImageResource(method.paymentIconId)
                     it.setOnClickListener {
-                        listener.onClickPaymentMethod((viewHolder.itemView.tag as Triple<*, *, *>).first as Payment, method)
+                        listener.onClickPaymentMethod((viewHolder.itemView.tag as PaymentData).payment, method)
                     }
                 })
 
@@ -659,35 +613,31 @@ private class PaymentRecyclerViewAdapter(val context: Context,
                     it.layoutParams = LinearLayout.LayoutParams(0, 1, 0.5F)
                 })
 
-                if (method.isPeerToPeer) {
-                    viewHolder.peerToPeerMethodButtons.add(Triple(preSpacerId, methodButtonId, postSpacerId))
+                if (method.acceptedByPeer) {
+                    viewHolder.paymentMethodButtonsAcceptedByPeers.add(Triple(preSpacerId, methodButtonId, postSpacerId))
+
+                    if (method.acceptedByRestaurant) {
+                        viewHolder.paymentMethodButtonsAcceptedByRestaurant.add(Triple(preSpacerId, methodButtonId, postSpacerId))
+                    } else {
+                        viewHolder.paymentMethodButtonsNeedsSurrogate.add(Triple(preSpacerId, methodButtonId, postSpacerId))
+                    }
                 } else {
-                    viewHolder.nonPeerToPeerMethodButtons.add(Triple(preSpacerId, methodButtonId, postSpacerId))
+                    // PaymentMethod must be accepted by restaurant if it cannot be accepted by peers
+                    viewHolder.paymentMethodButtonsNotAcceptedByPeers.add(Triple(preSpacerId, methodButtonId, postSpacerId))
+                    viewHolder.paymentMethodButtonsAcceptedByRestaurant.add(Triple(preSpacerId, methodButtonId, postSpacerId))
                 }
             }
         }
 
-        viewHolder.itemView.doOnPreDraw {
-            viewHolder.viewBinding.payInstructionsPlaceholder.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                height = viewHolder.viewBinding.payInstructions.height + viewHolder.viewBinding.payInstructions.marginBottom
-            }
-
-            viewHolder.viewBinding.amountPlaceholder.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                width = viewHolder.viewBinding.amount.width
-            }
-
-            viewHolder.viewBinding.paymentMethodButtonPlaceholder.updateLayoutParams<ConstraintLayout.LayoutParams> {
-                width = viewHolder.viewBinding.paymentMethodFlipButton.width + viewHolder.viewBinding.paymentMethodFlipButton.marginStart
-            }
-        }
+        viewHolder.setShrunkenPlaceholders()
 
         return viewHolder
     }
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         holder.apply {
-            val (newPayment, newStableId, newState) = mPaymentList[position]
-            itemView.tag = mPaymentList[position] // store updated payment and state
+            val newPaymentData = mPaymentDataSet[position]
+            itemView.tag = newPaymentData
 
             viewBinding.paymentMethodsExpandingLayout.setExpandedSize(
                 viewBinding.paymentCardView.width
@@ -695,85 +645,63 @@ private class PaymentRecyclerViewAdapter(val context: Context,
                         - viewBinding.amount.marginEnd
                         - viewBinding.payInstructions.marginStart)
 
-            viewBinding.paymentMethodsExpandingLayout.df = newPayment.payer.name == "Alan Leung" || newPayment.payer.name == "Geoffrey Wing"
+            viewBinding.payer.text = newPaymentData.payerString
+            viewBinding.payInstructions.text = newPaymentData.payInstructionsString
+            viewBinding.amount.text = newPaymentData.amountString
+            viewBinding.amountPlaceholder.text = newPaymentData.amountString
 
+            viewBinding.activePaymentMethodIcon.icon = ContextCompat.getDrawable(context, newPaymentData.payment.method.paymentIconId)
+            viewBinding.activePaymentMethodIcon.iconTint = if (newPaymentData.payment.method.isIconColorless) iconColorOnBackgroundTint else null
 
-            viewBinding.activePaymentMethodIcon.iconTint =
-                if (newPayment.method.isIconColorless) { iconColorOnBackgroundTint } else { null }
-            viewBinding.activePaymentMethodIcon.icon =
-                ContextCompat.getDrawable(context, newPayment.method.paymentIconId)
+            viewBinding.payerContactIcon.setContact(newPaymentData.iconContact, false)
 
-            viewBinding.amount.text = NumberFormat.getCurrencyInstance().format(newPayment.amount)
-            viewBinding.amountPlaceholder.text = NumberFormat.getCurrencyInstance().format(newPayment.amount)
+            if (newPaymentData.isPaymentIconClickable) {
+                viewBinding.activePaymentMethodIcon.isClickable = true
+                viewBinding.activePaymentMethodIcon.strokeColor = activePaymentMethodIconStrokeColor
+                viewBinding.closePaymentMethodListButton.isClickable = true
 
-            when {
-                (newPayment.payer.isCashPool()) -> {
-                    viewBinding.payer.text = newPayment.payee.name
-                    viewBinding.payerContactIcon.setContact(newPayment.payee.contact, false)
-                    viewBinding.payInstructions.text = context.resources.getString(R.string.payments_instruction_from_cash_pool)
-                    viewBinding.activePaymentMethodIcon.isClickable = false
-                    viewBinding.activePaymentMethodIcon.strokeColor = ColorStateList.valueOf(Color.TRANSPARENT)
-                    viewBinding.closePaymentMethodListButton.isClickable = false
-                }
-                (newPayment.payee.isCashPool()) -> {
-                    viewBinding.payer.text = newPayment.payer.name
-                    viewBinding.payerContactIcon.setContact(newPayment.payer.contact, false)
-                    viewBinding.payInstructions.text = context.resources.getString(R.string.payments_instruction_into_cash_pool)
-                    viewBinding.activePaymentMethodIcon.isClickable = false
-                    viewBinding.activePaymentMethodIcon.strokeColor = ColorStateList.valueOf(Color.TRANSPARENT)
-                    viewBinding.closePaymentMethodListButton.isClickable = false
-                }
-                (newPayment.payee.isRestaurant()) -> {
-                    viewBinding.payer.text = newPayment.payer.name
-                    viewBinding.payerContactIcon.setContact(newPayment.payer.contact, false)
-                    viewBinding.activePaymentMethodIcon.isClickable = true
-                    viewBinding.activePaymentMethodIcon.strokeColor = activePaymentMethodIconStrokeColor
-                    viewBinding.closePaymentMethodListButton.isClickable = true
-
-                    val surrogate = newPayment.surrogate
-                    viewBinding.payInstructions.text = when {
-                        surrogate == null -> {
-                            context.resources.getString(
-                                newPayment.method.paymentInstructionStringId,
-                                context.resources.getString(
-                                    R.string.payments_instruction_restaurant_payee
-                                )
-                            )
-                        }
-                        surrogate.isCashPool() -> {
-                            context.resources.getString(R.string.payments_instruction_into_cash_pool)
-                        }
-                        else -> {
-                            context.resources.getString(
-                                newPayment.method.paymentInstructionStringId,
-                                surrogate.name
-                            )
-                        }
-                    }
-
-                    for (viewIds in nonPeerToPeerMethodButtons) {
+                if (newPaymentData.payment.payee.isRestaurant()) {
+                    for (viewIds in paymentMethodButtonsAcceptedByRestaurant) {
                         val (preSpacerId, methodButtonId, postSpacerId) = viewIds
                         viewBinding.paymentMethodsExpandingLayout.findViewById<Space>(preSpacerId).visibility = View.VISIBLE
                         viewBinding.paymentMethodsExpandingLayout.findViewById<ImageView>(methodButtonId).visibility = View.VISIBLE
                         viewBinding.paymentMethodsExpandingLayout.findViewById<Space>(postSpacerId).visibility = View.VISIBLE
                     }
-                }
-                else -> {
-                    viewBinding.payer.text = newPayment.payer.name
-                    viewBinding.payerContactIcon.setContact(newPayment.payer.contact, false)
-                    viewBinding.payInstructions.text = context.resources.getString(newPayment.method.paymentInstructionStringId, newPayment.payee.name)
 
-                    viewBinding.activePaymentMethodIcon.isClickable = true
-                    viewBinding.activePaymentMethodIcon.strokeColor = activePaymentMethodIconStrokeColor
-                    viewBinding.closePaymentMethodListButton.isClickable = true
+                    if (newPaymentData.allowSurrogatePaymentMethods) {
+                        for (viewIds in paymentMethodButtonsNeedsSurrogate) {
+                            val (preSpacerId, methodButtonId, postSpacerId) = viewIds
+                            viewBinding.paymentMethodsExpandingLayout.findViewById<Space>(preSpacerId).visibility = View.VISIBLE
+                            viewBinding.paymentMethodsExpandingLayout.findViewById<ImageView>(methodButtonId).visibility = View.VISIBLE
+                            viewBinding.paymentMethodsExpandingLayout.findViewById<Space>(postSpacerId).visibility = View.VISIBLE
+                        }
+                    } else {
+                        for (viewIds in paymentMethodButtonsNeedsSurrogate) {
+                            val (preSpacerId, methodButtonId, postSpacerId) = viewIds
+                            viewBinding.paymentMethodsExpandingLayout.findViewById<Space>(preSpacerId).visibility = View.GONE
+                            viewBinding.paymentMethodsExpandingLayout.findViewById<ImageView>(methodButtonId).visibility = View.GONE
+                            viewBinding.paymentMethodsExpandingLayout.findViewById<Space>(postSpacerId).visibility = View.GONE
+                        }
+                    }
+                } else {
+                    for (viewIds in paymentMethodButtonsAcceptedByPeers) {
+                        val (preSpacerId, methodButtonId, postSpacerId) = viewIds
+                        viewBinding.paymentMethodsExpandingLayout.findViewById<Space>(preSpacerId).visibility = View.VISIBLE
+                        viewBinding.paymentMethodsExpandingLayout.findViewById<ImageView>(methodButtonId).visibility = View.VISIBLE
+                        viewBinding.paymentMethodsExpandingLayout.findViewById<Space>(postSpacerId).visibility = View.VISIBLE
+                    }
 
-                    for (viewIds in nonPeerToPeerMethodButtons) {
+                    for (viewIds in paymentMethodButtonsNotAcceptedByPeers) {
                         val (preSpacerId, methodButtonId, postSpacerId) = viewIds
                         viewBinding.paymentMethodsExpandingLayout.findViewById<Space>(preSpacerId).visibility = View.GONE
                         viewBinding.paymentMethodsExpandingLayout.findViewById<ImageView>(methodButtonId).visibility = View.GONE
                         viewBinding.paymentMethodsExpandingLayout.findViewById<Space>(postSpacerId).visibility = View.GONE
                     }
                 }
+            } else {
+                viewBinding.activePaymentMethodIcon.isClickable = false
+                viewBinding.activePaymentMethodIcon.strokeColor = ColorStateList.valueOf(Color.TRANSPARENT)
+                viewBinding.closePaymentMethodListButton.isClickable = false
             }
 
             val timeNow = System.currentTimeMillis()
@@ -783,9 +711,9 @@ private class PaymentRecyclerViewAdapter(val context: Context,
                 listAnimationStartTime = timeNow
             }
 
-            if (viewHolderPaymentStableId == newStableId) {
-                if (viewHolderState == newState) {
-                    // ViewHolder is already in or transitioning to the desired state
+            if (viewHolderPaymentStableId == newPaymentData.stableId) {
+                if (viewHolderState == newPaymentData.displayState) {
+                    // ViewHolder is bound to the same payment and state is unchanged
                 } else {
                     // ViewHolder is bound to the same payment, but state has changed
                     val viewHolderElapsedTime = timeNow - viewHolderAnimationStartTime
@@ -800,84 +728,93 @@ private class PaymentRecyclerViewAdapter(val context: Context,
                         .toFloat()/animationDuration).coerceIn(0f, 1f)
 
                     if (animationProgress == 1f) {
-                        applyState(newState)
+                        applyState(newPaymentData.displayState)
                     } else {
-                        animateStateChange(viewHolderState, newState, animationProgress)
+                        animateStateChange(viewHolderState, newPaymentData.displayState, animationProgress)
                     }
-                    viewHolderState = newState
+                    viewHolderState = newPaymentData.displayState
                 }
             } else {
                 /* ViewHolder is showing a different payment */
-                viewHolderPaymentStableId = newStableId
+                viewHolderPaymentStableId = newPaymentData.stableId
 
-                if (newState == R.id.default_state) {
+                if (newPaymentData.displayState == DEFAULT_STATE) {
                     viewHolderAnimationStartTime = 0L
-                    applyState(R.id.default_state)
+                    applyState(DEFAULT_STATE)
                 } else {
                     val animationProgress = ((System.currentTimeMillis() - listAnimationStartTime)
                         .toFloat()/animationDuration).coerceIn(0f, 1f)
                     viewHolderAnimationStartTime = listAnimationStartTime
 
                     if (animationProgress == 1f) {
-                        applyState(newState)
+
+                        if(((itemView.tag as PaymentData).payment).payer.name == "Drew Regitsky") {
+                            Log.e("applying "+newPaymentData.displayState, "now")
+                        }
+
+
+
+                        applyState(newPaymentData.displayState)
                     } else {
-                        when (newState) {
-                            R.id.selecting_method_state -> {
-                                animateStateChange(R.id.default_state, R.id.selecting_method_state, animationProgress)
+
+                        if(((itemView.tag as PaymentData).payment).payer.name == "Drew Regitsky") {
+                            Log.e("animating "+newPaymentData.displayState, "now")
+                        }
+
+                        when (newPaymentData.displayState) {
+                            SELECTING_METHOD_STATE -> {
+                                animateStateChange(DEFAULT_STATE, SELECTING_METHOD_STATE, animationProgress)
                             }
-                            R.id.showing_instructions_state -> {
-                                animateStateChange(R.id.selecting_method_state, R.id.showing_instructions_state, animationProgress)
+                            SHOWING_INSTRUCTIONS_STATE -> {
+                                animateStateChange(SELECTING_METHOD_STATE, SHOWING_INSTRUCTIONS_STATE, animationProgress)
                             }
-                            R.id.candidate_state -> {
-                                animateStateChange(R.id.default_state, R.id.candidate_state, animationProgress)
+                            CANDIDATE_STATE -> {
+                                animateStateChange(DEFAULT_STATE, CANDIDATE_STATE, animationProgress)
                             }
-                            R.id.ineligible_state -> {
-                                animateStateChange(R.id.default_state, R.id.ineligible_state, animationProgress)
+                            INELIGIBLE_STATE -> {
+                                animateStateChange(DEFAULT_STATE, INELIGIBLE_STATE, animationProgress)
                             }
                         }
                     }
                 }
 
-                viewHolderState = newState
+                viewHolderState = newPaymentData.displayState
             }
         }
     }
 
-    suspend fun updateDataSet(paymentsData: Pair<List<Triple<Payment, Long?, Int>>, Pair<Long?, Int>>) {
+    suspend fun updateDataSet(paymentsData: Pair<List<PaymentData>, Pair<Long?, Int>>) {
         val adapter = this
-        val oldPayments = mPaymentList
-        val newPayments = paymentsData.first
 
         val diffResult = DiffUtil.calculateDiff(object : DiffUtil.Callback() {
-            override fun getOldListSize() = oldPayments.size
+            override fun getOldListSize() = mPaymentDataSet.size
 
-            override fun getNewListSize() = newPayments.size
+            override fun getNewListSize() = paymentsData.first.size
 
             override fun areItemsTheSame(oldPosition: Int, newPosition: Int): Boolean {
-                val oldPaymentId = oldPayments[oldPosition].second
-                val newPaymentId = newPayments[newPosition].second
-
-                return oldPaymentId != null && oldPaymentId == newPaymentId
+                val oldPaymentId = mPaymentDataSet[oldPosition].stableId
+                return oldPaymentId != null && oldPaymentId == paymentsData.first[newPosition].stableId
             }
 
             override fun areContentsTheSame(oldPosition: Int, newPosition: Int): Boolean {
-                val (oldPayment, _, oldState) = oldPayments[oldPosition]
-                val (newPayment, _, newState) = newPayments[newPosition]
+                val oldPaymentData = mPaymentDataSet[oldPosition]
+                val newPaymentData = paymentsData.first[newPosition]
 
-                return newState == oldState &&
-                        newPayment.amount == oldPayment.amount &&
-                        newPayment.committed == oldPayment.committed &&
-                        newPayment.method == oldPayment.method &&
-                        newPayment.surrogate?.name == oldPayment.surrogate?.name &&
-                        newPayment.payer.name == oldPayment.payer.name &&
-                        newPayment.payee.name == oldPayment.payee.name
+                return newPaymentData.displayState == oldPaymentData.displayState &&
+                        newPaymentData.payment.method == oldPaymentData.payment.method &&
+                        newPaymentData.payerString == oldPaymentData.payerString &&
+                        newPaymentData.payInstructionsString == oldPaymentData.payInstructionsString &&
+                        newPaymentData.amountString == oldPaymentData.amountString &&
+                        newPaymentData.iconContact == oldPaymentData.iconContact &&
+                        newPaymentData.isPaymentIconClickable == oldPaymentData.isPaymentIconClickable &&
+                        newPaymentData.allowSurrogatePaymentMethods == oldPaymentData.allowSurrogatePaymentMethods
             }
         })
 
         withContext(Dispatchers.Main) {
-            adapter.notifyItemChanged(mPaymentList.size - 1) // clears BottomOffset from old last item
+            adapter.notifyItemChanged(mPaymentDataSet.size - 1) // clears BottomOffset from old last item
 
-            mPaymentList = newPayments
+            mPaymentDataSet = paymentsData.first
             if (paymentsData.second != mActivePaymentIdAndState) {
                 // Active payment and/or state change that will trigger a new animation
                 mActivePaymentIdAndState = paymentsData.second

@@ -206,4 +206,10 @@
             app:layout_constraintTop_toTopOf="parent"
             android:visibility="invisible" />
     </androidx.constraintlayout.widget.ConstraintLayout>
+
+    <View
+        android:id="@+id/surrogate_selection"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="?attr/selectableItemBackground"/>
 </com.google.android.material.card.MaterialCardView>

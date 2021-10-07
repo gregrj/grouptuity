@@ -105,8 +105,8 @@ class Repository(context: Context) {
 
     // Private backing fields for bill-specific entity flows
     private var mBill = Bill("", "", 0L, 0.0, true, 0.0, tipAsPercent = true, isTaxTipped = false, discountsReduceTip = false)
-    private var mCashPool = Diner("", "", Contact.cashPool, PaymentPreferences())
-    private var mRestaurant = Diner("", "", Contact.restaurant, PaymentPreferences())
+    private var mCashPool = Diner("", "", -1, Contact.cashPool, PaymentPreferences())
+    private var mRestaurant = Diner("", "", -0, Contact.restaurant, PaymentPreferences())
     private var mDiners = mutableListOf<Diner>()
     private var mItems = mutableListOf<Item>()
     private var mDebts = mutableListOf<Debt>()
@@ -122,6 +122,10 @@ class Repository(context: Context) {
     private val _payments: MutableStateFlow<List<Payment>> = MutableStateFlow(mPayments)
     private var paymentStableId = 0L
     private val paymentStableIdMap = mutableMapOf<String, Long>()
+    private var maxDinerListIndex = 0
+    private var maxItemListIndex = 0
+    private var maxDebtListIndex = 0
+    private var maxDiscountListIndex = 0
 
     // Bill entities
     val bill: StateFlow<Bill> = _bill
@@ -268,8 +272,13 @@ class Repository(context: Context) {
             taxIsTipped.value,
             discountsReduceTip.value)
 
-        val cashPool = Diner(newUUID(), newBill.id, Contact.cashPool)
-        val restaurant = Diner(newUUID(), newBill.id, Contact.restaurant)
+        maxDinerListIndex = 0
+        maxItemListIndex = 0
+        maxDebtListIndex = 0
+        maxDiscountListIndex = 0
+
+        val cashPool = Diner(newUUID(), newBill.id, -1, Contact.cashPool)
+        val restaurant = Diner(newUUID(), newBill.id, -1, Contact.restaurant)
 
         // Commit updated objects to UI
         mBill = newBill
@@ -302,14 +311,19 @@ class Repository(context: Context) {
                 mBill = payload.bill
                 mCashPool = payload.cashPool
                 mRestaurant = payload.restaurant
-                mDiners = payload.diners
-                mItems = payload.items
-                mDebts = payload.debts
-                mDiscounts = payload.discounts
+                mDiners = payload.diners.sortedBy { it.listIndex }.toMutableList()
+                mItems = payload.items.sortedBy { it.listIndex }.toMutableList()
+                mDebts = payload.debts.sortedBy { it.listIndex }.toMutableList()
+                mDiscounts = payload.discounts.sortedBy { it.listIndex }.toMutableList()
                 mPayments = payload.payments
 
                 paymentStableId = 0L
                 paymentStableIdMap.clear()
+
+                maxDinerListIndex = if (payload.diners.isEmpty()) 0 else payload.diners.maxOf { it.listIndex }
+                maxItemListIndex = if (payload.items.isEmpty()) 0 else payload.items.maxOf { it.listIndex }
+                maxDebtListIndex = if (payload.debts.isEmpty()) 0 else payload.debts.maxOf { it.listIndex }
+                maxDiscountListIndex = if (payload.discounts.isEmpty()) 0 else payload.discounts.maxOf { it.listIndex }
 
                 commitBill()
             }
@@ -364,7 +378,7 @@ class Repository(context: Context) {
 
     // Diner Functions
     fun addSelfAsDiner(includeWithEveryone: Boolean = true) {
-        val selfDiner = Diner(newUUID(), mBill.id, Contact.self)
+        val selfDiner = Diner(newUUID(), mBill.id, maxDinerListIndex++, Contact.self)
 
         if (includeWithEveryone) {
             // TODO
@@ -380,12 +394,14 @@ class Repository(context: Context) {
         val diners: List<Diner> = if (includeWithEveryone) {
             dinerContacts.map { contact ->
                 Log.e(contact.name, ""+ mBill.id)
-                Diner(newUUID(), mBill.id, contact).also {
-
+                Diner(newUUID(), mBill.id, maxDinerListIndex++, contact).also {
+                    // TODO add all-diner items/debts/discounts to this diner
                 }
             }
         } else {
-            dinerContacts.map { contact -> Diner(newUUID(), mBill.id, contact) }
+            dinerContacts.map { contact ->
+                Diner(newUUID(), mBill.id, maxDinerListIndex++, contact)
+            }
         }
 
         mDiners.addAll(diners)
@@ -413,7 +429,8 @@ class Repository(context: Context) {
 
     // Item Functions
     fun addItem(price: Double, name: String, diners: Collection<Diner>) {
-        val item = Item(newUUID(), mBill.id, price, name)
+        val item = Item(newUUID(), mBill.id, maxItemListIndex++, price, name)
+
         diners.forEach { diner ->
             item.addDiner(diner)
             diner.addItem(item)
@@ -430,7 +447,7 @@ class Repository(context: Context) {
         editedItem.discounts.forEach { it.removeItem(editedItem) }
 
         // Add new item to diners and discounts
-        val newItem = Item(editedItem.id, editedItem.billId, price, name)
+        val newItem = Item(editedItem.id, editedItem.billId, editedItem.listIndex, price, name)
         diners.forEach { diner ->
             newItem.addDiner(diner)
             diner.addItem(newItem)
@@ -462,7 +479,8 @@ class Repository(context: Context) {
 
     // Debt Functions
     fun addDebt(amount: Double, name: String, debtors: Collection<Diner>, creditors: Collection<Diner>) {
-        val debt = Debt(newUUID(), mBill.id, amount, name)
+        val debt = Debt(newUUID(), mBill.id, maxDebtListIndex++, amount, name)
+
         debtors.forEach { debtor ->
             debt.addDebtor(debtor)
             debtor.addOwedDebt(debt)
@@ -489,7 +507,8 @@ class Repository(context: Context) {
 
     // Discount Functions
     fun addDiscount(asPercent: Boolean, onItems: Boolean, value: Double, cost: Double?, items: List<Item>, recipients: List<Diner>, purchasers: List<Diner>) {
-        val discount = Discount(newUUID(), mBill.id, asPercent, onItems, value, cost)
+        val discount = Discount(newUUID(), mBill.id, maxDiscountListIndex++, asPercent, onItems, value, cost)
+
         items.forEach { item ->
             discount.addItem(item)
             item.addDiscount(discount)
@@ -515,7 +534,14 @@ class Repository(context: Context) {
         editedDiscount.purchasers.forEach { it.removePurchasedDiscount(editedDiscount) }
 
         // Add new discount to item, recipient, and purchaser objects
-        val newDiscount = Discount(editedDiscount.id, editedDiscount.billId, asPercent, onItems, value, cost)
+        val newDiscount = Discount(
+            editedDiscount.id,
+            editedDiscount.billId,
+            editedDiscount.listIndex,
+            asPercent,
+            onItems,
+            value,
+            cost)
         items.forEach { item ->
             newDiscount.addItem(item)
             item.addDiscount(newDiscount)

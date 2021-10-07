@@ -6,7 +6,6 @@ import android.content.res.Configuration
 import android.os.Bundle
 import android.os.Parcelable
 import android.util.AttributeSet
-import android.util.Log
 import android.widget.LinearLayout
 import androidx.core.animation.doOnEnd
 import com.grouptuity.grouptuity.R
@@ -24,7 +23,6 @@ class ExpandableLayout @JvmOverloads constructor(context: Context,
         const val STALLED = 4
     }
 
-    var df = false
     var mExpansionState = COLLAPSED
         private set
     private var mFractionExpanded = 0f
@@ -49,8 +47,6 @@ class ExpandableLayout @JvmOverloads constructor(context: Context,
             }
         }
     }
-
-    var parallaxMultiplier = 0.5f
 
     fun collapse(initialProgress: Float?=null) {
         when (initialProgress) {
@@ -133,21 +129,8 @@ class ExpandableLayout @JvmOverloads constructor(context: Context,
         super.onMeasure(widthMeasureSpec, heightMeasureSpec)
 
         if (orientation == VERTICAL) {
-//            for (i in 0 until childCount) {
-//                val child = getChildAt(i)
-//                child.translationY = parallaxMultiplier * (mTargetExpansion ?: measuredHeight) * (mFractionExpanded - 1f)
-//            }
-
             setMeasuredDimension(measuredWidth, (mFractionExpanded*(mTargetExpansion ?: measuredHeight)).roundToInt())
         } else {
-//            for (i in 0 until childCount) {
-////                val child = getChildAt(i)
-////                child.translationX = parallaxMultiplier * (mTargetExpansion ?: measuredWidth) * (mFractionExpanded - 1f)
-////            }
-
-            if (df)
-                Log.e("width", (mFractionExpanded*(mTargetExpansion ?: measuredWidth)).roundToInt().toString())
-
             setMeasuredDimension((mFractionExpanded*(mTargetExpansion ?: measuredWidth)).roundToInt(), measuredHeight)
         }
     }

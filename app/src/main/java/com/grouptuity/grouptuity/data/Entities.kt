@@ -40,7 +40,7 @@ private fun nameToInitials(name: String?): String {
 
 
 enum class PaymentMethod(val acceptedByRestaurant: Boolean,
-                         val isPeerToPeer: Boolean,
+                         val acceptedByPeer: Boolean,
                          val paymentInstructionStringId: Int,
                          val paymentIconId: Int,
                          val isIconColorless: Boolean) {
@@ -218,6 +218,7 @@ class Bill(@PrimaryKey val id: String,
     indices = [Index("billId")])
 class Diner(@PrimaryKey val id: String,
             val billId: String,
+            val listIndex: Int,
             @Embedded(prefix = "contact_") val contact: Contact,
             var paymentPreferences: PaymentPreferences = PaymentPreferences()): Parcelable {
 
@@ -361,6 +362,7 @@ class Diner(@PrimaryKey val id: String,
         dest?.apply {
             this.writeString(id)
             this.writeString(billId)
+            this.writeInt(listIndex)
             this.writeParcelable(contact, 0)
             this.writeString(paymentPreferences.toJson())
             this.writeStringList(itemIds)
@@ -377,6 +379,7 @@ class Diner(@PrimaryKey val id: String,
         override fun createFromParcel(parcel: Parcel) = Diner(
             parcel.readString()!!,
             parcel.readString()!!,
+            parcel.readInt(),
             parcel.readParcelable(Contact::class.java.classLoader) ?: Contact.dummy,
             PaymentPreferences.fromJson(parcel.readString() ?: ""))
             .withIdLists(
@@ -399,6 +402,7 @@ class Diner(@PrimaryKey val id: String,
     indices = [Index("billId")])
 class Item(@PrimaryKey val id: String,
            val billId: String,
+           val listIndex: Int,
            val price: Double,
            val name: String): Parcelable {
 
@@ -446,6 +450,7 @@ class Item(@PrimaryKey val id: String,
         dest?.apply {
             this.writeString(id)
             this.writeString(billId)
+            this.writeInt(listIndex)
             this.writeDouble(price)
             this.writeString(name)
             this.writeStringList(dinerIds)
@@ -457,6 +462,7 @@ class Item(@PrimaryKey val id: String,
         override fun createFromParcel(parcel: Parcel) = Item(
             parcel.readString()!!,
             parcel.readString()!!,
+            parcel.readInt(),
             parcel.readDouble(),
             parcel.readString() ?: "Item")
             .withIdLists(
@@ -472,7 +478,11 @@ class Item(@PrimaryKey val id: String,
 @Entity(tableName = "debt_table",
     foreignKeys = [ForeignKey(entity = Bill::class, parentColumns = ["id"], childColumns = ["billId"], onDelete = ForeignKey.CASCADE)],
     indices = [Index("billId")])
-class Debt(@PrimaryKey val id: String, val billId: String, val amount: Double, val name: String): Parcelable {
+class Debt(@PrimaryKey val id: String,
+           val billId: String,
+           val listIndex: Int,
+           val amount: Double,
+           val name: String): Parcelable {
 
     @Ignore private val debtorIdsMutable = mutableListOf<String>()
     @Ignore private val creditorIdsMutable = mutableListOf<String>()
@@ -518,6 +528,7 @@ class Debt(@PrimaryKey val id: String, val billId: String, val amount: Double, v
         dest?.apply {
             this.writeString(id)
             this.writeString(billId)
+            this.writeInt(listIndex)
             this.writeDouble(amount)
             this.writeString(name)
             this.writeStringList(debtorIds)
@@ -529,6 +540,7 @@ class Debt(@PrimaryKey val id: String, val billId: String, val amount: Double, v
         override fun createFromParcel(parcel: Parcel) = Debt(
             parcel.readString()!!,
             parcel.readString()!!,
+            parcel.readInt(),
             parcel.readDouble(),
             parcel.readString()!!)
             .withIdLists(
@@ -545,11 +557,12 @@ class Debt(@PrimaryKey val id: String, val billId: String, val amount: Double, v
     foreignKeys = [ForeignKey(entity = Bill::class, parentColumns = ["id"], childColumns = ["billId"], onDelete = ForeignKey.CASCADE)],
     indices = [Index("billId")])
 class Discount(@PrimaryKey val id: String,
-                    val billId: String,
-                    val asPercent: Boolean,
-                    val onItems: Boolean,
-                    val value: Double,
-                    val cost: Double?): Parcelable {
+               val billId: String,
+               val listIndex: Int,
+               val asPercent: Boolean,
+               val onItems: Boolean,
+               val value: Double,
+               val cost: Double?): Parcelable {
 
     @Ignore private val itemIdsMutable = mutableListOf<String>()
     @Ignore private val recipientIdsMutable = mutableListOf<String>()
@@ -609,6 +622,7 @@ class Discount(@PrimaryKey val id: String,
         dest?.apply {
             this.writeString(id)
             this.writeString(billId)
+            this.writeInt(listIndex)
             this.writeInt(if (asPercent) 1 else  0)
             this.writeInt(if (onItems) 1 else  0)
             this.writeDouble(value)
@@ -623,6 +637,7 @@ class Discount(@PrimaryKey val id: String,
         override fun createFromParcel(parcel: Parcel) = Discount(
             parcel.readString()!!,
             parcel.readString()!!,
+            parcel.readInt(),
             parcel.readInt() == 1,
             parcel.readInt() == 1,
             parcel.readDouble(),
