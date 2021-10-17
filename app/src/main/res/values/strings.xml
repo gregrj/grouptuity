@@ -317,6 +317,24 @@
     <string name="payments_close_selection_list">Close payment method list</string>
 
     <string name="settings_toolbar_title">Settings</string>
+    <string name="settings_account_category">User Account</string>
+    <string name="settings_account_name">Name</string>
+    <string name="settings_account_email">Email</string>
+    <string name="settings_account_email_hint">Enter your email address</string>
+    <string name="settings_bill_category">Bill Splitting</string>
+    <string name="settings_bill_auto_add_self">Auto-include yourself on bills</string>
+    <string name="settings_bill_auto_add_self_summary_on">New bills automatically include you as a diner</string>
+    <string name="settings_bill_auto_add_self_summary_off">New bills start without any diners</string>
+    <string name="settings_bill_contact_search_typo_assist">Search contacts with typo assist</string>
+    <string name="settings_bill_contact_search_typo_assist_mode_on">Contacts best matching the search phrase including common typos are shown</string>
+    <string name="settings_bill_contact_search_typo_assist_mode_off">Only contacts exactly matching the search phrase are shown</string>
+    <string name="settings_bill_tax_percent">Default tax percent</string>
+    <string name="settings_bill_tip_percent">Default tip percent</string>
+    <string name="settings_bill_discounts_reduce_tip">Discounts reduce tip</string>
+    <string name="settings_bill_tip_applied_to_tax">Tip applied to tax</string>
+    <string name="settings_app_version">App Version</string>
+
+
 
     <string name="ok">OK</string>
     <string name="cancel">Cancel</string>

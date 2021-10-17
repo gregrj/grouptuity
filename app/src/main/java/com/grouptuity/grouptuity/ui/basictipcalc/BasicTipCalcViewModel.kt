@@ -34,8 +34,8 @@ class BasicTipCalcViewModel(app: Application): UIViewModel(app) {
 
     private val mBillAmountInput = MutableStateFlow(Pair(0.0, CalculationType.SUBTOTAL))
     private val mDiscountInput = MutableStateFlow(Pair(0.0, false))
-    private val mTaxInput = MutableStateFlow(Pair(repository.defaultTaxPercent.value, true))
-    private val mTipInput = MutableStateFlow(Pair(repository.defaultTipPercent.value, true))
+    private val mTaxInput = MutableStateFlow(Pair(repository.defaultTaxPercent.value.toDouble(), true))
+    private val mTipInput = MutableStateFlow(Pair(repository.defaultTipPercent.value.toDouble(), true))
     private val mTaxTipped = MutableStateFlow(repository.taxIsTipped.value)
     private val mDiscountReducesTip = MutableStateFlow(repository.discountsReduceTip.value)
 
@@ -476,10 +476,10 @@ class BasicTipCalcViewModel(app: Application): UIViewModel(app) {
     private val discountPercent = MutableStateFlow(0.0)
     private val discountAmount = MutableStateFlow(0.0)
     private val subtotalWithDiscounts = MutableStateFlow(0.0)
-    private val taxPercent = MutableStateFlow(repository.defaultTaxPercent.value)
+    private val taxPercent = MutableStateFlow(repository.defaultTaxPercent.value.toDouble())
     private val taxAmount = MutableStateFlow(0.0)
     private val subtotalWithDiscountsAndTax = MutableStateFlow(0.0)
-    private val tipPercent = MutableStateFlow(repository.defaultTipPercent.value)
+    private val tipPercent = MutableStateFlow(repository.defaultTipPercent.value.toDouble())
     private val tipAmount = MutableStateFlow(0.0)
     private val total = MutableStateFlow(0.0)
     private val warningMessageEventMutable = MutableLiveData<Event<String>>()
@@ -614,8 +614,8 @@ class BasicTipCalcViewModel(app: Application): UIViewModel(app) {
     fun reset() {
         mBillAmountInput.value = Pair(0.0, CalculationType.SUBTOTAL)
         mDiscountInput.value = Pair(0.0, false)
-        mTaxInput.value = Pair(repository.defaultTaxPercent.value, true)
-        mTipInput.value = Pair(repository.defaultTipPercent.value, true)
+        mTaxInput.value = Pair(repository.defaultTaxPercent.value.toDouble(), true)
+        mTipInput.value = Pair(repository.defaultTipPercent.value.toDouble(), true)
         mTaxTipped.value = repository.taxIsTipped.value
         mDiscountReducesTip.value = repository.discountsReduceTip.value
     }

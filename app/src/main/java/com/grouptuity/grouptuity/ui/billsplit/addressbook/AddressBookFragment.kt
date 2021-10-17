@@ -21,8 +21,6 @@ import androidx.appcompat.widget.SearchView
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.os.bundleOf
 import androidx.core.view.doOnPreDraw
-import androidx.core.view.marginLeft
-import androidx.core.view.marginStart
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.setFragmentResult
@@ -42,7 +40,6 @@ import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.Contact
 import com.grouptuity.grouptuity.databinding.FragAddressBookBinding
 import com.grouptuity.grouptuity.databinding.FragAddressBookListitemBinding
-import com.grouptuity.grouptuity.ui.billsplit.dinerdetails.DinerDetailsFragmentDirections
 import com.grouptuity.grouptuity.ui.custom.views.RecyclerViewListener
 import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
 import com.grouptuity.grouptuity.ui.custom.transitions.CircularRevealTransition
@@ -255,7 +252,7 @@ class AddressBookFragment: Fragment(), Revealable by RevealableImpl() {
 
     private fun setupToolbar() {
         binding.toolbar.inflateMenu(R.menu.toolbar_addressbook)
-        binding.toolbar.setNavigationIcon(R.drawable.ic_arrow_back)
+        binding.toolbar.setNavigationIcon(R.drawable.ic_arrow_back_light)
         binding.toolbar.setNavigationOnClickListener { addressBookViewModel.handleOnBackPressed() }
 
         binding.toolbar.setOnMenuItemClickListener { item ->
@@ -314,7 +311,7 @@ class AddressBookFragment: Fragment(), Revealable by RevealableImpl() {
             if(toolBarState.navIconAsClose == null) {
                 binding.toolbar.navigationIcon = null
             } else {
-                binding.toolbar.setNavigationIcon(if(toolBarState.navIconAsClose) R.drawable.ic_close else R.drawable.ic_arrow_back)
+                binding.toolbar.setNavigationIcon(if(toolBarState.navIconAsClose) R.drawable.ic_close else R.drawable.ic_arrow_back_light)
             }
 
             if(toolBarState.searchInactive) {

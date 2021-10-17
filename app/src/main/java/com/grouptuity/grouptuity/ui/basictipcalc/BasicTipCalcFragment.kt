@@ -55,28 +55,32 @@ class BasicTipCalcFragment: Fragment() {
             }
         }
 
-        binding.toolbar.setNavigationIcon(R.drawable.ic_arrow_back)
-        binding.toolbar.setNavigationOnClickListener {
-            requireActivity().onBackPressed() // Close fragment using default onBackPressed behavior
-        }
-        binding.toolbar.inflateMenu(R.menu.toolbar_calculator)
-        binding.toolbar.setOnMenuItemClickListener { item ->
-            when(item.itemId) {
-                R.id.tax_is_tipped -> {
-                    basicTipCalcViewModel.toggleTipTaxed()
-                    true
+        binding.toolbar.apply {
+            setNavigationIcon(R.drawable.ic_arrow_back_light)
+
+            // Close fragment using default onBackPressed behavior
+            setNavigationOnClickListener { requireActivity().onBackPressed() }
+
+            inflateMenu(R.menu.toolbar_calculator)
+            setOnMenuItemClickListener { item ->
+                when(item.itemId) {
+                    R.id.tax_is_tipped -> {
+                        basicTipCalcViewModel.toggleTipTaxed()
+                        true
+                    }
+                    R.id.discount_reduces_tip -> {
+                        basicTipCalcViewModel.toggleDiscountsReduceTip()
+                        true
+                    }
+                    R.id.reset -> {
+                        basicTipCalcViewModel.reset()
+                        true
+                    }
+                    else -> { false }
                 }
-                R.id.discount_reduces_tip -> {
-                    basicTipCalcViewModel.toggleDiscountsReduceTip()
-                    true
-                }
-                R.id.reset -> {
-                    basicTipCalcViewModel.reset()
-                    true
-                }
-                else -> { false }
             }
         }
+
         basicTipCalcViewModel.taxTipped.observe(viewLifecycleOwner, {
             binding.toolbar.menu.findItem(R.id.tax_is_tipped).isChecked = it
         })

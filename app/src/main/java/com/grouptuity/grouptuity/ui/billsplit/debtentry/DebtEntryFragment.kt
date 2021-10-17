@@ -8,7 +8,6 @@ import android.app.SearchManager
 import android.content.Context
 import android.graphics.Color
 import android.os.Bundle
-import android.util.Log
 import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
@@ -177,14 +176,14 @@ class DebtEntryFragment: Fragment(), Revealable by RevealableImpl() {
     @SuppressLint("ClickableViewAccessibility")
     private fun setupToolbar() {
         binding.toolbar.inflateMenu(R.menu.toolbar_debtentry)
-        binding.toolbar.setNavigationIcon(R.drawable.ic_arrow_back)
+        binding.toolbar.setNavigationIcon(R.drawable.ic_arrow_back_light)
         binding.toolbar.setNavigationOnClickListener { debtEntryViewModel.handleOnBackPressed() }
 
         debtEntryViewModel.toolBarState.observe(viewLifecycleOwner) { toolBarState ->
             binding.toolbar.title = toolBarState.title
 
             if(toolBarState.navIconVisible) {
-                binding.toolbar.setNavigationIcon(R.drawable.ic_arrow_back)
+                binding.toolbar.setNavigationIcon(R.drawable.ic_arrow_back_light)
             } else {
                 binding.toolbar.navigationIcon = null
             }

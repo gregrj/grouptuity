@@ -10,6 +10,7 @@ import androidx.datastore.preferences.core.*
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.*
 import androidx.room.*
+import com.grouptuity.grouptuity.BuildConfig
 import com.grouptuity.grouptuity.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -71,33 +72,47 @@ class Repository(context: Context) {
                 instance
             }
         }
+    }
 
-        // Preference Keys
-        val LOADED_BILL_ID_KEY = stringPreferencesKey("loaded_bill_id")
-        val USER_NAME_KEY = stringPreferencesKey("user_name")
-        val USER_PHOTO_URI_KEY = stringPreferencesKey("user_photo_uri")
-        val TAX_PERCENT_KEY = doublePreferencesKey("default_tax_percent")
-        val TIP_PERCENT_KEY = doublePreferencesKey("default_tip_percent")
-        val TAX_IS_TIPPED_KEY = booleanPreferencesKey("default_tax_is_tipped")
-        val DISCOUNTS_REDUCE_TIP_KEY = booleanPreferencesKey("default_discounts_reduce_tip")
+    inner class StoredPreference<T>(private val key: Preferences.Key<T>, private val defaultValue: T) {
+        val stateFlow = preferenceDataStore.data.mapLatest { preferences ->
+            preferences[key] ?: defaultValue
+        }.stateIn(CoroutineScope(Dispatchers.IO), SharingStarted.Eagerly, defaultValue)
+
+        init {
+            keyStoredPreferenceMap[key.name] = this
+        }
+
+        var value: T
+            get() = runBlocking { preferenceDataStore.data.map { it[key] ?: defaultValue }.first() }
+            set(newValue) {
+                CoroutineScope(Dispatchers.IO).launch {
+                    preferenceDataStore.edit { preferences -> preferences[key] = newValue }
+                }
+            }
     }
 
     private val database = AppDatabase.getDatabase(context)
     private val preferenceDataStore = context.preferenceDataStore
+    val keyStoredPreferenceMap = mutableMapOf<String, StoredPreference<*>>()
 
     // Preferences
-    private val loadedBillId: StateFlow<String> = getPreferenceFlow(LOADED_BILL_ID_KEY, "", "pending")
-    val userName: StateFlow<String> = getPreferenceFlow(USER_NAME_KEY, "You") //TODO parameterize
-    val userPhotoUri: StateFlow<String> = getPreferenceFlow(USER_PHOTO_URI_KEY, "")
-    val defaultTaxPercent: StateFlow<Double> = getPreferenceFlow(TAX_PERCENT_KEY, 7.25)
-    val defaultTipPercent: StateFlow<Double> = getPreferenceFlow(TIP_PERCENT_KEY, 15.0)
-    val taxIsTipped: StateFlow<Boolean> = getPreferenceFlow(TAX_IS_TIPPED_KEY, false)
-    val discountsReduceTip: StateFlow<Boolean> = getPreferenceFlow(DISCOUNTS_REDUCE_TIP_KEY, false)
+    val appVersion = StoredPreference(stringPreferencesKey(context.getString(R.string.preference_key_app_version)), BuildConfig.VERSION_NAME)
+    val loadedBillId = StoredPreference(stringPreferencesKey(context.getString(R.string.preference_key_loaded_bill_id)), "uninitialized")
+    val userName = StoredPreference(stringPreferencesKey(context.getString(R.string.preference_key_user_name)), context.getString(R.string.default_user_name))
+    val userEmail = StoredPreference(stringPreferencesKey(context.getString(R.string.preference_key_user_email)), "")
+    val userPhotoUri = StoredPreference(stringPreferencesKey(context.getString(R.string.preference_key_user_photo_uri)), "")
+    val defaultTaxPercent = StoredPreference(stringPreferencesKey(context.getString(R.string.preference_key_default_tax_percent)), context.getString(R.string.default_default_tax_percent))
+    val defaultTipPercent = StoredPreference(stringPreferencesKey(context.getString(R.string.preference_key_default_tip_percent)), context.getString(R.string.default_default_tip_percent))
+    val taxIsTipped = StoredPreference(booleanPreferencesKey(context.getString(R.string.preference_key_tax_is_tipped)), context.resources.getBoolean(R.bool.default_tax_is_tipped))
+    val discountsReduceTip = StoredPreference(booleanPreferencesKey(context.getString(R.string.preference_key_discounts_reduce_tip)), context.resources.getBoolean(R.bool.default_discounts_reduce_tip))
+    val autoAddSelf = StoredPreference(booleanPreferencesKey(context.getString(R.string.preference_key_auto_add_self)), context.resources.getBoolean(R.bool.default_auto_add_self))
+    val searchWithTypoAssist = StoredPreference(booleanPreferencesKey(context.getString(R.string.preference_key_contact_search_typo_assist)), context.resources.getBoolean(R.bool.default_contact_search_typo_assist))
 
     // App-level data
     val loadInProgress = MutableStateFlow(true)
     val bills = database.getSavedBills()
-    val selfContact = combine(userName, userPhotoUri) { userName, userPhotoUri ->
+    val selfContact = combine(userName.stateFlow, userPhotoUri.stateFlow) { userName, userPhotoUri ->
         Contact.updateSelfContactData(userName, userPhotoUri)
         //TODO database.contactDao().save(Contact.self)
         Contact.self
@@ -191,13 +206,6 @@ class Repository(context: Context) {
     private val _discountValues = MutableStateFlow(emptyMap<Discount, Double>())
     val discountValues: StateFlow<Map<Discount, Double>> = _discountValues
 
-    private fun <T> getPreferenceFlow(key: Preferences.Key<T>, defaultValue: T, initialValue: T? = null): StateFlow<T> = preferenceDataStore.data.mapLatest { preferences ->
-        preferences[key] ?: defaultValue
-    }.stateIn(CoroutineScope(Dispatchers.IO), SharingStarted.Eagerly, initialValue ?: defaultValue)
-    private fun <T> setPreferenceValue(key: Preferences.Key<T>, newValue: T) = CoroutineScope(Dispatchers.IO).launch {
-        preferenceDataStore.edit { preferences -> preferences[key] = newValue }
-    }
-
     private fun commitBill() = CoroutineScope(Dispatchers.Default).launch {
 
         val billCalculation = BillCalculation(mBill, mCashPool, mRestaurant, mDiners, mItems, mDebts, mDiscounts, mPayments)
@@ -265,9 +273,9 @@ class Repository(context: Context) {
             newUUID(),
             "Bill from " + SimpleDateFormat.getDateTimeInstance(DateFormat.DEFAULT, DateFormat.SHORT).format(Date(timestamp)),
             timestamp,
-            defaultTaxPercent.value,
+            defaultTaxPercent.value.toDouble(),
             true,
-            defaultTipPercent.value,
+            defaultTipPercent.value.toDouble(),
             true,
             taxIsTipped.value,
             discountsReduceTip.value)
@@ -296,7 +304,7 @@ class Repository(context: Context) {
         commitBill()
 
         // Write updates to the database
-        database.saveBill(newBill).invokeOnCompletion { setPreferenceValue(LOADED_BILL_ID_KEY, newBill.id) }
+        database.saveBill(newBill).invokeOnCompletion { loadedBillId.value = newBill.id }
         database.saveDiner(cashPool)
         database.saveDiner(restaurant)
     }
@@ -329,7 +337,7 @@ class Repository(context: Context) {
             }
 
             // Save ID of newly loaded bill so it will reload automatically on app relaunch
-            setPreferenceValue(LOADED_BILL_ID_KEY, payload.bill.id)
+            loadedBillId.value = payload.bill.id
         }
     }
     fun deleteBill(bill: Bill) {
@@ -597,7 +605,7 @@ class Repository(context: Context) {
     init {
         ProcessLifecycleOwner.get().lifecycleScope.launchWhenResumed {
             when(val billId = loadedBillId.value) {
-                "", "pending" -> createAndLoadNewBill()
+                "uninitialized" -> createAndLoadNewBill()
                 mBill.id -> { /* Correct bill already loaded */ }
                 else -> {
                     // TODO check if bill is expired

@@ -20,7 +20,7 @@
 
         <activity
             android:name=".SplashActivity"
-            android:theme="@style/SplashTheme"
+            android:theme="@style/Theme.Grouptuity.Splash"
             android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -40,6 +40,12 @@
 
             <meta-data android:name="android.app.searchable" android:resource="@xml/searchable"/>
         </activity>
-    </application>
 
+        <activity
+            android:name=".SettingsActivity"
+            android:theme="@style/Theme.Grouptuity.Settings"
+            android:label="@string/settings_toolbar_title"
+            android:exported="true"
+            android:launchMode="singleTop"/>
+    </application>
 </manifest>

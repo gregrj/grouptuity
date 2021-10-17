@@ -37,10 +37,19 @@
         <item name="colorPrimaryVariant">@color/blue_dark</item>
     </style>
 
+    <style name="Theme.Grouptuity.Settings" parent="Theme.Grouptuity">
+        <item name="colorPrimary">@color/gray</item>
+        <item name="colorPrimaryVariant">@color/gray_light</item>
+        <item name="colorOnPrimary">@color/gray_dark</item>
+
+        <item name="android:editTextColor">@color/gray_dark</item>
+        <item name="android:textColorHint">@color/gray</item>
+    </style>
+
     <style name="Theme.Grouptuity.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
     <style name="Theme.Grouptuity.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
 
-    <style name="SplashTheme" parent="Theme.AppCompat.NoActionBar">
+    <style name="Theme.Grouptuity.Splash" parent="Theme.AppCompat.NoActionBar">
         <item name="android:windowBackground">@drawable/splash_screen</item>
         <item name="colorPrimary">@color/red</item>
         <item name="android:statusBarColor">@color/red_dark</item>

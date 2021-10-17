@@ -2,13 +2,9 @@
 <navigation xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     xmlns:tools="http://schemas.android.com/tools"
-    android:id="@+id/nav_graph"
+    android:id="@+id/nav_graph_main"
     app:startDestination="@+id/billSplitFragment"
     tools:ignore="UnusedNavigation">
-
-    <action
-        android:id="@+id/action_global_settingsFragment"
-        app:destination="@id/settingsHolderFragment"/>
 
     <nav_fragment
         android:id="@+id/billSplitFragment"
@@ -33,11 +29,6 @@
 
         <action android:id="@+id/editSimpleCalcTaxTip" app:destination="@id/calculator" />
     </nav_fragment>
-
-    <nav_fragment
-        android:id="@+id/settingsHolderFragment"
-        android:name="com.grouptuity.grouptuity.ui.SettingsHolderFragment"
-        android:label="SettingsHolderFragment" />
 
     <nav_fragment
         android:id="@+id/addressBookFragment"

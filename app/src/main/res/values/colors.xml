@@ -19,4 +19,6 @@
     <color name="off_black">#FF1E1E1E</color>
 
     <color name="TranslucentOverlay">#46000000</color>
+
+    <color name="test">#FFFF7900</color>
 </resources>

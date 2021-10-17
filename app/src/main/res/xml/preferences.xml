@@ -1,35 +1,75 @@
-<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto">
-
-    <PreferenceCategory app:title="@string/messages_header">
+<PreferenceScreen xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:android="http://schemas.android.com/apk/res/android">
+    <PreferenceCategory
+        app:title="@string/settings_account_category"
+        app:iconSpaceReserved="false">
 
         <EditTextPreference
-            app:key="signature"
-            app:title="@string/signature_title"
-            app:useSimpleSummaryProvider="true" />
+            app:key="@string/preference_key_user_name"
+            app:title="@string/settings_account_name"
+            app:useSimpleSummaryProvider="true"
+            app:iconSpaceReserved="false"/>
 
-        <ListPreference
-            app:defaultValue="reply"
-            app:entries="@array/reply_entries"
-            app:entryValues="@array/reply_values"
-            app:key="reply"
-            app:title="@string/reply_title"
-            app:useSimpleSummaryProvider="true" />
-
-    </PreferenceCategory>
-
-    <PreferenceCategory app:title="@string/sync_header">
-
-        <SwitchPreferenceCompat
-            app:key="sync"
-            app:title="@string/sync_title" />
-
-        <SwitchPreferenceCompat
-            app:dependency="sync"
-            app:key="attachment"
-            app:summaryOff="@string/attachment_summary_off"
-            app:summaryOn="@string/attachment_summary_on"
-            app:title="@string/attachment_title" />
+        <EditTextPreference
+            app:key="@string/preference_key_user_email"
+            app:title="@string/settings_account_email"
+            app:useSimpleSummaryProvider="true"
+            app:iconSpaceReserved="false"/>
 
     </PreferenceCategory>
 
+    <PreferenceCategory
+        app:title="@string/settings_bill_category"
+        app:iconSpaceReserved="false">
+
+        <Preference
+            app:key="@string/preference_key_default_tax_percent"
+            app:title="@string/settings_bill_tax_percent"
+            app:useSimpleSummaryProvider="true"
+            app:iconSpaceReserved="false"/>
+
+        <Preference
+            app:key="@string/preference_key_default_tip_percent"
+            app:title="@string/settings_bill_tip_percent"
+            app:useSimpleSummaryProvider="true"
+            app:iconSpaceReserved="false"/>
+
+        <SwitchPreferenceCompat
+            app:key="@string/preference_key_tax_is_tipped"
+            app:title="@string/settings_bill_tip_applied_to_tax"
+            app:summaryOn="@string/settings_bill_auto_add_self_summary_on"
+            app:summaryOff="@string/settings_bill_auto_add_self_summary_off"
+            app:iconSpaceReserved="false"/>
+
+        <SwitchPreferenceCompat
+            app:key="@string/preference_key_discounts_reduce_tip"
+            app:title="@string/settings_bill_discounts_reduce_tip"
+            app:summaryOn="@string/settings_bill_auto_add_self_summary_on"
+            app:summaryOff="@string/settings_bill_auto_add_self_summary_off"
+            app:iconSpaceReserved="false"/>
+
+        <SwitchPreferenceCompat
+            app:key="@string/preference_key_auto_add_self"
+            app:title="@string/settings_bill_auto_add_self"
+            app:summaryOn="@string/settings_bill_auto_add_self_summary_on"
+            app:summaryOff="@string/settings_bill_auto_add_self_summary_off"
+            app:iconSpaceReserved="false"/>
+
+        <SwitchPreferenceCompat
+            app:key="@string/preference_key_contact_search_typo_assist"
+            app:title="@string/settings_bill_contact_search_typo_assist"
+            app:summaryOn="@string/settings_bill_contact_search_typo_assist_mode_on"
+            app:summaryOff="@string/settings_bill_contact_search_typo_assist_mode_off"
+            app:iconSpaceReserved="false"/>
+    </PreferenceCategory>
+
+
+    <PreferenceCategory>
+        <EditTextPreference
+            android:selectable="false"
+            android:key="@string/preference_key_app_version"
+            android:title="App Version"
+            app:useSimpleSummaryProvider="true"
+            app:iconSpaceReserved="false"/>
+    </PreferenceCategory>
 </PreferenceScreen>

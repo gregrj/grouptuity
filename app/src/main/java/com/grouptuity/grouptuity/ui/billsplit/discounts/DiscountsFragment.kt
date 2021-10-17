@@ -67,7 +67,7 @@ class DiscountsFragment: Fragment(), Revealable by RevealableImpl() {
         // Intercept back pressed events to allow fragment-specific behaviors
         backPressedCallback = object : OnBackPressedCallback(true) { override fun handleOnBackPressed() { closeFragment() } }
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, backPressedCallback)
-        binding.toolbar.setNavigationIcon(R.drawable.ic_arrow_back)
+        binding.toolbar.setNavigationIcon(R.drawable.ic_arrow_back_light)
         binding.toolbar.setNavigationOnClickListener { closeFragment() }
 
         postponeEnterTransition()

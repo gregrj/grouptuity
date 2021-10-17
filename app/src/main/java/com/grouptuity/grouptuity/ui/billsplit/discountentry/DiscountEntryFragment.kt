@@ -228,7 +228,7 @@ class DiscountEntryFragment: Fragment(), Revealable by RevealableImpl() {
     }
 
     private fun setupToolbar() {
-        binding.toolbar.setNavigationIcon(R.drawable.ic_arrow_back)
+        binding.toolbar.setNavigationIcon(R.drawable.ic_arrow_back_light)
         binding.toolbar.setNavigationOnClickListener { discountEntryViewModel.handleOnBackPressed() }
 
         discountEntryViewModel.toolbarTitle.observe(viewLifecycleOwner) { binding.toolbar.title = it }
@@ -515,7 +515,7 @@ class DiscountEntryFragment: Fragment(), Revealable by RevealableImpl() {
 
         binding.fab.setOnClickListener {
             when(discountEntryViewModel.fabIcon.value) {
-                R.drawable.ic_arrow_back -> discountEntryViewModel.switchToDiscountProperties()
+                R.drawable.ic_arrow_back_light -> discountEntryViewModel.switchToDiscountProperties()
                 R.drawable.ic_arrow_forward -> trySavingDiscount()
             }
         }

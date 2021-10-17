@@ -440,9 +440,9 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
         if(handlingReimbursements) {
             if(reimbursees.isEmpty()) null else {
                 if(onItems) {
-                    if (items.isEmpty()) R.drawable.ic_arrow_back else  R.drawable.ic_arrow_forward
+                    if (items.isEmpty()) R.drawable.ic_arrow_back_light else  R.drawable.ic_arrow_forward
                 } else {
-                    if (diners.isEmpty()) R.drawable.ic_arrow_back else  R.drawable.ic_arrow_forward
+                    if (diners.isEmpty()) R.drawable.ic_arrow_back_light else  R.drawable.ic_arrow_forward
                 }
             }
         } else {

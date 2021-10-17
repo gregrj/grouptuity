@@ -4,6 +4,7 @@ import android.animation.Animator
 import android.animation.ValueAnimator
 import android.graphics.Typeface
 import android.os.Bundle
+import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -67,11 +68,17 @@ class CalculatorFragment: Fragment(), Revealable by RevealableImpl() {
         binding.fadeOutEditText.setText(args.previousValue)
 
         // Setup toolbar
-        binding.toolbar.title = args.title
-        binding.toolbar.setNavigationIcon(R.drawable.ic_arrow_back)
-        binding.toolbar.setNavigationOnClickListener {
-            if (!calculatorViewModel.isInputLocked.value)
-                closeFragment()
+        binding.toolbar.apply {
+            title = args.title
+
+            // Set toolbar back navigation icon and its color
+            setNavigationIcon(R.drawable.ic_arrow_back_light)
+
+            // Close fragment using default onBackPressed behavior unless animation in progress
+            setNavigationOnClickListener {
+                if (!calculatorViewModel.isInputLocked.value)
+                    closeFragment()
+            }
         }
 
         setupNumberPad()

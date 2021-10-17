@@ -8,7 +8,6 @@ import android.graphics.drawable.Animatable
 import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Bundle
-import android.util.Log
 import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
@@ -94,7 +93,7 @@ class DinerDetailsFragment: Fragment(), Revealable by RevealableImpl() {
         }
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, backPressedCallback)
 
-        binding.toolbar.setNavigationIcon(R.drawable.ic_arrow_back)
+        binding.toolbar.setNavigationIcon(R.drawable.ic_arrow_back_light)
         binding.toolbar.setNavigationOnClickListener { viewModel.handleOnBackPressed() }
         (view.findViewById(R.id.appbar_layout) as AppBarLayout).addOnOffsetChangedListener(
             AppBarLayout.OnOffsetChangedListener { appBarLayout, verticalOffset ->

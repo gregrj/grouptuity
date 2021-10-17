@@ -202,14 +202,14 @@ class ItemEntryFragment: Fragment(), Revealable by RevealableImpl() {
     @SuppressLint("ClickableViewAccessibility")
     private fun setupToolbar() {
         binding.toolbar.inflateMenu(R.menu.toolbar_itementry)
-        binding.toolbar.setNavigationIcon(R.drawable.ic_arrow_back)
+        binding.toolbar.setNavigationIcon(R.drawable.ic_arrow_back_light)
         binding.toolbar.setNavigationOnClickListener { itemEntryViewModel.handleOnBackPressed() }
 
         itemEntryViewModel.toolBarState.observe(viewLifecycleOwner) { toolBarState ->
             binding.toolbar.title = toolBarState.title
 
             if(toolBarState.navIconVisible) {
-                binding.toolbar.setNavigationIcon(R.drawable.ic_arrow_back)
+                binding.toolbar.setNavigationIcon(R.drawable.ic_arrow_back_light)
             } else {
                 binding.toolbar.navigationIcon = null
             }

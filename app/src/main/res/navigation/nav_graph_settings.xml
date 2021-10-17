@@ -1,0 +1,31 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/nav_graph_settings"
+    app:startDestination="@+id/settingsHolderFragment">
+
+    <nav_fragment
+        android:id="@+id/settingsHolderFragment"
+        android:name="com.grouptuity.grouptuity.SettingsHolderFragment"
+        android:label="SettingsHolderFragment" >
+        <action
+            android:id="@+id/editNumericalPreference"
+            app:destination="@id/calculator" />
+    </nav_fragment>
+
+    <nav_fragment
+        android:id="@+id/calculator"
+        android:name="com.grouptuity.grouptuity.ui.calculator.CalculatorFragment"
+        tools:layout="@layout/frag_calculator">
+        <argument
+            android:name="title"
+            app:argType="string"/>
+        <argument
+            android:name="previous_value"
+            app:argType="string"/>
+        <argument
+            android:name="calculation_type"
+            app:argType="com.grouptuity.grouptuity.data.CalculationType"/>
+    </nav_fragment>
+</navigation>

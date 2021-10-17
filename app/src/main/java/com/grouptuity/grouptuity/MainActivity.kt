@@ -90,7 +90,7 @@ class MainActivity: AppCompatActivity() {
 
         val navController = navHostFragment.navController
         navController.navigatorProvider.addNavigator(CustomNavigator(this, navHostFragment.childFragmentManager, R.id.fragment_container_view))
-        navController.setGraph(R.navigation.nav_graph)
+        navController.setGraph(R.navigation.nav_graph_main)
         navController.addOnDestinationChangedListener { _, destination, _ ->
             when(destination.id) {
                 R.id.billSplitFragment -> {
@@ -120,8 +120,8 @@ class MainActivity: AppCompatActivity() {
                             true
                         }
                         R.id.nav_settings -> {
-                            navController.navigate(R.id.action_global_settingsFragment)
-//                            binding.drawerLayout.closeDrawers()
+                            startActivity(Intent(this, SettingsActivity::class.java))
+                            binding.drawerLayout.closeDrawers()
                             false
                         }
                         else -> {
@@ -139,7 +139,8 @@ class MainActivity: AppCompatActivity() {
                             false
                         }
                         R.id.nav_settings -> {
-                            navController.navigate(R.id.action_global_settingsFragment)
+                            startActivity(Intent(this, SettingsActivity::class.java))
+                            binding.drawerLayout.closeDrawers()
                             false
                         }
                         else -> {

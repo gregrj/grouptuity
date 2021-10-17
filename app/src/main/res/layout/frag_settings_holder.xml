@@ -3,7 +3,8 @@
     xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:theme="@style/Theme.Grouptuity.Settings">
 
     <com.google.android.material.appbar.AppBarLayout
         android:id="@+id/appbar_layout"
@@ -14,7 +15,8 @@
             android:id="@+id/status_bar_background_view"
             android:layout_width="match_parent"
             android:layout_height="@dimen/status_bar_height"
-            android:background="?colorSurfaceVariant"/>
+            android:background="?colorPrimaryVariant"
+            android:elevation="4dp"/>
 
         <androidx.appcompat.widget.Toolbar
             android:id="@+id/toolbar"
@@ -29,6 +31,6 @@
         android:id="@+id/fragment_container_view"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
-        android:name="com.grouptuity.grouptuity.ui.SettingsFragment"
+        android:name="com.grouptuity.grouptuity.SettingsFragment"
         app:layout_behavior="@string/appbar_scrolling_view_behavior"/>
 </androidx.coordinatorlayout.widget.CoordinatorLayout>
