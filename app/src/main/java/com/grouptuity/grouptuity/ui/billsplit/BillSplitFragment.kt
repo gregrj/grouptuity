@@ -1,6 +1,7 @@
 package com.grouptuity.grouptuity.ui.billsplit
 
 import android.os.Bundle
+import android.util.Log
 import android.view.*
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
@@ -17,6 +18,8 @@ import com.grouptuity.grouptuity.ui.custom.transitions.CircularRevealTransition
 
 
 // TODO prevent double tap on fab causing navigation error
+
+// TODO fab starts visible when navigating back to fragment
 
 class BillSplitFragment: Fragment() {
     private var binding by setNullOnDestroy<FragBillSplitBinding>()
@@ -57,37 +60,7 @@ class BillSplitFragment: Fragment() {
 
         binding.viewPager.registerOnPageChangeCallback(object: ViewPager2.OnPageChangeCallback() {
             override fun onPageSelected(position: Int) {
-                if(position != fabPageIndex && binding.fab.isOrWillBeShown) {
-                    // Old FAB is showing so first hide and once hidden, show with new image
-                    binding.fab.hide(object: FloatingActionButton.OnVisibilityChangedListener() {
-                        override fun onHidden(fab: FloatingActionButton) {
-                            super.onHidden(fab)
-                            fabPageIndex = position
-                            when (position) {
-                                0 -> {
-                                    fab.setImageResource(R.drawable.ic_add_person)
-                                    fab.show()
-                                }
-                                1 -> {
-                                    fab.setImageResource(R.drawable.ic_add_item)
-                                    fab.show()
-                                }
-                                2 -> { /* no FAB on the Tax&Tip fragment */ }
-                                3 -> { /* no FAB on the Payment fragment */ }
-                            }
-                        }
-                    })
-                } else {
-                    fabPageIndex = position
-                    when (position) {
-                        0 -> {  binding.fab.setImageResource(R.drawable.ic_add_person)
-                            binding.fab.show() }
-                        1 -> {  binding.fab.setImageResource(R.drawable.ic_add_item)
-                            binding.fab.show() }
-                        2 -> {  binding.fab.hide() }
-                        3 -> {  binding.fab.hide() }
-                    }
-                }
+                updateFAB(position)
             }
         })
 
@@ -134,6 +107,45 @@ class BillSplitFragment: Fragment() {
                 1 -> {  // Show fragment for item entry
                     findNavController().navigate(BillSplitFragmentDirections.createNewItem(editedItem = null, CircularRevealTransition.OriginParams(binding.fab)))
                 }
+            }
+        }
+    }
+
+    override fun onViewStateRestored(savedInstanceState: Bundle?) {
+        super.onViewStateRestored(savedInstanceState)
+        updateFAB(binding.viewPager.currentItem)
+    }
+
+    private fun updateFAB(position: Int) {
+        if(position != fabPageIndex && binding.fab.isOrWillBeShown) {
+            // Old FAB is showing so first hide and once hidden, show with new image
+            binding.fab.hide(object: FloatingActionButton.OnVisibilityChangedListener() {
+                override fun onHidden(fab: FloatingActionButton) {
+                    super.onHidden(fab)
+                    fabPageIndex = position
+                    when (position) {
+                        0 -> {
+                            fab.setImageResource(R.drawable.ic_add_person)
+                            fab.show()
+                        }
+                        1 -> {
+                            fab.setImageResource(R.drawable.ic_add_item)
+                            fab.show()
+                        }
+                        2 -> { /* no FAB on the Tax&Tip fragment */ }
+                        3 -> { /* no FAB on the Payment fragment */ }
+                    }
+                }
+            })
+        } else {
+            fabPageIndex = position
+            when (position) {
+                0 -> {  binding.fab.setImageResource(R.drawable.ic_add_person)
+                    binding.fab.show() }
+                1 -> {  binding.fab.setImageResource(R.drawable.ic_add_item)
+                    binding.fab.show() }
+                2 -> {  binding.fab.hide() }
+                3 -> {  binding.fab.hide() }
             }
         }
     }
