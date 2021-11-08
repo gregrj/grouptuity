@@ -498,7 +498,7 @@ private class ItemEntryDinerSelectionRecyclerViewAdapter(val context: Context, v
 
             val isSelected = mSelections.contains(newDiner)
 
-            viewBinding.contactIcon.setContact(newDiner.contact, isSelected)
+            viewBinding.contactIcon.setContact(newDiner.asContact(), isSelected)
 
             viewBinding.name.text = newDiner.name
 

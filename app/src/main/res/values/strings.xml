@@ -142,6 +142,12 @@
         <item quantity="one">%1$d diner</item>
         <item quantity="other">%1$d diners</item>
     </plurals>
+    <string name="debtentry_pays">Pays</string>
+    <string name="debtentry_receives">Receives</string>
+    <string name="debtentry_creditor_message">Receive %s</string>
+    <string name="debtentry_debtor_message">Pay %s</string>
+    <string name="debtentry_dual_nothing_message">Debts cancel out ($0)</string>
+    <string name="debtentry_launching_diner_missing_alert">%s is not included</string>
 
     <string name="items_add_items_hint">Add all items\non the bill</string>
     <string name="items_no_diners_warning">No diners assigned</string>
@@ -313,8 +319,20 @@
     <string name="payments_instruction_credit_card_split">Split bill on credit card</string>
     <string name="payments_instruction_iou_email">Send IOU email to %s</string>
     <string name="payments_instruction_venmo">Pay %s with Venmo</string>
+    <string name="payments_instruction_cash_app">Pay %s with the Cash App</string>
+    <string name="payments_instruction_algorand">Pay %s with Algorand</string>
+    <string name="payments_alias_entry_iou_email">Email address for %s</string>
+    <string name="payments_alias_entry_venmo">Venmo for %s</string>
+    <string name="payments_alias_entry_cash_app">Cash App for %s</string>
+    <string name="payments_alias_entry_algorand">Algorand address for %s</string>
     <string name="payments_selection_instruction">Select restaurant payer</string>
     <string name="payments_close_selection_list">Close payment method list</string>
+    <string name="payments_fab_process_payments">Process Payments</string>
+    <string name="payments_scan_code">Scan code</string>
+    <string name="payments_enter_manually">Enter manually</string>
+    <string name="payments_ptp_username_hint">Enter username</string>
+
+    <string name="venmo_note">Settling the bill with Grouptuity</string>
 
     <string name="settings_toolbar_title">Settings</string>
     <string name="settings_account_category">User Account</string>
@@ -334,10 +352,34 @@
     <string name="settings_bill_tip_applied_to_tax">Tip applied to tax</string>
     <string name="settings_app_version">App Version</string>
 
-
+    <string name="qrcodescanner_close_button">Back</string>
+    <string name="qrcodescanner_camera_flash_button">Toggle camera flash</string>
+    <string name="qrcodescanner_permission_rationale_title">Camera Access</string>
+    <string name="qrcodescanner_camera_permission_rationale_message">Scanning Venmo or Cash App usernames from QR codes requires access to your device camera</string>
+    <string name="qrcodescanner_chip_instruction_general">Scan code for %s</string>
+    <string name="qrcodescanner_chip_instruction_venmo">Scan code in %s\'s Venmo app</string>
+    <string name="qrcodescanner_chip_instruction_cash_app">Scan code in %s\'s Cash App</string>
+    <string name="qrcodescanner_title_invalid_url">Cannot recognize QR Code</string>
+    <string name="qrcodescanner_message_invalid_url_venmo">This does not appear to be a Venmo address</string>
+    <string name="qrcodescanner_message_invalid_url_cash_app">This does not appear to be a $Cashtag</string>
+    <string name="qrcodescanner_message_invalid_url_algorand">This does not appear to be an Algorand address</string>
+    <string name="qrcodescanner_title_no_internet">No Internet connection</string>
+    <string name="qrcodescanner_message_no_internet_venmo">Cannot look up QR code without connecting to venmo.com</string>
+    <string name="qrcodescanner_title_requested_venmo">Verifying Venmo Address</string>
+    <string name="qrcodescanner_title_no_response_venmo">Cannot reach venmo.com</string>
+    <string name="qrcodescanner_message_no_response_venmo">Cannot look up QR code without connecting to venmo.com</string>
+    <string name="qrcodescanner_title_bad_response_venmo">Cannot verify Venmo address</string>
+    <string name="qrcodescanner_message_bad_response_venmo">venmo.com is not responding with a Venmo address</string>
+    <string name="qrcodescanner_title_invalid_venmo">Unrecognized Venmo address</string>
+    <string name="qrcodescanner_message_invalid_venmo">venmo.com does not recognize this QR code as an active Venmo address</string>
+    <string name="qrcodescanner_title_valid_venmo">Venmo Address for %s:</string>
+    <string name="qrcodescanner_title_valid_cash_app">$Cashtag for %s:</string>
+    <string name="qrcodescanner_title_valid_algorand">Algorand address for %s:</string>
 
     <string name="ok">OK</string>
     <string name="cancel">Cancel</string>
+    <string name="retry">Try Again</string>
+    <string name="accept">Accept</string>
     <string name="keep_editing">Keep Editing</string>
     <string name="save">Save</string>
     <string name="proceed">Continue</string>
@@ -385,8 +427,7 @@
 
     <!-- Sync Preferences -->
     <string name="attachment_title">Download incoming attachments</string>
-    <string name="attachment_summary_on">Automatically download attachments for incoming emails
-    </string>
+    <string name="attachment_summary_on">Automatically download attachments for incoming emails</string>
     <string name="attachment_summary_off">Only download attachments when manually requested</string>
     <string name="hello_blank_fragment">Hello blank fragment</string>
 

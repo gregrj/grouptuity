@@ -1,5 +1,6 @@
 package com.grouptuity.grouptuity.data
 
+import android.util.Log
 import androidx.room.*
 import kotlinx.coroutines.flow.Flow
 
@@ -48,7 +49,7 @@ abstract class BaseDao<T> {
 
 @Dao
 abstract class ContactDao: BaseDao<Contact>() {
-    @Query("SELECT contact_lookupKey FROM diner_table WHERE billId = :billId")
+    @Query("SELECT lookupKey FROM diner_table WHERE billId = :billId")
     abstract fun getContactLookupKeysOnBill(billId: Long): Flow<List<String>>
 
     @Query("SELECT * FROM contact_table WHERE lookupKey!='grouptuity_cash_pool_contact_lookupKey' AND lookupKey!='grouptuity_restaurant_contact_lookupKey'")
@@ -97,16 +98,16 @@ abstract class BillDao: BaseDao<Bill>() {
 
 @Dao
 abstract class DinerDao: BaseDao<Diner>() {
-    @Query("SELECT id FROM diner_table WHERE billId = :billId AND contact_lookupKey!='grouptuity_cash_pool_contact_lookupKey' AND contact_lookupKey!='grouptuity_restaurant_contact_lookupKey'")
+    @Query("SELECT id FROM diner_table WHERE billId = :billId AND lookupKey!='grouptuity_cash_pool_contact_lookupKey' AND lookupKey!='grouptuity_restaurant_contact_lookupKey'")
     abstract suspend fun getDinerIdsOnBill(billId: String): List<String>
 
     @Query("SELECT * FROM diner_table WHERE id = :dinerId")
     abstract suspend fun getBaseDiner(dinerId: String): Diner?
 
-    @Query("SELECT * FROM diner_table WHERE billId = :billId AND contact_lookupKey='grouptuity_cash_pool_contact_lookupKey' LIMIT 1")
+    @Query("SELECT * FROM diner_table WHERE billId = :billId AND lookupKey='grouptuity_cash_pool_contact_lookupKey' LIMIT 1")
     abstract suspend fun getBaseCashPool(billId: String): Diner?
 
-    @Query("SELECT * FROM diner_table WHERE billId = :billId AND contact_lookupKey='grouptuity_restaurant_contact_lookupKey' LIMIT 1")
+    @Query("SELECT * FROM diner_table WHERE billId = :billId AND lookupKey='grouptuity_restaurant_contact_lookupKey' LIMIT 1")
     abstract suspend fun getBaseRestaurant(billId: String): Diner?
 
     @Query("SELECT id FROM item_table INNER JOIN diner_item_join_table ON item_table.id=diner_item_join_table.itemId WHERE diner_item_join_table.dinerId=:dinerId")
@@ -129,9 +130,6 @@ abstract class DinerDao: BaseDao<Diner>() {
 
     @Query("SELECT id FROM payment_table INNER JOIN payment_payee_join_table ON payment_table.id=payment_payee_join_table.paymentId WHERE payment_payee_join_table.dinerId=:dinerId")
     abstract suspend fun getPaymentIdsReceivedByDiner(dinerId: String): MutableList<String>
-
-    @Insert(onConflict = OnConflictStrategy.REPLACE)
-    abstract suspend fun addContactForDiner(contact: Contact)
 
     @Insert
     abstract suspend fun addItemsForDiner(joins: List<DinerItemJoin>)
@@ -158,7 +156,6 @@ abstract class DinerDao: BaseDao<Diner>() {
     open suspend fun save(diner: Diner) {
         delete(diner)
         insert(diner)
-        addContactForDiner(diner.contact)
         addItemsForDiner(diner.itemIds.map { DinerItemJoin(diner.id, it) })
         addDebtsOwedByDiner(diner.debtOwedIds.map { DebtDebtorJoin(it, diner.id) })
         addDebtsHeldByDiner(diner.debtHeldIds.map { DebtCreditorJoin(it, diner.id) })

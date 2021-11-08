@@ -3,8 +3,10 @@
     <words>
       <w>addressbook</w>
       <w>aftertax</w>
+      <w>algorand</w>
       <w>billsplit</w>
       <w>bottomsheet</w>
+      <w>cashtag</w>
       <w>deemphasized</w>
       <w>dinerdetails</w>
       <w>discountentry</w>
@@ -14,6 +16,7 @@
       <w>listitem</w>
       <w>reimbursee</w>
       <w>reimbursees</w>
+      <w>reticle</w>
       <w>snackbar</w>
       <w>taxtip</w>
       <w>unfavorite</w>

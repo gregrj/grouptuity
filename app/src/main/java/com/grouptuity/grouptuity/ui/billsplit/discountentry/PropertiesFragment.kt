@@ -276,7 +276,7 @@ internal class DinersListFragment: Fragment() {
             holder.apply {
                 itemView.tag = newDiner // store updated data
 
-                viewBinding.contactIcon.setContact(newDiner.contact, isSelected)
+                viewBinding.contactIcon.setContact(newDiner.asContact(), isSelected)
 
                 viewBinding.name.text = newDiner.name
 
@@ -471,7 +471,7 @@ internal class ItemsListFragment: Fragment() {
                         params.marginEnd = (2 * context.resources.displayMetrics.density).toInt()
                         icon.layoutParams = params
 
-                        icon.setContact(diner.contact, false)
+                        icon.setContact(diner.asContact(), false)
                         viewBinding.dinerIcons.addView(icon)
                     }
                 }

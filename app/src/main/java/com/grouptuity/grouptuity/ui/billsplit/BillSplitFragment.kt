@@ -1,8 +1,10 @@
 package com.grouptuity.grouptuity.ui.billsplit
 
 import android.os.Bundle
-import android.util.Log
-import android.view.*
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.view.animation.Animation
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
@@ -13,18 +15,22 @@ import com.google.android.material.tabs.TabLayoutMediator
 import com.grouptuity.grouptuity.MainActivity
 import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.databinding.FragBillSplitBinding
-import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
 import com.grouptuity.grouptuity.ui.custom.transitions.CircularRevealTransition
+import com.grouptuity.grouptuity.ui.custom.views.hideExtendedFAB
+import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
+import com.grouptuity.grouptuity.ui.custom.views.showExtendedFAB
 
 
 // TODO prevent double tap on fab causing navigation error
 
-// TODO fab starts visible when navigating back to fragment
-
 class BillSplitFragment: Fragment() {
     private var binding by setNullOnDestroy<FragBillSplitBinding>()
     private lateinit var billSplitViewModel: BillSplitViewModel
-    private var fabPageIndex = 0
+    private var fabPageIndexActual = 0
+    private var fabPageIndexTarget = 0
+    private var fabAnimatorsLive = false
+    private var payFABHideAnimation: Animation? = null
+    private var payFABShowAnimation: Animation? = null
 
     companion object {
         const val FRAG_POSITION_DINERS = 0
@@ -60,7 +66,27 @@ class BillSplitFragment: Fragment() {
 
         binding.viewPager.registerOnPageChangeCallback(object: ViewPager2.OnPageChangeCallback() {
             override fun onPageSelected(position: Int) {
-                updateFAB(position)
+                fabPageIndexTarget = position
+
+                if (fabPageIndexActual != fabPageIndexTarget && binding.fab.isOrWillBeShown) {
+
+                    if (fabPageIndexTarget != 3) {
+                        payFABShowAnimation?.apply {
+                            if (!this.hasEnded()) {
+                                payFABShowAnimation?.cancel()
+                                payFABShowAnimation = null
+                            }
+                        }
+
+                        if (payFABHideAnimation == null || payFABHideAnimation!!.hasEnded()) {
+                            payFABHideAnimation = hideExtendedFAB(binding.paymentFab)
+                        }
+                    }
+
+                    hideFAB()
+                } else {
+                    showFAB()
+                }
             }
         })
 
@@ -99,6 +125,13 @@ class BillSplitFragment: Fragment() {
             }
         }
 
+        // Override payments FAB visibility if no payments need to be processed
+        billSplitViewModel.hasPaymentsToProcess.observe(viewLifecycleOwner) {
+            if (fabPageIndexActual == 3) {
+                showFAB()
+            }
+        }
+
         binding.fab.setOnClickListener {
             when(binding.viewPager.currentItem) {
                 0 -> {  // Show address book for contact selection
@@ -109,43 +142,102 @@ class BillSplitFragment: Fragment() {
                 }
             }
         }
+
+        binding.paymentFab.setOnClickListener { billSplitViewModel.requestProcessPayments() }
     }
 
     override fun onViewStateRestored(savedInstanceState: Bundle?) {
         super.onViewStateRestored(savedInstanceState)
-        updateFAB(binding.viewPager.currentItem)
+
+        fabPageIndexTarget = binding.viewPager.currentItem
+        fabPageIndexActual = fabPageIndexTarget
+        when (fabPageIndexActual) {
+            0 -> {
+                binding.fab.setImageResource(R.drawable.ic_add_person)
+                binding.fab.show()
+                binding.paymentFab.visibility = View.INVISIBLE
+            }
+            1 -> {
+                binding.fab.setImageResource(R.drawable.ic_add_item)
+                binding.fab.show()
+                binding.paymentFab.visibility = View.INVISIBLE
+            }
+            2 -> {
+                binding.fab.hide()
+                binding.paymentFab.visibility = View.INVISIBLE
+            }
+            3 -> {
+                binding.fab.hide()
+
+                if (billSplitViewModel.hasPaymentsToProcess.value == true) {
+                    binding.paymentFab.visibility = View.VISIBLE
+                }
+            }
+        }
     }
 
-    private fun updateFAB(position: Int) {
-        if(position != fabPageIndex && binding.fab.isOrWillBeShown) {
-            // Old FAB is showing so first hide and once hidden, show with new image
-            binding.fab.hide(object: FloatingActionButton.OnVisibilityChangedListener() {
-                override fun onHidden(fab: FloatingActionButton) {
-                    super.onHidden(fab)
-                    fabPageIndex = position
-                    when (position) {
-                        0 -> {
-                            fab.setImageResource(R.drawable.ic_add_person)
-                            fab.show()
-                        }
-                        1 -> {
-                            fab.setImageResource(R.drawable.ic_add_item)
-                            fab.show()
-                        }
-                        2 -> { /* no FAB on the Tax&Tip fragment */ }
-                        3 -> { /* no FAB on the Payment fragment */ }
+    private fun hideFAB() {
+        binding.fab.hide(object: FloatingActionButton.OnVisibilityChangedListener() {
+            override fun onHidden(fab: FloatingActionButton) {
+                super.onHidden(fab)
+                showFAB()
+            }
+        })
+    }
+
+    private fun showFAB() {
+        fabPageIndexActual = fabPageIndexTarget
+
+        if (fabPageIndexActual == 3) {
+            binding.fab.hide()
+
+            if (billSplitViewModel.hasPaymentsToProcess.value == true) {
+                payFABHideAnimation?.apply {
+                    if (!this.hasEnded()) {
+                        payFABHideAnimation?.cancel()
+                        payFABHideAnimation = null
                     }
                 }
-            })
+
+                if (payFABShowAnimation == null || payFABShowAnimation!!.hasEnded()) {
+                    payFABShowAnimation = showExtendedFAB(binding.paymentFab)
+                }
+            } else {
+                payFABShowAnimation?.apply {
+                    if (!this.hasEnded()) {
+                        payFABShowAnimation?.cancel()
+                        payFABShowAnimation = null
+                    }
+                }
+
+                if (payFABHideAnimation == null || payFABHideAnimation!!.hasEnded()) {
+                    payFABHideAnimation = hideExtendedFAB(binding.paymentFab)
+                }
+            }
         } else {
-            fabPageIndex = position
-            when (position) {
-                0 -> {  binding.fab.setImageResource(R.drawable.ic_add_person)
-                    binding.fab.show() }
-                1 -> {  binding.fab.setImageResource(R.drawable.ic_add_item)
-                    binding.fab.show() }
-                2 -> {  binding.fab.hide() }
-                3 -> {  binding.fab.hide() }
+            payFABShowAnimation?.apply {
+                if (!this.hasEnded()) {
+                    payFABShowAnimation?.cancel()
+                    payFABShowAnimation = null
+                }
+            }
+
+            if (payFABHideAnimation == null || payFABHideAnimation!!.hasEnded()) {
+                payFABHideAnimation = hideExtendedFAB(binding.paymentFab)
+            }
+
+            when (fabPageIndexActual) {
+                0 -> {
+                    binding.fab.setImageResource(R.drawable.ic_add_person)
+                    binding.fab.show()
+                }
+                1 -> {
+                    binding.fab.setImageResource(R.drawable.ic_add_item)
+                    binding.fab.show()
+                }
+                2 -> {
+                    binding.fab.hide()
+                }
             }
         }
     }

@@ -3,22 +3,27 @@ package com.grouptuity.grouptuity.ui.billsplit
 import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
+import android.app.Activity
+import android.content.ActivityNotFoundException
 import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
 import android.content.res.ColorStateList
 import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
 import android.util.TypedValue
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
-import android.widget.ImageView
-import android.widget.LinearLayout
-import android.widget.Space
+import android.view.*
+import android.widget.*
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.ActivityResult
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.app.AlertDialog
 import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
 import androidx.core.view.*
+import androidx.core.widget.addTextChangedListener
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
@@ -26,6 +31,7 @@ import androidx.recyclerview.widget.DefaultItemAnimator
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.RecyclerView.NO_ID
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.Diner
 import com.grouptuity.grouptuity.data.Payment
@@ -37,12 +43,18 @@ import com.grouptuity.grouptuity.ui.billsplit.PaymentsViewModel.Companion.DEFAUL
 import com.grouptuity.grouptuity.ui.billsplit.PaymentsViewModel.Companion.INELIGIBLE_STATE
 import com.grouptuity.grouptuity.ui.billsplit.PaymentsViewModel.Companion.SELECTING_METHOD_STATE
 import com.grouptuity.grouptuity.ui.billsplit.PaymentsViewModel.Companion.SHOWING_INSTRUCTIONS_STATE
+import com.grouptuity.grouptuity.ui.billsplit.qrcodescanner.QRCodeScannerActivity
+import com.grouptuity.grouptuity.ui.billsplit.payments.getVenmoAppIntent
 import com.grouptuity.grouptuity.ui.custom.views.RecyclerViewBottomOffset
 import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.text.NumberFormat
 
+
+// TODO block input from buttons under select payer instructions
+// TODO prevent surrogate methods if only one diner
 
 class PaymentsFragment: Fragment() {
     companion object {
@@ -53,6 +65,7 @@ class PaymentsFragment: Fragment() {
     private var binding by setNullOnDestroy<FragPaymentsBinding>()
     private lateinit var paymentsViewModel: PaymentsViewModel
     private lateinit var backPressedCallback: OnBackPressedCallback
+    private lateinit var qrCodeScannerLauncher: ActivityResultLauncher<Intent>
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         paymentsViewModel = ViewModelProvider(requireActivity()).get(PaymentsViewModel::class.java)
@@ -86,8 +99,8 @@ class PaymentsFragment: Fragment() {
                     paymentsViewModel.setActivePayment(null)
                 }
 
-                override fun onClickPaymentMethod(payment: Payment, paymentMethod: PaymentMethod) {
-                    paymentsViewModel.setPaymentMethodPreference(payment, paymentMethod)
+                override fun onClickPaymentMethod(method: PaymentMethod) {
+                    paymentsViewModel.setPaymentMethod(method)
                 }
 
                 override fun onClickSurrogate(diner: Diner) {
@@ -99,7 +112,7 @@ class PaymentsFragment: Fragment() {
         binding.list.apply {
             adapter = recyclerAdapter
 
-            //TODO starttransition getting called on all 4 tab fragments?
+            //TODO start transition getting called on all 4 tab fragments?
             requireParentFragment().apply {
                 postponeEnterTransition()
                 viewTreeObserver.addOnPreDrawListener {
@@ -123,6 +136,123 @@ class PaymentsFragment: Fragment() {
             // TODO FAb toggle based on state and payments
 
             binding.noPaymentsHint.visibility = if (paymentsData.first.isEmpty()) View.VISIBLE else View.GONE
+        }
+
+        paymentsViewModel.showSetAliasDialogEvent.observe(viewLifecycleOwner) { it.consume()?.apply { showSetAliasDialog(this.first, this.second, this.third) } }
+
+        paymentsViewModel.processPaymentsEvent.observe(viewLifecycleOwner) { it.consume()?.apply { processPayments() } }
+
+        qrCodeScannerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                Log.e("ok", result.toString())
+            } else {
+                Log.e("false", result.toString())
+            }
+        }
+    }
+
+    private fun showSetAliasDialog(subject: Int, diner: Diner, method: PaymentMethod) {
+
+        val items = mutableListOf<Triple<String, Int, () -> Unit>>()
+
+        if (method.aliasCodeScannable && requireContext().packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY)) {
+            items.add(Triple(requireContext().getString(R.string.payments_scan_code), R.drawable.ic_qr_code_scanner_36dp) {
+                val intent = Intent(requireContext(), QRCodeScannerActivity::class.java)
+                intent.putExtra(getString(R.string.intent_key_qrcode_payment_method), method)
+                intent.putExtra(getString(R.string.intent_key_qrcode_diner_name), diner.name)
+                qrCodeScannerLauncher.launch(intent)
+            })
+        }
+
+        diner.emailAddresses.forEach { email ->
+            items.add(Triple(email, R.drawable.ic_payment_iou_email) {
+                when(subject) {
+                    PaymentsViewModel.SELECTING_PAYER_ALIAS -> paymentsViewModel.setPayerAlias(email)
+                    PaymentsViewModel.SELECTING_PAYEE_ALIAS -> paymentsViewModel.setPayeeAlias(email)
+                    PaymentsViewModel.SELECTING_SURROGATE_ALIAS -> paymentsViewModel.setSurrogateAlias(email)
+                }
+            })
+        }
+
+        items.add(Triple(requireContext().getString(R.string.payments_enter_manually), R.drawable.ic_edit_24dp_surface) {
+            val editTextDialog = MaterialAlertDialogBuilder(ContextThemeWrapper(requireContext(), R.style.AlertDialog))
+                .setIcon(method.paymentIconId)
+                .setTitle(requireContext().getString(method.aliasSelectionStringId, diner.name))
+                .setView(R.layout.dialog_edit_text)
+                .setNegativeButton(resources.getString(R.string.cancel)) { _, _ -> }
+                .setPositiveButton(resources.getString(R.string.save)) { dialog, _ ->
+                    (dialog as? AlertDialog)?.findViewById<EditText>(R.id.edit_text)?.text?.toString()?.apply {
+                        when(subject) {
+                            PaymentsViewModel.SELECTING_PAYER_ALIAS -> paymentsViewModel.setPayerAlias(this)
+                            PaymentsViewModel.SELECTING_PAYEE_ALIAS -> paymentsViewModel.setPayeeAlias(this)
+                            PaymentsViewModel.SELECTING_SURROGATE_ALIAS -> paymentsViewModel.setSurrogateAlias(this)
+                        }
+                    }
+                }.create()
+            editTextDialog.show()
+
+            // Positive button is only enabled when the EditText is not empty
+            editTextDialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = false
+            editTextDialog.findViewById<EditText>(R.id.edit_text)?.also { editText ->
+                editText.requestFocus()
+                editText.addTextChangedListener {
+                    editTextDialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = !it.isNullOrEmpty()
+                }
+            }
+
+            // Focus on EditText and show keyboard
+            editTextDialog.window?.clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM)
+            editTextDialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE)
+        })
+
+        val adapter = object: ArrayAdapter<Triple<String, Int, () -> Unit>>(requireContext(), android.R.layout.select_dialog_item, items) {
+            override fun getView(position: Int, convertView: View?, parent: ViewGroup) = super.getView(position, convertView, parent).also {
+                it.findViewById<TextView>(android.R.id.text1).apply {
+                    compoundDrawablePadding = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, 14F, context.resources.displayMetrics).toInt()
+                    setCompoundDrawablesWithIntrinsicBounds(items[position].second, 0, 0, 0)
+                    text = items[position].first
+                }
+            }
+        }
+
+        MaterialAlertDialogBuilder(requireContext())
+            .setIcon(method.paymentIconId)
+            .setTitle(requireContext().getString(method.aliasSelectionStringId, diner.name))
+            .setAdapter(adapter) { _, position -> items[position].third() }
+            .show()
+    }
+
+    private fun processPayments() {
+        // TODO for testing
+
+        val counterparty: String = "example@example.com"
+
+        val numberFormat = NumberFormat.getNumberInstance()
+        numberFormat.minimumFractionDigits = 2
+        numberFormat.maximumFractionDigits = 2
+        numberFormat.isGroupingUsed = false
+        val amount: String = numberFormat.format(2.34)
+
+        try {
+            val venmoIntent = getVenmoAppIntent(
+                requireContext(),
+                counterparty,
+                amount,
+                false
+            )
+            startActivityForResult(venmoIntent, 12674)
+        } catch (e: ActivityNotFoundException) {
+//                val venmoIntent = Intent(this, VenmoWebViewActivity::class.java)
+//                val venmo_uri = VenmoSDK.openVenmoPaymentInWebView(
+//                    Grouptuity.VENMO_APP_ID,
+//                    "Grouptuity",
+//                    contact,
+//                    amount,
+//                    note,
+//                    action
+//                )
+//                venmoIntent.putExtra("url", venmo_uri)
+//                startActivityForResult(venmoIntent, VenmoActivityRequestCode)
         }
     }
 }
@@ -158,7 +288,7 @@ private class PaymentRecyclerViewAdapter(val context: Context,
     interface PaymentRecyclerViewListener {
         fun onClickActivePaymentMethodIcon(payment: Payment)
         fun onClickCloseButton(payment: Payment)
-        fun onClickPaymentMethod(payment: Payment, paymentMethod: PaymentMethod)
+        fun onClickPaymentMethod(method: PaymentMethod)
         fun onClickSurrogate(diner: Diner)
     }
 
@@ -603,7 +733,9 @@ private class PaymentRecyclerViewAdapter(val context: Context,
                     }
                     it.setImageResource(method.paymentIconId)
                     it.setOnClickListener {
-                        listener.onClickPaymentMethod((viewHolder.itemView.tag as PaymentData).payment, method)
+                        if (viewHolder.viewHolderState == SELECTING_METHOD_STATE) {
+                            listener.onClickPaymentMethod(method)
+                        }
                     }
                 })
 
@@ -747,20 +879,8 @@ private class PaymentRecyclerViewAdapter(val context: Context,
                     viewHolderAnimationStartTime = listAnimationStartTime
 
                     if (animationProgress == 1f) {
-
-                        if(((itemView.tag as PaymentData).payment).payer.name == "Drew Regitsky") {
-                            Log.e("applying "+newPaymentData.displayState, "now")
-                        }
-
-
-
                         applyState(newPaymentData.displayState)
                     } else {
-
-                        if(((itemView.tag as PaymentData).payment).payer.name == "Drew Regitsky") {
-                            Log.e("animating "+newPaymentData.displayState, "now")
-                        }
-
                         when (newPaymentData.displayState) {
                             SELECTING_METHOD_STATE -> {
                                 animateStateChange(DEFAULT_STATE, SELECTING_METHOD_STATE, animationProgress)

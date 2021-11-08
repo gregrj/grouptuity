@@ -146,17 +146,49 @@
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     app:layout_constraintTop_toTopOf="parent"
-                                    app:layout_constraintStart_toStartOf="parent"
+                                    app:layout_constraintEnd_toEndOf="parent"
                                     app:layout_constraintBottom_toBottomOf="parent"
-                                    android:layout_marginStart="8dp"/>
+                                    android:gravity="center"/>
 
                                 <com.google.android.material.checkbox.MaterialCheckBox
                                     android:id="@+id/select_all_debtors"
                                     android:layout_width="wrap_content"
                                     android:layout_height="wrap_content"
                                     app:layout_constraintTop_toTopOf="parent"
-                                    app:layout_constraintEnd_toEndOf="parent"
-                                    app:layout_constraintBottom_toBottomOf="parent"/>
+                                    app:layout_constraintStart_toStartOf="parent"
+                                    app:layout_constraintBottom_toBottomOf="parent"
+                                    android:layout_marginStart="8dp"/>
+
+                                <TextView
+                                    android:id="@+id/pays_label"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    app:layout_constraintTop_toTopOf="parent"
+                                    app:layout_constraintBottom_toBottomOf="parent"
+                                    app:layout_constraintStart_toEndOf="@+id/select_all_debtors"
+                                    android:text="@string/debtentry_pays"
+                                    style="@android:style/TextAppearance.Material.Medium"/>
+
+                                <TextView
+                                    android:id="@+id/receives_label"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    app:layout_constraintTop_toTopOf="parent"
+                                    app:layout_constraintBottom_toBottomOf="parent"
+                                    app:layout_constraintEnd_toStartOf="@+id/select_all_creditors"
+                                    android:text="@string/debtentry_receives"
+                                    style="@android:style/TextAppearance.Material.Medium"/>
+
+                                <ImageView
+                                    android:id="@+id/arrow"
+                                    android:layout_width="0dp"
+                                    android:layout_height="wrap_content"
+                                    app:layout_constraintTop_toTopOf="parent"
+                                    app:layout_constraintBottom_toBottomOf="parent"
+                                    app:layout_constraintStart_toEndOf="@+id/pays_label"
+                                    app:layout_constraintEnd_toStartOf="@+id/receives_label"
+                                    android:src="@drawable/ic_arrow_forward_long"
+                                    android:autoMirrored="true"/>
 
                             </androidx.constraintlayout.widget.ConstraintLayout>
 
@@ -190,7 +222,6 @@
                         android:elevation="4dp"/>
 
                 </androidx.coordinatorlayout.widget.CoordinatorLayout>
-
             </LinearLayout>
 
             <View

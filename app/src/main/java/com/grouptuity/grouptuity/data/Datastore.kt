@@ -3,6 +3,8 @@ package com.grouptuity.grouptuity.data
 import android.app.Application
 import android.content.Context
 import android.content.pm.PackageManager
+import android.database.Cursor
+import android.net.Uri
 import android.provider.ContactsContract
 import android.util.Log
 import androidx.datastore.core.DataStore
@@ -11,9 +13,8 @@ import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.*
 import androidx.room.*
 import com.grouptuity.grouptuity.BuildConfig
+import com.grouptuity.grouptuity.Event
 import com.grouptuity.grouptuity.R
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import java.text.DateFormat
@@ -33,6 +34,9 @@ val Context.preferenceDataStore: DataStore<Preferences> by preferencesDataStore(
 
 abstract class UIViewModel(app: Application): AndroidViewModel(app) {
     protected val repository = Repository.getInstance(app)
+
+    protected val context: Context
+        get() = getApplication<Application>().applicationContext
 
     private val transitionInputLocked = MutableStateFlow(false)
     private val inputLocks = mutableListOf<Flow<Boolean>>(transitionInputLocked)
@@ -111,6 +115,8 @@ class Repository(context: Context) {
 
     // App-level data
     val loadInProgress = MutableStateFlow(true)
+    val requestProcessPaymentsEvent = MutableLiveData<Event<Boolean>>()
+    val requestoadInProgress = MutableStateFlow(true)
     val bills = database.getSavedBills()
     val selfContact = combine(userName.stateFlow, userPhotoUri.stateFlow) { userName, userPhotoUri ->
         Contact.updateSelfContactData(userName, userPhotoUri)
@@ -120,8 +126,8 @@ class Repository(context: Context) {
 
     // Private backing fields for bill-specific entity flows
     private var mBill = Bill("", "", 0L, 0.0, true, 0.0, tipAsPercent = true, isTaxTipped = false, discountsReduceTip = false)
-    private var mCashPool = Diner("", "", -1, Contact.cashPool, PaymentPreferences())
-    private var mRestaurant = Diner("", "", -0, Contact.restaurant, PaymentPreferences())
+    private var mCashPool = Diner("", "", -1, Contact.cashPool)
+    private var mRestaurant = Diner("", "", -0, Contact.restaurant)
     private var mDiners = mutableListOf<Diner>()
     private var mItems = mutableListOf<Item>()
     private var mDebts = mutableListOf<Debt>()
@@ -304,14 +310,17 @@ class Repository(context: Context) {
         commitBill()
 
         // Write updates to the database
-        database.saveBill(newBill).invokeOnCompletion { loadedBillId.value = newBill.id }
-        database.saveDiner(cashPool)
-        database.saveDiner(restaurant)
+        database.saveBill(newBill).invokeOnCompletion {
+            loadedBillId.value = newBill.id
+
+            database.saveDiner(cashPool)
+            database.saveDiner(restaurant)
+        }
     }
-    fun loadSavedBill(billId: String) = CoroutineScope(Dispatchers.IO).launch {
+    fun loadSavedBill(context: Context, billId: String) = CoroutineScope(Dispatchers.IO).launch {
         loadInProgress.value = true
 
-        val payload = database.loadBill(billId)
+        val payload = database.loadBill(context, billId)
         if (payload == null) {
             createAndLoadNewBill()
         } else {
@@ -386,7 +395,9 @@ class Repository(context: Context) {
 
     // Diner Functions
     fun addSelfAsDiner(includeWithEveryone: Boolean = true) {
-        val selfDiner = Diner(newUUID(), mBill.id, maxDinerListIndex++, Contact.self)
+        val selfDiner = Diner(newUUID(), mBill.id, ++maxDinerListIndex, Contact.self).also {
+            // TODO add emails
+        }
 
         if (includeWithEveryone) {
             // TODO
@@ -395,20 +406,25 @@ class Repository(context: Context) {
         mDiners.add(selfDiner)
         commitBill()
 
+        // TODO save contact to database?
+
         database.saveDiner(selfDiner)
         //TODO commit updates for other entities affected by includeWithEveryone
     }
-    fun addContactsAsDiners(dinerContacts: Collection<Contact>, includeWithEveryone: Boolean = true) {
-        val diners: List<Diner> = if (includeWithEveryone) {
-            dinerContacts.map { contact ->
-                Log.e(contact.name, ""+ mBill.id)
-                Diner(newUUID(), mBill.id, maxDinerListIndex++, contact).also {
+    fun addContactsAsDiners(context: Context, dinerContacts: List<Contact>, includeWithEveryone: Boolean = true) {
+        val diners: List<Diner> = dinerContacts.map { contact ->
+            Diner(newUUID(), mBill.id, ++maxDinerListIndex, contact).also {
+                if(includeWithEveryone) {
                     // TODO add all-diner items/debts/discounts to this diner
                 }
-            }
-        } else {
-            dinerContacts.map { contact ->
-                Diner(newUUID(), mBill.id, maxDinerListIndex++, contact)
+
+                CoroutineScope(Dispatchers.IO).launch {
+                    AddressBook.getContactData(context, contact.lookupKey)?.apply {
+                        // Update photoUri and email addresses, but keep Diner saved name because the user
+                        // can edit this in the app
+                        it.emailAddresses = third
+                    }
+                }
             }
         }
 
@@ -416,6 +432,7 @@ class Repository(context: Context) {
 
         commitBill()
 
+        database.saveContacts(dinerContacts)
         database.saveDiners(diners)
         //TODO commit updates for other entities affected by includeWithEveryone
     }
@@ -437,7 +454,7 @@ class Repository(context: Context) {
 
     // Item Functions
     fun addItem(price: Double, name: String, diners: Collection<Diner>) {
-        val item = Item(newUUID(), mBill.id, maxItemListIndex++, price, name)
+        val item = Item(newUUID(), mBill.id, ++maxItemListIndex, price, name)
 
         diners.forEach { diner ->
             item.addDiner(diner)
@@ -487,7 +504,7 @@ class Repository(context: Context) {
 
     // Debt Functions
     fun addDebt(amount: Double, name: String, debtors: Collection<Diner>, creditors: Collection<Diner>) {
-        val debt = Debt(newUUID(), mBill.id, maxDebtListIndex++, amount, name)
+        val debt = Debt(newUUID(), mBill.id, ++maxDebtListIndex, amount, name)
 
         debtors.forEach { debtor ->
             debt.addDebtor(debtor)
@@ -515,7 +532,7 @@ class Repository(context: Context) {
 
     // Discount Functions
     fun addDiscount(asPercent: Boolean, onItems: Boolean, value: Double, cost: Double?, items: List<Item>, recipients: List<Diner>, purchasers: List<Diner>) {
-        val discount = Discount(newUUID(), mBill.id, maxDiscountListIndex++, asPercent, onItems, value, cost)
+        val discount = Discount(newUUID(), mBill.id, ++maxDiscountListIndex, asPercent, onItems, value, cost)
 
         items.forEach { item ->
             discount.addItem(item)
@@ -591,15 +608,44 @@ class Repository(context: Context) {
             else -> { paymentStableIdMap[payment.payerId + payment.payeeId] }
         }
     }
-    fun setPaymentPreference(payment: Payment, method: PaymentMethod, surrogate: Diner?) {
-        payment.payer.setPaymentPreference(
-            if(payment.payee.isCashPool()) mRestaurant else payment.payee,
+
+    fun setPaymentTemplate(
+        method: PaymentMethod,
+        payer: Diner,
+        payee: Diner,
+        surrogate: Diner? = null,
+        payerAlias: String? = null,
+        payeeAlias: String? = null,
+        surrogateAlias: String? = null) {
+
+        val newTemplate = PaymentTemplate(
             method,
-            surrogate)
+            payer.id,
+            payee.id,
+            surrogate?.id,
+            payerAlias,
+            payeeAlias,
+            surrogateAlias)
+
+        payer.setPaymentTemplate(newTemplate)
+
+        if (payerAlias != null && payer.getDefaultAliasForMethod(method) == null) {
+            payer.setDefaultAliasForMethod(method, payerAlias)
+        }
+
+        if (payeeAlias != null && payee.getDefaultAliasForMethod(method) == null) {
+            payee.setDefaultAliasForMethod(method, payeeAlias)
+            database.saveDiner(payee)
+        }
+
+        if (surrogateAlias != null && surrogate!!.getDefaultAliasForMethod(method) == null) {
+            surrogate.setDefaultAliasForMethod(method, surrogateAlias)
+            database.saveDiner(surrogate)
+        }
 
         commitBill()
 
-        database.saveDiner(payment.payer)
+        database.saveDiner(payer)
     }
 
     init {
@@ -609,7 +655,7 @@ class Repository(context: Context) {
                 mBill.id -> { /* Correct bill already loaded */ }
                 else -> {
                     // TODO check if bill is expired
-                    loadSavedBill(billId)
+                    loadSavedBill(context, billId)
                 }
             }
         }
@@ -627,6 +673,69 @@ class AddressBook(context: Context) {
                 val instance = AddressBook(context)
                 INSTANCE = instance
                 instance
+            }
+        }
+
+        private fun getEmailAddressesForContactId(context: Context, contactId: String): List<String> {
+            val emailAddresses = mutableListOf<String>()
+            var cursor: Cursor? = null
+
+            try {
+                cursor = context.contentResolver.query(
+                    ContactsContract.CommonDataKinds.Email.CONTENT_URI,
+                    arrayOf(ContactsContract.CommonDataKinds.Email.ADDRESS),
+                    ContactsContract.CommonDataKinds.Email.CONTACT_ID + " = " + contactId,
+                    null,
+                    null
+                )?.apply {
+                    while(this.moveToNext()) {
+                        emailAddresses.add(this.getString(0))
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("Failed email query", e.stackTraceToString())
+            } finally {
+                cursor?.close()
+            }
+
+            return emailAddresses
+        }
+
+        fun getContactData(context: Context, lookupKey: String): Triple<String, String?, List<String>>? {
+            var contactName: String? = null
+            var contactPhotoUri: String? = null
+            var contactEmailAddresses: List<String>? = null
+            var cursor: Cursor? = null
+
+            try {
+                val lookupUri: Uri = Uri.withAppendedPath(ContactsContract.Contacts.CONTENT_LOOKUP_URI, lookupKey)
+
+                cursor = context.contentResolver.query(
+                    lookupUri,
+                    arrayOf(ContactsContract.Contacts._ID,
+                        ContactsContract.Contacts.LOOKUP_KEY,
+                        ContactsContract.Contacts.DISPLAY_NAME_PRIMARY,
+                        ContactsContract.Contacts.PHOTO_URI),
+                    null,
+                    null,
+                    null)?.apply {
+
+                    if (this.moveToFirst()) {
+                        contactName = this.getString(2).trim()
+                        contactPhotoUri = this.getString(3)
+                        contactEmailAddresses = getEmailAddressesForContactId(context, this.getString(0))
+                    }
+                }
+            } catch (e: Exception) {
+                Log.e("Failed contact query", e.stackTraceToString())
+            } finally {
+                cursor?.close()
+            }
+
+            return if (contactName != null) {
+                Triple(contactName!!, contactPhotoUri, contactEmailAddresses ?: emptyList())
+            } else {
+                null
             }
         }
     }
@@ -654,15 +763,11 @@ class AddressBook(context: Context) {
 
         // Start with device contacts and supplement with saved app contacts
         emit(fromDevice.toMutableMap().apply {
-            fromApp.forEach { (lookupKey, appContact) ->
-                this.merge(lookupKey, appContact) { oldContact, newContact ->
-                    if (oldContact.name != newContact.name ||
-                        oldContact.photoUri != newContact.photoUri) {
-                        newContact.withUpdatedExternalInfo(oldContact.name, newContact.name).also {
-                            updatedAppContacts.add(it)
-                        }
-                    } else {
-                        newContact
+            fromApp.forEach { (lookupKey, contact) ->
+                this.merge(lookupKey, contact) { deviceContact, appContact ->
+                    appContact.also {
+                        it.name = deviceContact.name
+                        it.photoUri = deviceContact.photoUri
                     }
                 }
             }
@@ -703,7 +808,8 @@ class AddressBook(context: Context) {
             arrayOf(ContactsContract.Contacts._ID,
                     ContactsContract.Contacts.LOOKUP_KEY,
                     ContactsContract.Contacts.DISPLAY_NAME_PRIMARY,
-                    ContactsContract.Contacts.PHOTO_URI),
+                    ContactsContract.Contacts.PHOTO_URI,
+                    ContactsContract.Contacts.HAS_PHONE_NUMBER),
             null,
             null,
             null)?.apply {
@@ -715,10 +821,12 @@ class AddressBook(context: Context) {
                 if(name.isNullOrBlank() || excludedNames.contains(name))
                     continue
 
-                contacts[getString(1)] = Contact(getString(1),
-                                                 name.trim(),
-                                                 getString(3),
-                                                 Contact.VISIBLE)
+                contacts[getString(1)] = Contact(
+                    getString(1),
+                    name.trim(),
+                    Contact.VISIBLE).also {
+                        it.photoUri = getString(3)
+                    }
             }
         }?.close()
 
@@ -741,8 +849,7 @@ class AddressBook(context: Context) {
 @Database(entities = [Bill::class, Diner::class, Item::class, Debt::class, Discount::class,
     Payment::class, Contact::class, DinerItemJoin::class, DebtDebtorJoin::class,
     DebtCreditorJoin::class, DiscountRecipientJoin::class, DiscountPurchaserJoin::class,
-    DiscountItemJoin::class, PaymentPayerJoin::class, PaymentPayeeJoin::class],
-    exportSchema = false, version = 1)
+    DiscountItemJoin::class, PaymentPayerJoin::class, PaymentPayeeJoin::class], exportSchema = false, version = 1)
 @TypeConverters(Converters::class)
 abstract class AppDatabase: RoomDatabase() {
     abstract fun billDao(): BillDao
@@ -809,7 +916,7 @@ abstract class AppDatabase: RoomDatabase() {
     fun saveDiscount(discount: Discount) = CoroutineScope(Dispatchers.IO).launch { discountDao().save(discount) }
     fun savePayment(payment: Payment) = CoroutineScope(Dispatchers.IO).launch { paymentDao().save(payment) }
 
-    suspend fun loadBill(billId: String): LoadBillPayload? {
+    suspend fun loadBill(context: Context, billId: String): LoadBillPayload? {
         val bill = billDao().getBill(billId) ?: return null
         val cashPool = dinerDao().getCashPoolOnBill(billId) ?: return null
         val restaurant = dinerDao().getRestaurantOnBill(billId) ?: return null
@@ -819,7 +926,21 @@ abstract class AppDatabase: RoomDatabase() {
         val discountMap = discountDao().getDiscountsOnBill(billId).associateBy { it.id }
         val paymentMap = paymentDao().getPaymentsOnBill(billId).associateBy { it.id }
 
-        dinerMap.forEach { (_, diner) -> diner.populateEntityLists(itemMap, debtMap, discountMap, paymentMap) }
+        dinerMap.forEach { (_, diner) ->
+
+            if (diner.lookupKey == Contact.self.lookupKey) {
+                // TODO pull data for self
+            } else {
+                AddressBook.getContactData(context, diner.lookupKey)?.apply {
+                    // Update photoUri and email addresses, but keep Diner saved name because the user
+                    // can edit this in the app
+                    diner.photoUri = second
+                    diner.emailAddresses = third
+                }
+            }
+
+            diner.populateEntityLists(itemMap, debtMap, discountMap, paymentMap)
+        }
         itemMap.forEach { (_, item) -> item.populateEntityLists(dinerMap, discountMap) }
         debtMap.forEach { (_, debt) -> debt.populateEntityLists(dinerMap) }
         discountMap.forEach { (_, discount) -> discount.populateEntityLists(dinerMap, itemMap) }

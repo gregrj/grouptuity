@@ -13,6 +13,7 @@
         <item name="colorTertiary">@color/gray</item>
         <item name="colorTertiaryVariant">@color/gray_dark</item>
         <item name="colorOnTertiary">@color/white</item>
+        <item name="colorTertiaryHighlight">@color/gray_light</item>
 
         <item name="colorSurface">@color/white</item>
         <item name="colorSurfaceVariant">@color/gray_light</item>
@@ -46,6 +47,13 @@
         <item name="android:textColorHint">@color/gray</item>
     </style>
 
+    <style name="Theme.Grouptuity.Camera" parent="Theme.Grouptuity">
+        <item name="android:statusBarColor">@color/black</item>
+        <item name="android:navigationBarColor">@color/black</item>
+        <item name="android:colorBackground">@color/black</item>
+        <item name="colorBackground">@color/black</item>
+    </style>
+
     <style name="Theme.Grouptuity.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
     <style name="Theme.Grouptuity.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
 
@@ -59,6 +67,16 @@
         <item name="colorPrimary">@color/blue</item>
         <item name="buttonBarPositiveButtonStyle">@style/Widget.MaterialComponents.Button</item>
         <item name="buttonBarNegativeButtonStyle">@style/Widget.MaterialComponents.Button.TextButton.Dialog</item>
+    </style>
+
+    <style name="AlertDialog" parent="Theme.MaterialComponents.DayNight.Dialog.Alert">
+        <item name="colorPrimary">@color/gray_dark</item>
+        <item name="android:editTextColor">@color/gray_dark</item>
+        <item name="android:textColorHint">@color/gray</item>
+        <item name="colorControlNormal">@color/gray</item>
+        <item name="colorControlActivated">@color/blue</item>
+        <item name="colorControlHighlight">@color/blue</item>
+        <item name="android:textColorHighlight">@color/gray_light</item>
     </style>
 
     <style name="AppThemeSecondaryEditTextActionView" parent="Theme.Grouptuity.Secondary">

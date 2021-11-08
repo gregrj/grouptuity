@@ -363,12 +363,12 @@ class BillCalculation(private val bill: Bill,
 
         // Insert surrogate transactions for indirect payments to restaurant via peer-to-peer
         transactionMap.getPaymentsToPayee(restaurant).forEach { (payer, amount) ->
-            payer.paymentPreferences.getForRecipient(restaurant).also { (method, surrogateId) ->
-                if (surrogateId != null) {
-                    diners.find { it.id == surrogateId }?.also { surrogate ->
+            payer.getPaymentTemplate(restaurant).also { template ->
+                if (template?.surrogateId != null) {
+                    diners.find { it.id == template.surrogateId }?.also { surrogate ->
                         transactionMap.removeTransaction(payer, restaurant)
                         dinersWithoutBills.remove(payer)
-                        paymentsMap[payer]!!.add(createPayment(amount, method, payer, restaurant, surrogate))
+                        paymentsMap[payer]!!.add(createPayment(amount, template.method, payer, restaurant, surrogate))
 
                         transactionMap.addTransaction(surrogate, restaurant, amount)
                     }
@@ -384,13 +384,13 @@ class BillCalculation(private val bill: Bill,
         val nonPoolCreditCardUsers = mutableListOf<Diner>()
         var poolAmount = 0.0
         diners.forEach { payer ->
-            payer.paymentPreferences.getForRecipient(restaurant).also { (method, _) ->
-                if (method == PaymentMethod.CREDIT_CARD_SPLIT) {
+            payer.getPaymentTemplate(restaurant).also { template ->
+                if (template?.method == PaymentMethod.CREDIT_CARD_SPLIT) {
                     poolCreditCardUsers.add(payer)
                     poolAmount += transactionMap.getTransactionAmount(payer, restaurant)
                 } else if (transactionMap.getTransactionAmount(payer, restaurant) > 0.0)  {
-                    when (method) {
-                        PaymentMethod.CASH -> {
+                    when (template?.method) {
+                        null, PaymentMethod.CASH -> {
                             poolCashContributors.add(payer)
                             poolAmount += transactionMap.getTransactionAmount(payer, restaurant)
                         }
@@ -443,9 +443,9 @@ class BillCalculation(private val bill: Bill,
             }
         } else {
             transactionMap.getPaymentsToPayee(restaurant).forEach { (payer, amount) ->
-                payer.paymentPreferences.getForRecipient(restaurant).also { (method, _) ->
+                payer.getPaymentTemplate(restaurant).also { template ->
                     dinersWithoutBills.remove(payer)
-                    paymentsMap[payer]!!.add(createPayment(amount, method, payer, restaurant, null))
+                    paymentsMap[payer]!!.add(createPayment(amount, template?.method ?: PaymentMethod.CASH, payer, restaurant, null))
                 }
             }
         }
@@ -457,7 +457,7 @@ class BillCalculation(private val bill: Bill,
                     paymentsMap[payer]!!.add(
                         createPayment(
                             amount,
-                            payer.paymentPreferences.getForRecipient(payee).first,
+                            payer.getPaymentTemplate(payee)?.method ?: PaymentMethod.CASH,
                             payer,
                             payee,
                             null)
@@ -499,11 +499,10 @@ class BillCalculation(private val bill: Bill,
     }
 
     private fun createPayment(amount: Double, method: PaymentMethod, payer: Diner, payee: Diner, surrogate: Diner?) =
-        Payment(newUUID(), bill.id, amount, method.name, false, payer.id, payee.id, surrogate?.id).also {
+        Payment(newUUID(), bill.id, amount, method, false, payer.id, payee.id, surrogate?.id).also {
             it.payer = payer
             it.payee = payee
             it.surrogate = surrogate
-            it.method = method
         }
 }
 

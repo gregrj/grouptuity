@@ -37,6 +37,7 @@ import com.grouptuity.grouptuity.ui.custom.views.slideUpFAB
 import java.text.NumberFormat
 
 // TODO handle inset changes
+// TODO handle screen orientation change (also on other fragments)
 
 
 class DiscountEntryFragment: Fragment(), Revealable by RevealableImpl() {
@@ -126,8 +127,8 @@ class DiscountEntryFragment: Fragment(), Revealable by RevealableImpl() {
 
         binding.pricePlaceholder.text = NumberFormat.getCurrencyInstance().apply { this.minimumFractionDigits = 0 }.format(0)
 
-        discountEntryViewModel.showUnsavedValidEditsAlertEvent.observe(viewLifecycleOwner) { it.consume()?.apply { showUnsavedValidEditsAlertEvent() } }
-        discountEntryViewModel.showUnsavedInvalidEditsAlertEvent.observe(viewLifecycleOwner) { it.consume()?.apply { showUnsavedInvalidEditsAlertEvent() } }
+        discountEntryViewModel.showUnsavedValidEditsAlertEvent.observe(viewLifecycleOwner) { it.consume()?.apply { showUnsavedValidEditsAlert() } }
+        discountEntryViewModel.showUnsavedInvalidEditsAlertEvent.observe(viewLifecycleOwner) { it.consume()?.apply { showUnsavedInvalidEditsAlert() } }
         discountEntryViewModel.showIncompleteReimbursementAlertEvent.observe(viewLifecycleOwner) { it.consume()?.apply { showReimbursementNoSelectionsAlert() } }
     }
 
@@ -181,7 +182,7 @@ class DiscountEntryFragment: Fragment(), Revealable by RevealableImpl() {
         requireActivity().onBackPressed()
     }
 
-    private fun showUnsavedValidEditsAlertEvent() {
+    private fun showUnsavedValidEditsAlert() {
         MaterialAlertDialogBuilder(requireContext(), R.style.AlertDialogPosSuggestionSecondary)
             .setTitle(resources.getString(R.string.discountentry_alert_abort_unsaved_valid_edits_title))
             .setMessage(resources.getString(R.string.discountentry_alert_abort_unsaved_valid_edits_message))
@@ -192,7 +193,7 @@ class DiscountEntryFragment: Fragment(), Revealable by RevealableImpl() {
             .show()
     }
 
-    private fun showUnsavedInvalidEditsAlertEvent() {
+    private fun showUnsavedInvalidEditsAlert() {
         MaterialAlertDialogBuilder(requireContext(), R.style.AlertDialogPosSuggestionSecondary)
             .setTitle(resources.getString(R.string.discountentry_alert_abort_unsaved_invalid_edits_title))
             .setMessage(resources.getString(R.string.discountentry_alert_abort_unsaved_invalid_edits_message))

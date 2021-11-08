@@ -134,9 +134,9 @@ class SettingsHolderFragment: Fragment() {
             setNavigationIcon(R.drawable.ic_arrow_back_dark)
             setNavigationOnClickListener { requireActivity().onBackPressed() }
 
-            val typedValue = TypedValue()
-            requireContext().theme.resolveAttribute(R.attr.colorOnSurface, typedValue, true)
-            navigationIcon?.setTint(typedValue.data)
+            navigationIcon?.setTint(TypedValue().also {
+                requireContext().theme.resolveAttribute(R.attr.colorOnSurface, it, true)
+            }.data)
         }
 
         findNavController().currentBackStackEntry?.savedStateHandle?.getLiveData<Pair<CalculationType, Double>>(CALCULATOR_RETURN_KEY)?.observe(viewLifecycleOwner) { pair ->

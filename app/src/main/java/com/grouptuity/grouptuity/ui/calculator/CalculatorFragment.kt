@@ -39,7 +39,7 @@ class CalculatorFragment: Fragment(), Revealable by RevealableImpl() {
     private lateinit var backPressedCallback: OnBackPressedCallback
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        calculatorViewModel = ViewModelProvider(requireActivity()).get(CalculatorViewModel::class.java).also {
+        calculatorViewModel = ViewModelProvider(requireActivity())[CalculatorViewModel::class.java].also {
             it.initialize(args.calculationType)
         }
         binding = FragCalculatorBinding.inflate(inflater, container, false)

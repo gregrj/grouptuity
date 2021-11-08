@@ -85,7 +85,7 @@ class AddressBookViewModel(app: Application): UIViewModel(app) {
 
         if(selectedContacts.isEmpty()) {
             ToolBarState(
-                getApplication<Application>().resources.getString(R.string.addressbook_toolbar_select_diners),
+                context.resources.getString(R.string.addressbook_toolbar_select_diners),
                 navIconAsClose = if(isSearching) null else false,
                 searchInactive = !isSearching,
                 tertiaryBackground = false,
@@ -95,7 +95,7 @@ class AddressBookViewModel(app: Application): UIViewModel(app) {
                 showOtherButtons = !isSearching)
         } else {
             ToolBarState(
-                getApplication<Application>().resources.getQuantityString(R.plurals.addressbook_toolbar_num_selected, selectedContacts.size, selectedContacts.size),
+                context.resources.getQuantityString(R.plurals.addressbook_toolbar_num_selected, selectedContacts.size, selectedContacts.size),
                 navIconAsClose = if(isSearching) null else true,
                 searchInactive = !isSearching,
                 tertiaryBackground = !isSearching,
@@ -279,7 +279,7 @@ class AddressBookViewModel(app: Application): UIViewModel(app) {
     }
 
     fun addSelectedContactsToBill() {
-        repository.addContactsAsDiners(addressBook.allContacts.value.let { allContacts ->
+        repository.addContactsAsDiners(context, addressBook.allContacts.value.let { allContacts ->
             mSelections.mapNotNull { lookupKey ->
                 allContacts[lookupKey]
             }

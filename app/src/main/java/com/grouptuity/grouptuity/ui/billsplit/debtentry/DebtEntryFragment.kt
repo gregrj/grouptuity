@@ -8,6 +8,7 @@ import android.app.SearchManager
 import android.content.Context
 import android.graphics.Color
 import android.os.Bundle
+import android.util.Log
 import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
@@ -27,6 +28,7 @@ import androidx.recyclerview.widget.*
 import androidx.transition.Transition
 import androidx.transition.TransitionValues
 import com.google.android.material.bottomsheet.BottomSheetBehavior
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.transition.Hold
 import com.grouptuity.grouptuity.AppViewModel
 import com.grouptuity.grouptuity.R
@@ -36,7 +38,6 @@ import com.grouptuity.grouptuity.databinding.FragDebtentryListdinerBinding
 import com.grouptuity.grouptuity.ui.custom.transitions.CardViewExpandTransition
 import com.grouptuity.grouptuity.ui.custom.transitions.Revealable
 import com.grouptuity.grouptuity.ui.custom.transitions.RevealableImpl
-import com.grouptuity.grouptuity.ui.custom.views.RecyclerViewBottomOffset
 import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
 import com.grouptuity.grouptuity.ui.custom.views.slideUpFAB
 import kotlinx.coroutines.Dispatchers
@@ -48,6 +49,8 @@ import kotlinx.coroutines.withContext
 // TODO finish item name editor -> issues with back press and keyboard dismiss; block calculator inputs
 // TODO check for substantial edits and show alert on dismiss
 
+// Warn if launching diner not part of debt
+
 class DebtEntryFragment: Fragment(), Revealable by RevealableImpl() {
     private var binding by setNullOnDestroy<FragDebtentryBinding>()
     private val args: DebtEntryFragmentArgs by navArgs()
@@ -58,9 +61,11 @@ class DebtEntryFragment: Fragment(), Revealable by RevealableImpl() {
     private var toolbarInTertiaryState = false
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        appViewModel = ViewModelProvider(requireActivity()).get(AppViewModel::class.java)
-        debtEntryViewModel = ViewModelProvider(requireActivity()).get(DebtEntryViewModel::class.java)
-        debtEntryViewModel.initializeForDiner(args.loadedDiner)
+        appViewModel = ViewModelProvider(requireActivity())[AppViewModel::class.java]
+        debtEntryViewModel = ViewModelProvider(requireActivity())[DebtEntryViewModel::class.java].also {
+            it.initializeForDiner(args.loadedDiner)
+        }
+
         binding = FragDebtentryBinding.inflate(inflater, container, false)
         return binding.root
     }
@@ -129,7 +134,16 @@ class DebtEntryFragment: Fragment(), Revealable by RevealableImpl() {
 
         binding.fab.setOnClickListener {
             if(debtEntryViewModel.areDebtInputsValid.value == true) {
-                closeFragment(true)
+                if (debtEntryViewModel.isLaunchingDinerPresent) {
+                    closeFragment(true)
+                } else {
+                    MaterialAlertDialogBuilder(requireContext(), R.style.AlertDialogPosSuggestionSecondary)
+                        .setTitle(resources.getString(R.string.debtentry_launching_diner_missing_alert, debtEntryViewModel.launchingDiner!!.name))
+                        .setCancelable(true)
+                        .setNegativeButton(resources.getString(R.string.cancel)) { _, _ -> }
+                        .setPositiveButton(resources.getString(R.string.proceed)) { _, _ -> closeFragment(true) }
+                        .show()
+                }
             }
         }
 
@@ -352,10 +366,6 @@ class DebtEntryFragment: Fragment(), Revealable by RevealableImpl() {
             itemAnimator = null
 
             addItemDecoration(DividerItemDecoration(context, LinearLayoutManager.VERTICAL))
-
-            // Add a spacer to the last item in the list to ensure it is not cut off when the toolbar
-            // and floating action button are visible
-            addItemDecoration(RecyclerViewBottomOffset(resources.getDimension(R.dimen.recyclerview_bottom_offset).toInt()))
         }
 
         debtEntryViewModel.dinerData.observe(viewLifecycleOwner, { data -> lifecycleScope.launch { recyclerAdapter.updateDataSet(dinerData = data) } })
@@ -532,7 +542,7 @@ class DebtEntryFragment: Fragment(), Revealable by RevealableImpl() {
 
 private class DebtEntryDinerSelectionRecyclerViewAdapter(val context: Context, val listener: DebtEntryDinerSelectionListener):
         RecyclerView.Adapter<DebtEntryDinerSelectionRecyclerViewAdapter.ViewHolder>() {
-    private var mDinerData = emptyList<Triple<Diner, Boolean, Boolean>>()
+    private var mDinerData = emptyList<DebtEntryViewModel.Companion.DinerDatapoint>()
 
     interface DebtEntryDinerSelectionListener {
         fun toggleCreditor(diner: Diner)
@@ -548,35 +558,44 @@ private class DebtEntryDinerSelectionRecyclerViewAdapter(val context: Context, v
 
     override fun onBindViewHolder(holder: ViewHolder, position: Int) {
         holder.apply {
-            val (diner, isCreditor, isDebtor) = mDinerData[position]
-            viewBinding.contactIcon.setContact(diner.contact, false)
-            viewBinding.name.text = diner.contact.name
-            viewBinding.creditorCheckbox.isChecked = isCreditor
+            val (diner, isDebtor, isCreditor, message) = mDinerData[position]
+            viewBinding.contactIcon.setContact(diner.asContact(), false)
+            viewBinding.name.text = diner.name
             viewBinding.debtorCheckbox.isChecked = isDebtor
+            viewBinding.creditorCheckbox.isChecked = isCreditor
 
-            viewBinding.creditorCheckbox.setOnClickListener { listener.toggleCreditor(diner) }
+            if (message == null) {
+                viewBinding.message.visibility = View.GONE
+            } else {
+                viewBinding.message.visibility = View.VISIBLE
+                viewBinding.message.text = message
+            }
+
+            viewBinding.creditorCheckbox.setOnClickListener {
+                Log.e("creditorCheckbox", "c")
+                listener.toggleCreditor(diner) }
             viewBinding.debtorCheckbox.setOnClickListener { listener.toggleDebtor(diner) }
         }
     }
 
-    suspend fun updateDataSet(dinerData: List<Triple<Diner, Boolean, Boolean>>) {
+    suspend fun updateDataSet(dinerData: List<DebtEntryViewModel.Companion.DinerDatapoint>) {
         val diffResult = DiffUtil.calculateDiff(object: DiffUtil.Callback() {
             override fun getOldListSize() = mDinerData.size
 
             override fun getNewListSize() = dinerData.size
 
             override fun areItemsTheSame(oldPosition: Int, newPosition: Int) =
-                dinerData[newPosition].first.lookupKey == mDinerData[oldPosition].first.lookupKey
+                dinerData[newPosition].diner.lookupKey == mDinerData[oldPosition].diner.lookupKey
 
             override fun areContentsTheSame(oldPosition: Int, newPosition: Int): Boolean {
-                val (newContact, isNewContactCreditor, isNewContactDebtor) = dinerData[newPosition]
-                val (oldContact, isOldContactCreditor, isOldContactDebtor) = mDinerData[oldPosition]
+                val (newDiner, isNewContactDebtor, isNewContactCreditor, newMessage) = dinerData[newPosition]
+                val (oldDiner, isOldContactDebtor, isOldContactCreditor, oldMessage) = mDinerData[oldPosition]
 
-                return newContact.lookupKey == oldContact.lookupKey &&
-                        newContact.name == oldContact.name &&
-                        newContact.photoUri == oldContact.photoUri &&
+                return newDiner.name == oldDiner.name &&
+                        newDiner.photoUri == oldDiner.photoUri &&
                         isNewContactCreditor == isOldContactCreditor &&
-                        isNewContactDebtor == isOldContactDebtor
+                        isNewContactDebtor == isOldContactDebtor &&
+                        newMessage == oldMessage
             }
         })
 

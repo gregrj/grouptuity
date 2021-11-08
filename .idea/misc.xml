@@ -8,6 +8,9 @@
   <component name="DesignSurface">
     <option name="filePathToZoomLevelMap">
       <map>
+        <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/drawable/barcode_field_box.xml" value="0.403125" />
+        <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/drawable/camera_flash.xml" value="0.403125" />
+        <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/drawable/ic_add.xml" value="0.403125" />
         <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/drawable/ic_add_person.xml" value="0.403125" />
         <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/drawable/ic_animated_chevron.xml" value="0.403125" />
         <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/drawable/ic_arrow_back.xml" value="0.403125" />
@@ -15,27 +18,44 @@
         <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/drawable/ic_arrow_back_light.xml" value="0.403125" />
         <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/drawable/ic_arrow_back_on_secondary.xml" value="0.403125" />
         <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/drawable/ic_arrow_back_on_surface.xml" value="0.403125" />
+        <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/drawable/ic_arrow_forward_long.xml" value="0.403125" />
+        <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/drawable/ic_cash_app_logo_wine.xml" value="0.403125" />
         <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/drawable/ic_chevron_collapsed.xml" value="0.403125" />
         <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/drawable/ic_chevron_expanded.xml" value="0.403125" />
         <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/drawable/ic_delete_outline.xml" value="0.403125" />
+        <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/drawable/ic_edit_24dp_surface.xml" value="0.403125" />
+        <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/drawable/ic_edit_36dp.xml" value="0.403125" />
+        <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/drawable/ic_flash_off_vd_white_24.xml" value="0.403125" />
+        <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/drawable/ic_payment_algorand.xml" value="0.403125" />
         <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/drawable/ic_payment_cash.xml" value="0.403125" />
+        <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/drawable/ic_payment_cash_app.xml" value="0.33" />
+        <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/drawable/ic_payment_cashapp.xml" value="0.403125" />
         <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/drawable/ic_payment_credit_card.xml" value="0.403125" />
         <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/drawable/ic_payment_credit_card_split.xml" value="0.403125" />
         <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/drawable/ic_payment_iou_email.xml" value="0.403125" />
         <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/drawable/ic_payment_venmo.xml" value="0.403125" />
+        <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/drawable/ic_qr_code_scanner.xml" value="0.403125" />
         <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/drawable/ic_visibility_off.xml" value="0.403125" />
         <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/drawable/rounded_corners_list_background.xml" value="0.403125" />
         <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/drawable/side_nav_bar.xml" value="0.403125" />
+        <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/drawable/top_action_bar_scrim.xml" value="0.403125" />
+        <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/layout/activity_camera.xml" value="0.38697916666666665" />
+        <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/layout/activity_live_camera.xml" value="0.38697916666666665" />
+        <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/layout/activity_livecamera.xml" value="0.38697916666666665" />
         <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/layout/activity_main.xml" value="0.28442028985507245" />
         <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/layout/activity_settings.xml" value="0.38697916666666665" />
         <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/layout/add_self.xml" value="0.28442028985507245" />
+        <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/layout/barcode_bottom_sheet.xml" value="0.5" />
+        <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/layout/barcode_field.xml" value="0.38697916666666665" />
         <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/layout/calculator_collapsible.xml" value="0.38697916666666665" />
         <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/layout/calculator_fixed.xml" value="0.38697916666666665" />
+        <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/layout/camera_preview_overlay.xml" value="0.38697916666666665" />
+        <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/layout/dialog_edit_text.xml" value="0.38697916666666665" />
         <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/layout/flip_button.xml" value="0.38697916666666665" />
         <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/layout/flip_icon.xml" value="0.38697916666666665" />
         <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/layout/frag_basic_tip_calc.xml" value="0.1" />
         <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/layout/frag_calculator.xml" value="0.1" />
-        <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/layout/frag_debtentry.xml" value="0.1" />
+        <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/layout/frag_debtentry.xml" value="0.33" />
         <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/layout/frag_debtentry_listdiner.xml" value="0.33" />
         <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/layout/frag_diner_details.xml" value="0.1" />
         <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/layout/frag_diner_details_debt.xml" value="0.1" />
@@ -47,6 +67,7 @@
         <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/layout/frag_settings_holder.xml" value="0.1" />
         <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/layout/frag_simple_calc.xml" value="0.1" />
         <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/layout/frag_tax_tip.xml" value="0.2921195652173913" />
+        <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/layout/venmo_webview.xml" value="0.38697916666666665" />
         <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/menu/main.xml" value="0.21875" />
         <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/menu/toolbar_calculator.xml" value="0.1" />
         <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/menu/toolbar_debtentry.xml" value="0.38697916666666665" />

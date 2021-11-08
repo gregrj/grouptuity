@@ -169,7 +169,7 @@ class DinersRecyclerViewAdapter(private val context: Context,
             viewBinding.individualSubtotal.alpha = 1f
             viewBinding.remove.alpha = 1f
 
-            viewBinding.contactIcon.setContact(newDiner.contact, false)
+            viewBinding.contactIcon.setContact(newDiner.asContact(), false)
 
             viewBinding.name.text = newDiner.name
 

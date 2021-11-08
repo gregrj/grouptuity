@@ -9,7 +9,6 @@ import android.content.Context
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.util.Log
 import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
@@ -394,7 +393,6 @@ class AddressBookFragment: Fragment(), Revealable by RevealableImpl() {
 
         searchView.setOnQueryTextListener(object: SearchView.OnQueryTextListener {
             override fun onQueryTextChange(string: String?): Boolean {
-                Log.e("onQueryTextChange", string ?: "null")
                 pendingRewind = true
                 addressBookViewModel.updateSearchQuery(string)
                 return true

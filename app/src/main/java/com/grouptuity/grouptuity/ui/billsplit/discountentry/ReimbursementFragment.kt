@@ -136,7 +136,7 @@ class ReimbursementFragment: Fragment() {
             holder.apply {
                 itemView.tag = newDiner // store updated data
 
-                viewBinding.contactIcon.setContact(newDiner.contact, isSelected)
+                viewBinding.contactIcon.setContact(newDiner.asContact(), isSelected)
                 viewBinding.name.text = newDiner.name
 
                 itemView.setBackgroundColor(if(isSelected) colorBackgroundVariant else colorBackground)

@@ -22,7 +22,7 @@ class MainActivity: AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        appViewModel = ViewModelProvider(this).get(AppViewModel::class.java)
+        appViewModel = ViewModelProvider(this)[AppViewModel::class.java]
 
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
@@ -58,11 +58,9 @@ class MainActivity: AppCompatActivity() {
 
         // Hack: Setting the navigation bar color with xml style had issues during testing. Setting
         // the color programmatically works.
-        appViewModel.darkThemeActive.observe(this) {
-            switchWidget.isChecked = it
-            val typedValue = TypedValue()
-            this.theme.resolveAttribute(R.attr.colorBackground, typedValue, true)
-            window.navigationBarColor = typedValue.data
+        appViewModel.darkThemeActive.observe(this) { darkThemeActive ->
+            switchWidget.isChecked = darkThemeActive
+            window.navigationBarColor = TypedValue().also { this.theme.resolveAttribute(R.attr.colorBackground, it, true) }.data
         }
     }
 

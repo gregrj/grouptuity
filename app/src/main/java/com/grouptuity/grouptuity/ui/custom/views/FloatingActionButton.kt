@@ -3,11 +3,15 @@ package com.grouptuity.grouptuity.ui.custom.views
 import android.os.Handler
 import android.os.Looper
 import android.view.Gravity
+import android.view.View
+import android.view.animation.Animation
+import android.view.animation.AnimationUtils
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.content.res.ResourcesCompat
 import com.google.android.material.behavior.HideBottomViewOnScrollBehavior
 import com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.grouptuity.grouptuity.R
 
 
 fun extendFABToCenter(fab: ExtendedFloatingActionButton, iconId: Int) {
@@ -50,9 +54,59 @@ fun shrinkFABToCorner(fab: ExtendedFloatingActionButton, iconId: Int) {
     }, 50)
 }
 
+fun hideExtendedFAB(fab: ExtendedFloatingActionButton): Animation? {
+    return if (fab.visibility != View.VISIBLE) {
+        null
+    } else {
+        val animation = AnimationUtils.loadAnimation(fab.context, R.anim.scale_down).also {
+            it.setAnimationListener(object: Animation.AnimationListener {
+                override fun onAnimationStart(p0: Animation?) {
+                    fab.visibility = View.VISIBLE
+                }
+
+                override fun onAnimationEnd(p0: Animation?) {
+                    fab.visibility = View.INVISIBLE
+                }
+
+                override fun onAnimationRepeat(p0: Animation?) { }
+            })
+        }
+
+        fab.startAnimation(animation)
+        animation
+    }
+}
+
+fun showExtendedFAB(fab: ExtendedFloatingActionButton): Animation? {
+    return if (fab.visibility == View.VISIBLE) {
+        null
+    } else {
+        val animation = AnimationUtils.loadAnimation(fab.context, R.anim.scale_up).also {
+            it.setAnimationListener(object: Animation.AnimationListener {
+                override fun onAnimationStart(p0: Animation?) {
+                    fab.visibility = View.VISIBLE
+                }
+
+                override fun onAnimationEnd(p0: Animation?) { }
+
+                override fun onAnimationRepeat(p0: Animation?) { }
+            })
+        }
+
+        fab.startAnimation(animation)
+        return animation
+    }
+}
+
 fun slideUpFAB(fab: ExtendedFloatingActionButton) {
     ((fab.layoutParams as CoordinatorLayout.LayoutParams).behavior as? HideBottomViewOnScrollBehavior<ExtendedFloatingActionButton>)?.apply() {
         this.slideUp(fab)
+    }
+}
+
+fun slideDownFAB(fab: ExtendedFloatingActionButton) {
+    ((fab.layoutParams as CoordinatorLayout.LayoutParams).behavior as? HideBottomViewOnScrollBehavior<ExtendedFloatingActionButton>)?.apply() {
+        this.slideDown(fab)
     }
 }
 

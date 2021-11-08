@@ -182,7 +182,7 @@ private class ItemRecyclerViewAdapter(private val context: Context,
                         params.marginEnd = (2 * context.resources.displayMetrics.density).toInt()
                         icon.layoutParams = params
 
-                        icon.setContact(diner.contact, false)
+                        icon.setContact(diner.asContact(), false)
                         viewBinding.dinerIcons.addView(icon)
                     }
                 }

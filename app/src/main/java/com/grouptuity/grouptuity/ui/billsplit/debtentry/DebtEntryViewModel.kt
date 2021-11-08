@@ -1,7 +1,6 @@
 package com.grouptuity.grouptuity.ui.billsplit.debtentry
 
 import android.app.Application
-import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.asFlow
 import androidx.lifecycle.asLiveData
@@ -12,12 +11,17 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import java.text.NumberFormat
 
+
 class DebtEntryViewModel(app: Application): UIViewModel(app) {
     companion object {
         data class ToolBarState(val title: String, val navIconVisible: Boolean, val nameEditVisible: Boolean, val tertiaryBackground: Boolean)
+        data class DinerDatapoint(val diner: Diner, val isDebtor: Boolean, val isCreditor: Boolean, val message: String?)
     }
 
+    private val currencyFormatter = NumberFormat.getCurrencyInstance()
     private val calculator = CalculatorData(CalculationType.DEBT_AMOUNT)
+    var launchingDiner: Diner? = null
+        private set
 
     // Debt Name
     private val debtNameInput = MutableStateFlow<String?>(null)
@@ -39,11 +43,42 @@ class DebtEntryViewModel(app: Application): UIViewModel(app) {
     private var lastEditWasCreditor = true
     private val areAllCreditorsSelected: Flow<Boolean> = combine(creditorSelectionCount, repository.diners) { selectionCount, diners -> selectionCount == diners.size }
     private val areAllDebtorsSelected: Flow<Boolean> = combine(debtorSelectionCount, repository.diners) { selectionCount, diners -> selectionCount == diners.size }
+    val isLaunchingDinerPresent: Boolean get() = launchingDiner == null || creditorSelectionSet.contains(launchingDiner) || debtorSelectionSet.contains(launchingDiner)
 
     // Live Data Output
-    val dinerData: LiveData<List<Triple<Diner, Boolean, Boolean>>> = combine(repository.diners, _creditorSelections, _debtorSelections) { diners, creditors, debtors ->
+    val dinerData: LiveData<List<DinerDatapoint>> = combine(repository.diners, _creditorSelections, _debtorSelections, calculator.numericalValue) { diners, creditors, debtors, value ->
+        val amount = value ?: 0.0
+        val debtShare = amount / debtors.size
+        val creditShare = amount / creditors.size
+
         diners.map { diner ->
-            Triple(diner, creditors.contains(diner), debtors.contains(diner))
+            val isCreditor = creditors.contains(diner)
+            val isDebtor = debtors.contains(diner)
+
+            DinerDatapoint(diner, isDebtor, isCreditor, when {
+                isCreditor && isDebtor -> {
+                    when {
+                        debtors.size > creditors.size -> {
+                            context.getString(R.string.debtentry_creditor_message, currencyFormatter.format(creditShare - debtShare))
+                        }
+                        debtors.size < creditors.size -> {
+                            context.getString(R.string.debtentry_debtor_message, currencyFormatter.format(debtShare - creditShare))
+                        }
+                        else -> {
+                            context.getString(R.string.debtentry_dual_nothing_message)
+                        }
+                    }
+                }
+                isCreditor -> {
+                    context.getString(R.string.debtentry_creditor_message, currencyFormatter.format(creditShare))
+                }
+                isDebtor -> {
+                    context.getString(R.string.debtentry_debtor_message, currencyFormatter.format(debtShare))
+                }
+                else -> {
+                    null
+                }
+            })
         }
     }.withOutputSwitch(isOutputFlowing).asLiveData()
     val debtName: LiveData<String> = repository.debts.combine(debtNameInput) { debts, nameInput ->
@@ -133,11 +168,14 @@ class DebtEntryViewModel(app: Application): UIViewModel(app) {
     fun initializeForDiner(diner: Diner?) {
         unFreezeOutput()
 
+        launchingDiner = diner
+
         creditorSelectionSet.clear()
         debtorSelectionSet.clear()
 
-        if(diner != null)
+        if(diner != null) {
             creditorSelectionSet.add(diner)
+        }
 
         editingName.value = false
         hasEditedCreditorSelections = false

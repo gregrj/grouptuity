@@ -5,6 +5,7 @@
     <attr name="colorTertiary" format="reference" />
     <attr name="colorTertiaryVariant" format="reference" />
     <attr name="colorOnTertiary" format="reference" />
+    <attr name="colorTertiaryHighlight" format="reference" />
 
     <attr name="colorSurfaceVariant" format="reference" />
     <attr name="colorOnSurfaceMediumEmphasis" format="reference" />

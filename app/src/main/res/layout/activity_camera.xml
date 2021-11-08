@@ -1,0 +1,62 @@
+<?xml version="1.0" encoding="utf-8"?>
+<androidx.coordinatorlayout.widget.CoordinatorLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:keepScreenOn="true">
+
+    <androidx.camera.view.PreviewView
+        android:id="@+id/previewView"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
+
+    <com.grouptuity.grouptuity.ui.billsplit.qrcodescanner.GraphicOverlay
+        android:id="@+id/overlay"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"/>
+
+    <com.google.android.material.chip.Chip
+        android:id="@+id/instructions_chip"
+        style="@style/Widget.MaterialComponents.Chip.Entry"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginBottom="@dimen/bottom_prompt_chip_margin_bottom"
+        android:layout_gravity="bottom|center_horizontal"
+        android:checkable="false"
+        android:clickable="false"
+        android:textColor="?attr/colorOnPrimary"
+        android:textSize="@dimen/bottom_prompt_chip_text_size"
+        android:visibility="gone"
+        app:chipCornerRadius="@dimen/bottom_prompt_chip_corner_radius"
+        app:chipSurfaceColor="@color/TranslucentOverlay"
+        app:closeIconVisible="false"/>
+
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="@dimen/top_action_bar_height"
+        android:layout_gravity="top"
+        android:paddingStart="@dimen/top_action_bar_padding_horizontal"
+        android:paddingEnd="@dimen/top_action_bar_padding_horizontal"
+        android:background="@drawable/top_action_bar_scrim">
+
+        <ImageView
+            android:id="@+id/close_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_gravity="start"
+            android:padding="@dimen/top_action_button_padding"
+            android:contentDescription="@string/qrcodescanner_close_button"
+            android:src="@drawable/ic_close"/>
+
+        <ImageView
+            android:id="@+id/flash_button"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentEnd="true"
+            android:padding="@dimen/top_action_button_padding"
+            android:contentDescription="@string/qrcodescanner_camera_flash_button"
+            android:src="@drawable/camera_flash"/>
+    </RelativeLayout>
+
+</androidx.coordinatorlayout.widget.CoordinatorLayout>

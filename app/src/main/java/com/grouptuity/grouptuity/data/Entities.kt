@@ -3,21 +3,11 @@ package com.grouptuity.grouptuity.data
 import android.os.Parcel
 import android.os.Parcelable
 import androidx.room.*
-import org.json.JSONArray
-import org.json.JSONObject
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 import java.util.*
 import com.grouptuity.grouptuity.R
-
-
-class Converters {
-    @TypeConverter
-    fun jsonToPreferences(json: String?): PaymentPreferences = json?.let {
-        PaymentPreferences.fromJson(it)
-    } ?: PaymentPreferences()
-
-    @TypeConverter
-    fun preferencesToJson(preferences: PaymentPreferences?): String = preferences?.toJson() ?: ""
-}
+import java.lang.reflect.Type
 
 
 private fun nameToInitials(name: String?): String {
@@ -39,85 +29,97 @@ private fun nameToInitials(name: String?): String {
 }
 
 
+class Converters {
+    companion object {
+        val aliasMapType: Type = object : TypeToken<MutableMap<PaymentMethod, String>>() {}.type
+        val paymentTemplateMapType: Type = object : TypeToken<MutableMap<String, PaymentTemplate>>() {}.type
+    }
+
+    @TypeConverter
+    fun aliasMapToJSON(aliasMap: MutableMap<PaymentMethod, String>) = Gson().toJson(aliasMap)
+
+    @TypeConverter
+    fun jsonToAliasMap(json: String): MutableMap<PaymentMethod, String> = Gson().fromJson(json, aliasMapType)
+
+    @TypeConverter
+    fun paymentTemplateMapToJSON(template: MutableMap<String, PaymentTemplate>) = Gson().toJson(template)
+
+    @TypeConverter
+    fun jsonToPaymentTemplate(json: String): MutableMap<String, PaymentTemplate> = Gson().fromJson(json, paymentTemplateMapType)
+}
+
+
 enum class PaymentMethod(val acceptedByRestaurant: Boolean,
                          val acceptedByPeer: Boolean,
+                         val processedWithinApp: Boolean,
+                         val aliasCodeScannable: Boolean,
                          val paymentInstructionStringId: Int,
+                         val aliasSelectionStringId: Int,
                          val paymentIconId: Int,
                          val isIconColorless: Boolean) {
     CASH(
         true,
         true,
+        false,
+        false,
         R.string.payments_instruction_cash,
+        R.string.placeholder_text,
         R.drawable.ic_payment_cash,
         true),
     CREDIT_CARD_SPLIT(
         true,
         false,
+        false,
+        false,
         R.string.payments_instruction_credit_card_split,
+        R.string.placeholder_text,
         R.drawable.ic_payment_credit_card_split,
         true),
     CREDIT_CARD_INDIVIDUAL(
         true,
         false,
+        false,
+        false,
         R.string.payments_instruction_credit_card_individual,
+        R.string.placeholder_text,
         R.drawable.ic_payment_credit_card,
         true),
     IOU_EMAIL(
         false,
         true,
+        true,
+        false,
         R.string.payments_instruction_iou_email,
+        R.string.payments_alias_entry_iou_email,
         R.drawable.ic_payment_iou_email,
         true),
     VENMO(
         false,
         true,
+        true,
+        true,
         R.string.payments_instruction_venmo,
+        R.string.payments_alias_entry_venmo,
         R.drawable.ic_payment_venmo,
-        false)
-}
-
-
-class PaymentPreferences(private val preferenceMap: MutableMap<String, Pair<PaymentMethod, String?>>) {
-    constructor(): this(mutableMapOf<String, Pair<PaymentMethod, String?>>())
-
-    fun getForRecipient(recipient: Diner): Pair<PaymentMethod, String?> =
-        preferenceMap.getOrDefault(recipient.id, Pair(PaymentMethod.CASH, null))
-
-    fun setForRecipient(recipient: Diner, method: PaymentMethod, surrogate: Diner?) {
-        preferenceMap[recipient.id] = Pair(method, surrogate?.id)
-    }
-
-    fun toJson(): String {
-        val obj = JSONObject()
-        obj.put("payeeIds", JSONArray(preferenceMap.keys))
-        obj.put("methods", JSONArray(preferenceMap.values.map { it.first.name }))
-        obj.put("surrogates", JSONArray(preferenceMap.values.map { it.second }))
-
-        return obj.toString()
-    }
-
-    companion object {
-        fun fromJson(json: String): PaymentPreferences {
-            val obj = JSONObject(json)
-            val payeeIds = obj.getJSONArray("payeeIds")
-            val methods = obj.getJSONArray("methods")
-            val surrogates = obj.getJSONArray("surrogates")
-
-            if (payeeIds.length() == 0) {
-                return PaymentPreferences(mutableMapOf())
-            }
-
-            val newMap = mutableMapOf<String, Pair<PaymentMethod, String?>>()
-            for (i in 0 until payeeIds.length()) {
-                newMap[payeeIds[i].toString()] = Pair(
-                    PaymentMethod.valueOf(methods[i].toString()),
-                    if (surrogates[i].toString() == "null") null else surrogates[i].toString(),
-                )
-            }
-
-            return PaymentPreferences(newMap)
-        }
-    }
+        false),
+    CASH_APP(
+        false,
+        true,
+        true,
+        true,
+        R.string.payments_instruction_cash_app,
+        R.string.payments_alias_entry_cash_app,
+        R.drawable.ic_payment_cash_app,
+        false),
+    ALGO(
+        false,
+        true,
+        true,
+        true,
+        R.string.payments_instruction_algorand,
+        R.string.payments_alias_entry_algorand,
+        R.drawable.ic_payment_algorand,
+        true)
 }
 
 
@@ -126,21 +128,20 @@ class PaymentPreferences(private val preferenceMap: MutableMap<String, Pair<Paym
  */
 @Entity(tableName = "contact_table", indices = [Index(value = ["lookupKey"], unique = true)])
 class Contact(@PrimaryKey val lookupKey: String,
-                   val name: String,
-                   val photoUri: String?,
-                   val visibility: Int): Parcelable {  //TODO also include contact info?
+              var name: String,
+              var visibility: Int,
+              val paymentAliasDefaults: MutableMap<PaymentMethod, String> = mutableMapOf()): Parcelable {
+
+    @Ignore var photoUri: String? = null
 
     fun getInitials() = nameToInitials(name)
-
-    fun withUpdatedExternalInfo(newName: String, photoUri: String) =
-        Contact(lookupKey, newName, photoUri, visibility)
 
     companion object {
         const val VISIBLE = 0
         const val FAVORITE = 1
         const val HIDDEN = 2
 
-        private var selfName: String = "You"
+        private var selfName: String = "You" // Value overwritten from xml during database creation
         private var selfPhotoUri: String? = null
 
         fun updateSelfContactData(name: String, photoUri: String?) {
@@ -148,17 +149,21 @@ class Contact(@PrimaryKey val lookupKey: String,
             selfPhotoUri = photoUri
         }
 
-        val dummy = Contact("grouptuity_dummy_contact_lookupKey", "", null, VISIBLE)
-        val cashPool = Contact("grouptuity_cash_pool_contact_lookupKey", "cash pool", null, VISIBLE)
-        val restaurant = Contact("grouptuity_restaurant_contact_lookupKey", "restaurant", null, VISIBLE)
-        val self: Contact get() = Contact("grouptuity_self_contact_lookupKey", selfName, selfPhotoUri, VISIBLE)
+        val dummy = Contact("grouptuity_dummy_contact_lookupKey", "", VISIBLE)
+        val cashPool = Contact("grouptuity_cash_pool_contact_lookupKey", "cash pool", VISIBLE)
+        val restaurant = Contact("grouptuity_restaurant_contact_lookupKey", "restaurant",VISIBLE)
+        val self: Contact get() = Contact("grouptuity_self_contact_lookupKey", selfName, VISIBLE).also {
+            it.photoUri = selfPhotoUri
+        }
 
         @JvmField val CREATOR = object: Parcelable.Creator<Contact> {
             override fun createFromParcel(parcel: Parcel) = Contact(
                 parcel.readString()?: "contact_lookupKey",
-                parcel.readString()?: "contact",
-                parcel.readString(),
-                parcel.readInt())
+                parcel.readString()?: "contact_name",
+                parcel.readInt(),
+                Gson().fromJson(parcel.readString(), Converters.aliasMapType)).also {
+                    it.photoUri = parcel.readString()
+            }
 
             override fun newArray(size: Int): Array<Contact?> = arrayOfNulls(size)
         }
@@ -170,8 +175,9 @@ class Contact(@PrimaryKey val lookupKey: String,
         dest?.apply {
             this.writeString(lookupKey)
             this.writeString(name)
-            this.writeString(photoUri)
             this.writeInt(visibility)
+            this.writeString(Gson().toJson(paymentAliasDefaults))
+            this.writeString(photoUri)
         }
     }
 }
@@ -212,19 +218,34 @@ class Bill(@PrimaryKey val id: String,
 }
 
 
+data class PaymentTemplate(val method: PaymentMethod,
+                           val payerId: String,
+                           val payeeId: String,
+                           val surrogateId: String? = null,
+                           val payerAlias: String? = null,
+                           val payeeAlias: String? = null,
+                           val surrogateAlias: String? = null)
+
+
 @Entity(tableName = "diner_table",
-    foreignKeys = [ ForeignKey(entity = Bill::class, parentColumns = ["id"], childColumns = ["billId"], onDelete = ForeignKey.CASCADE),
-        ForeignKey(entity = Contact::class, parentColumns = ["lookupKey"], childColumns = ["contact_lookupKey"], onDelete = ForeignKey.NO_ACTION, deferred = true)],
+    foreignKeys = [ ForeignKey(entity = Bill::class, parentColumns = ["id"], childColumns = ["billId"], onDelete = ForeignKey.CASCADE)],
     indices = [Index("billId")])
 class Diner(@PrimaryKey val id: String,
             val billId: String,
             val listIndex: Int,
-            @Embedded(prefix = "contact_") val contact: Contact,
-            var paymentPreferences: PaymentPreferences = PaymentPreferences()): Parcelable {
+            val lookupKey: String,
+            val name: String,
+            val paymentAliasDefaults: MutableMap<PaymentMethod, String> = mutableMapOf(),
+            val paymentTemplateMap: MutableMap<String, PaymentTemplate> = mutableMapOf()): Parcelable {
 
-    @Ignore val lookupKey = contact.lookupKey
-    @Ignore val name = contact.name
-    @Ignore val photoUri = contact.photoUri
+    constructor(id: String, billId: String, listIndex: Int, contact: Contact): this(id, billId, listIndex, contact.lookupKey, contact.name, contact.paymentAliasDefaults) {
+        photoUri = contact.photoUri
+    }
+
+    @Ignore var photoUri: String? = null
+    @Ignore var emailAddresses: List<String> = emptyList()
+
+    fun asContact() = Contact(lookupKey, name, Contact.VISIBLE, paymentAliasDefaults).also { it.photoUri = photoUri }
 
     @Ignore private val itemIdsMutable = mutableListOf<String>()
     @Ignore private val debtOwedIdsMutable = mutableListOf<String>()
@@ -257,11 +278,27 @@ class Diner(@PrimaryKey val id: String,
     @Ignore val paymentsReceived: List<Payment> = paymentsReceivedMutable
 
     fun isRestaurant(): Boolean {
-        return contact.lookupKey == Contact.restaurant.lookupKey
+        return lookupKey == Contact.restaurant.lookupKey
     }
 
     fun isCashPool(): Boolean {
-        return contact.lookupKey == Contact.cashPool.lookupKey
+        return lookupKey == Contact.cashPool.lookupKey
+    }
+
+    fun getDefaultAliasForMethod(method: PaymentMethod) = paymentAliasDefaults[method]
+
+    fun setDefaultAliasForMethod(method: PaymentMethod, alias: String?) {
+        if (alias == null) {
+            paymentAliasDefaults.remove(method)
+        } else {
+            paymentAliasDefaults[method] = alias
+        }
+    }
+
+    fun getPaymentTemplate(payee: Diner) = paymentTemplateMap[payee.id]
+
+    fun setPaymentTemplate(template: PaymentTemplate) {
+        paymentTemplateMap[template.payeeId] = template
     }
 
     fun addItem(item: Item) {
@@ -322,10 +359,6 @@ class Diner(@PrimaryKey val id: String,
         paymentsReceivedMutable.remove(payment)
     }
 
-    fun setPaymentPreference(payee: Diner, method: PaymentMethod, surrogate: Diner?) {
-        paymentPreferences.setForRecipient(payee, method, surrogate)
-    }
-
     fun withIdLists(newItemIds: List<String>,
                     newDebtOwedIds: List<String>,
                     newDebtHeldIds: List<String>,
@@ -346,7 +379,6 @@ class Diner(@PrimaryKey val id: String,
                             debtMap: Map<String, Debt>,
                             discountMap: Map<String, Discount>,
                             paymentMap: Map<String, Payment>) {
-
         itemsMutable.addAll(itemIds.mapNotNull { itemMap[it] })
         debtsOwedMutable.addAll(debtOwedIds.mapNotNull { debtMap[it] })
         debtsHeldMutable.addAll(debtHeldIds.mapNotNull { debtMap[it] })
@@ -363,8 +395,10 @@ class Diner(@PrimaryKey val id: String,
             this.writeString(id)
             this.writeString(billId)
             this.writeInt(listIndex)
-            this.writeParcelable(contact, 0)
-            this.writeString(paymentPreferences.toJson())
+            this.writeString(lookupKey)
+            this.writeString(name)
+            this.writeString(Gson().toJson(paymentAliasDefaults))
+            this.writeString(Gson().toJson(paymentTemplateMap))
             this.writeStringList(itemIds)
             this.writeStringList(debtOwedIds)
             this.writeStringList(debtHeldIds)
@@ -380,8 +414,10 @@ class Diner(@PrimaryKey val id: String,
             parcel.readString()!!,
             parcel.readString()!!,
             parcel.readInt(),
-            parcel.readParcelable(Contact::class.java.classLoader) ?: Contact.dummy,
-            PaymentPreferences.fromJson(parcel.readString() ?: ""))
+            parcel.readString()!!,
+            parcel.readString()!!,
+            Gson().fromJson(parcel.readString(), Converters.aliasMapType),
+            Gson().fromJson(parcel.readString(), Converters.paymentTemplateMapType))
             .withIdLists(
                 parcel.createStringArrayList() ?: mutableListOf(),
                 parcel.createStringArrayList() ?: mutableListOf(),
@@ -658,11 +694,11 @@ class Discount(@PrimaryKey val id: String,
         ForeignKey(entity = Diner::class, parentColumns = ["id"], childColumns = ["payerId"], onDelete = ForeignKey.CASCADE),
         ForeignKey(entity = Diner::class, parentColumns = ["id"], childColumns = ["payeeId"], onDelete = ForeignKey.CASCADE),
         ForeignKey(entity = Diner::class, parentColumns = ["id"], childColumns = ["surrogateId"], onDelete = ForeignKey.CASCADE)],
-    indices = [Index("billId"), Index("payerId"), Index("payeeId")])
+    indices = [Index("billId"), Index("payerId"), Index("payeeId"), Index("surrogateId")])
 class Payment(@PrimaryKey val id: String,
               val billId: String,
               val amount: Double,
-              val methodString: String,
+              val method: PaymentMethod,
               val committed: Boolean,
               val payerId: String,
               val payeeId: String,
@@ -671,13 +707,13 @@ class Payment(@PrimaryKey val id: String,
     @Ignore lateinit var payer: Diner
     @Ignore lateinit var payee: Diner
     @Ignore var surrogate: Diner? = null
-    @Ignore lateinit var method: PaymentMethod
+
+    fun unprocessed() = !committed && method.processedWithinApp
 
     fun populateEntities(dinerMap: Map<String, Diner>) {
         payer = dinerMap[payerId]!!
         payee = dinerMap[payeeId]!!
         surrogate = dinerMap[surrogateId]!!
-        method = PaymentMethod.valueOf(methodString)
     }
 }
 
