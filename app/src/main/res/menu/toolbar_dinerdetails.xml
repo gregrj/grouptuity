@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context=".MainActivity">
+
+    <group android:id="@+id/group_editor">
+        <item
+            android:id="@+id/edit_diner"
+            android:title="@string/dinerdetails_toolbar_edit"
+            android:icon="@drawable/ic_edit"
+            android:visible="false"
+            app:showAsAction="always"/>
+    </group>
+</menu>

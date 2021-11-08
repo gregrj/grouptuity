@@ -20,6 +20,10 @@ import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 
+fun venmoAddressToString(address: String): String {
+    return address
+}
+
 
 class VenmoAddressParser(context: Context): QRCodeParser() {
     companion object {

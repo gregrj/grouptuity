@@ -2,6 +2,8 @@ package com.grouptuity.grouptuity.ui.billsplit.payments
 
 import com.grouptuity.grouptuity.ui.billsplit.qrcodescanner.QRCodeParser
 
+fun cashAppAddressToCashtag(address: String) = address
+
 
 class CashtagParser: QRCodeParser() {
     companion object {

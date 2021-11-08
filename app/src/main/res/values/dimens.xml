@@ -8,7 +8,7 @@
 
     <!-- App-specific dimensions -->
     <dimen name="status_bar_height">24dp</dimen>
-    <dimen name="details_header_height">250dp</dimen>
+    <dimen name="details_header_height">200dp</dimen>
     <dimen name="text_margin">16dp</dimen>
     <dimen name="contact_photo_size">48dp</dimen>
     <dimen name="material_card_corner_radius">4dp</dimen>

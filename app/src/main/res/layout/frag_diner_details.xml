@@ -56,6 +56,7 @@
                     android:id="@+id/collapsing_toolbar"
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
+                    android:fitsSystemWindows="true"
                     app:layout_scrollFlags="scroll|exitUntilCollapsed|snap"
                     app:contentScrim="?colorPrimary"
                     app:statusBarScrim="?colorPrimaryVariant"
@@ -94,25 +95,112 @@
                     <androidx.constraintlayout.widget.ConstraintLayout
                         android:id="@+id/biographics"
                         android:layout_width="match_parent"
-                        android:layout_height="100dp">
+                        android:layout_height="wrap_content"
+                        android:paddingHorizontal="24dp"
+                        android:paddingVertical="8dp">
 
-                        <com.google.android.material.textfield.TextInputEditText
-                            android:layout_width="match_parent"
-                            android:layout_height="wrap_content"
+                        <ImageView
+                            android:id="@+id/email_icon"
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
                             app:layout_constraintTop_toTopOf="parent"
+                            app:layout_constraintBottom_toTopOf="@+id/venmo_icon"
                             app:layout_constraintStart_toStartOf="parent"
-                            android:hint="Email"/>
+                            app:layout_constraintEnd_toStartOf="@+id/email_address"
+                            android:layout_marginEnd="16dp"
+                            android:layout_marginBottom="8dp"
+                            android:src="@drawable/ic_payment_iou_email"/>
 
-                        <View
-                            android:layout_width="match_parent"
-                            android:layout_height="1dp"
-                            android:layout_marginStart="24dp"
-                            android:layout_marginEnd="24dp"
-                            android:background="?colorOnSurfaceLowEmphasis"
-                            app:layout_constraintStart_toStartOf="parent"
+                        <TextView
+                            android:id="@+id/email_address"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            app:layout_constraintTop_toTopOf="@id/email_icon"
+                            app:layout_constraintStart_toEndOf="@+id/email_icon"
                             app:layout_constraintEnd_toEndOf="parent"
-                            app:layout_constraintBottom_toBottomOf="parent"/>
+                            app:layout_constraintBottom_toBottomOf="@+id/email_icon"
+                            style="@android:style/TextAppearance.Material.Medium"
+                            android:text="@string/dinerdetails_biographics_no_email"/>
+
+                        <ImageView
+                            android:id="@+id/venmo_icon"
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            app:layout_constraintTop_toBottomOf="@id/email_icon"
+                            app:layout_constraintBottom_toTopOf="@+id/cash_app_icon"
+                            app:layout_constraintStart_toStartOf="parent"
+                            app:layout_constraintEnd_toStartOf="@+id/venmo_address"
+                            android:layout_marginEnd="16dp"
+                            android:layout_marginBottom="8dp"
+                            android:src="@drawable/ic_payment_venmo"/>
+
+                        <TextView
+                            android:id="@+id/venmo_address"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            app:layout_constraintTop_toTopOf="@id/venmo_icon"
+                            app:layout_constraintStart_toEndOf="@+id/venmo_icon"
+                            app:layout_constraintEnd_toEndOf="parent"
+                            app:layout_constraintBottom_toBottomOf="@id/venmo_icon"
+                            style="@android:style/TextAppearance.Material.Medium"
+                            android:text="@string/dinerdetails_biographics_no_venmo"/>
+
+                        <ImageView
+                            android:id="@+id/cash_app_icon"
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            app:layout_constraintTop_toBottomOf="@id/venmo_icon"
+                            app:layout_constraintBottom_toTopOf="@+id/algorand_icon"
+                            app:layout_constraintStart_toStartOf="parent"
+                            app:layout_constraintEnd_toStartOf="@+id/cash_app_address"
+                            android:layout_marginEnd="16dp"
+                            android:layout_marginBottom="8dp"
+                            android:src="@drawable/ic_payment_cash_app"/>
+
+                        <TextView
+                            android:id="@+id/cash_app_address"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            app:layout_constraintTop_toTopOf="@id/cash_app_icon"
+                            app:layout_constraintStart_toEndOf="@+id/cash_app_icon"
+                            app:layout_constraintEnd_toEndOf="parent"
+                            app:layout_constraintBottom_toBottomOf="@id/cash_app_icon"
+                            style="@android:style/TextAppearance.Material.Medium"
+                            android:text="@string/dinerdetails_biographics_no_cashtag"/>
+
+                        <ImageView
+                            android:id="@+id/algorand_icon"
+                            android:layout_width="36dp"
+                            android:layout_height="36dp"
+                            app:layout_constraintTop_toBottomOf="@id/cash_app_icon"
+                            app:layout_constraintBottom_toBottomOf="parent"
+                            app:layout_constraintStart_toStartOf="parent"
+                            app:layout_constraintEnd_toStartOf="@+id/algorand_address"
+                            android:layout_marginEnd="16dp"
+                            android:src="@drawable/ic_payment_algorand"/>
+
+                        <TextView
+                            android:id="@+id/algorand_address"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            app:layout_constraintTop_toTopOf="@id/algorand_icon"
+                            app:layout_constraintStart_toEndOf="@+id/algorand_icon"
+                            app:layout_constraintEnd_toEndOf="parent"
+                            app:layout_constraintBottom_toBottomOf="@id/algorand_icon"
+                            style="@android:style/TextAppearance.Material.Medium"
+                            android:text="@string/dinerdetails_biographics_no_algorand"/>
+
                     </androidx.constraintlayout.widget.ConstraintLayout>
+
+                    <View
+                        android:layout_width="match_parent"
+                        android:layout_height="1dp"
+                        android:layout_marginVertical="8dp"
+                        android:layout_marginHorizontal="24dp"
+                        android:background="?colorOnSurfaceLowEmphasis"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintBottom_toBottomOf="parent"/>
 
                     <TextView
                         android:id="@+id/bill_title"
@@ -598,6 +686,18 @@
                     </androidx.constraintlayout.widget.ConstraintLayout>
                 </LinearLayout>
             </androidx.core.widget.NestedScrollView>
+
+            <com.google.android.material.floatingactionbutton.FloatingActionButton
+                android:id="@+id/fab"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="@dimen/fab_margin"
+                android:visibility="invisible"
+                app:layout_anchor="@+id/diner_image"
+                app:layout_anchorGravity="bottom|end"
+                android:src="@drawable/ic_edit"
+                android:contentDescription="@string/dinerdetails_toolbar_edit" />
+
         </androidx.coordinatorlayout.widget.CoordinatorLayout>
     </com.google.android.material.card.MaterialCardView>
 </com.grouptuity.grouptuity.ui.custom.views.LockableFrameLayout>

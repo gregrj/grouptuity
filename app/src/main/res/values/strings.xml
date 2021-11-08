@@ -62,6 +62,12 @@
     <string name="addressbook_listitem_hidden">(contact hidden)</string>
 
     <string name="dinerdetails_toolbar_title_new_diner">Create New Diner</string>
+    <string name="dinerdetails_toolbar_edit">Edit diner</string>
+    <string name="dinerdetails_biographics_no_email">(email address not set)</string>
+    <string name="dinerdetails_biographics_no_venmo">(Venmo address not set)</string>
+    <string name="dinerdetails_biographics_no_cashtag">($Cashtag not set)</string>
+    <string name="dinerdetails_biographics_no_algorand">(Algorand address not set)</string>
+
     <string name="dinerdetails_bill_section_title">Restaurant Bill</string>
     <string name="dinerdetails_items_subtotal_section">Subtotal</string>
     <plurals name="dinerdetails_item_split">

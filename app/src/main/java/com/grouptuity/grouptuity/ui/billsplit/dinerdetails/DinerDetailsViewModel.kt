@@ -6,6 +6,9 @@ import androidx.lifecycle.LiveData
 import androidx.lifecycle.asLiveData
 import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.*
+import com.grouptuity.grouptuity.ui.billsplit.payments.algorandAddressToString
+import com.grouptuity.grouptuity.ui.billsplit.payments.cashAppAddressToCashtag
+import com.grouptuity.grouptuity.ui.billsplit.payments.venmoAddressToString
 import kotlinx.coroutines.flow.*
 import java.text.NumberFormat
 import kotlin.math.abs
@@ -29,6 +32,25 @@ class DinerDetailsViewModel(app: Application): UIViewModel(app) {
         combine(loadedDiner, repository.individualExcessDiscountsAcquired) { diner, discountsAcquired ->
             discountsAcquired[diner]
         }
+
+    val email: LiveData<String> = loadedDiner.map {
+        it?.paymentAliasDefaults?.get(PaymentMethod.IOU_EMAIL) ?: context.getString(R.string.dinerdetails_biographics_no_email)
+    }.asLiveData()
+    val venmo: LiveData<String> = loadedDiner.map { diner ->
+        diner?.paymentAliasDefaults?.get(PaymentMethod.VENMO)?.let {
+            venmoAddressToString(it)
+        } ?: context.getString(R.string.dinerdetails_biographics_no_venmo)
+    }.asLiveData()
+    val cashtag: LiveData<String> = loadedDiner.map { diner ->
+        diner?.paymentAliasDefaults?.get(PaymentMethod.CASH_APP)?.let {
+            cashAppAddressToCashtag(it)
+        } ?: context.getString(R.string.dinerdetails_biographics_no_cashtag)
+    }.asLiveData()
+    val algorandAddress: LiveData<String> = loadedDiner.map { diner ->
+        diner?.paymentAliasDefaults?.get(PaymentMethod.ALGO)?.let {
+            algorandAddressToString(it)
+        } ?: context.getString(R.string.dinerdetails_biographics_no_algorand)
+    }.asLiveData()
 
     val items: LiveData<List<Pair<Item,Triple<String, String, String?>>>> = loadedDiner.mapLatest {
         it?.items?.map { item ->
