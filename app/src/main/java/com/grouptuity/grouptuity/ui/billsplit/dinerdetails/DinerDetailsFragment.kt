@@ -20,6 +20,7 @@ import androidx.core.animation.doOnEnd
 import androidx.core.animation.doOnStart
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.graphics.ColorUtils
+import androidx.core.transition.addListener
 import androidx.core.view.doOnPreDraw
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
@@ -61,6 +62,7 @@ import kotlinx.coroutines.withContext
 // private const val DELETE_BACKGROUND_COLOR = R.attr.colorTertiary
 
 // TODO remove itemanimation on debt recyclerview causes abrupt changing to scroll position
+// TODO from collapsed state, diner image does not return to exact position of icon in diner list item
 
 class DinerDetailsFragment: Fragment(), Revealable by RevealableImpl() {
     private var binding by setNullOnDestroy<FragDinerDetailsBinding>()
@@ -86,6 +88,7 @@ class DinerDetailsFragment: Fragment(), Revealable by RevealableImpl() {
         postponeEnterTransition()
 
         // Manually lock before AppBarLayout.OnOffsetChangedListener is called
+        // TODO replace with dedicated lock? Should everything just be handled in the onResume method?
         viewModel.notifyTransitionStarted()
 
         // Intercept user interactions while while fragment transitions are running
@@ -199,6 +202,9 @@ class DinerDetailsFragment: Fragment(), Revealable by RevealableImpl() {
 
         // Reset UI input/output locks leftover from aborted transitions/animations
         viewModel.unFreezeOutput()
+
+        // Manually unlock so AppBarLayout.OnOffsetChangedListener can run
+        viewModel.notifyTransitionFinished()
     }
 
     private fun closeFragment() {
