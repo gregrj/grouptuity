@@ -92,105 +92,21 @@
                     android:layout_height="wrap_content"
                     android:orientation="vertical">
 
-                    <androidx.constraintlayout.widget.ConstraintLayout
-                        android:id="@+id/biographics"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:paddingHorizontal="24dp"
-                        android:paddingVertical="8dp">
+                    <include
+                        android:id="@+id/email_biographics"
+                        layout="@layout/frag_diner_details_biographic_item"/>
 
-                        <ImageView
-                            android:id="@+id/email_icon"
-                            android:layout_width="36dp"
-                            android:layout_height="36dp"
-                            app:layout_constraintTop_toTopOf="parent"
-                            app:layout_constraintBottom_toTopOf="@+id/venmo_icon"
-                            app:layout_constraintStart_toStartOf="parent"
-                            app:layout_constraintEnd_toStartOf="@+id/email_address"
-                            android:layout_marginEnd="16dp"
-                            android:layout_marginBottom="8dp"
-                            android:src="@drawable/ic_payment_iou_email"/>
+                    <include
+                        android:id="@+id/venmo_biographics"
+                        layout="@layout/frag_diner_details_biographic_item"/>
 
-                        <TextView
-                            android:id="@+id/email_address"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            app:layout_constraintTop_toTopOf="@id/email_icon"
-                            app:layout_constraintStart_toEndOf="@+id/email_icon"
-                            app:layout_constraintEnd_toEndOf="parent"
-                            app:layout_constraintBottom_toBottomOf="@+id/email_icon"
-                            style="@android:style/TextAppearance.Material.Medium"
-                            android:text="@string/dinerdetails_biographics_no_email"/>
+                    <include
+                        android:id="@+id/cash_app_biographics"
+                        layout="@layout/frag_diner_details_biographic_item"/>
 
-                        <ImageView
-                            android:id="@+id/venmo_icon"
-                            android:layout_width="36dp"
-                            android:layout_height="36dp"
-                            app:layout_constraintTop_toBottomOf="@id/email_icon"
-                            app:layout_constraintBottom_toTopOf="@+id/cash_app_icon"
-                            app:layout_constraintStart_toStartOf="parent"
-                            app:layout_constraintEnd_toStartOf="@+id/venmo_address"
-                            android:layout_marginEnd="16dp"
-                            android:layout_marginBottom="8dp"
-                            android:src="@drawable/ic_payment_venmo"/>
-
-                        <TextView
-                            android:id="@+id/venmo_address"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            app:layout_constraintTop_toTopOf="@id/venmo_icon"
-                            app:layout_constraintStart_toEndOf="@+id/venmo_icon"
-                            app:layout_constraintEnd_toEndOf="parent"
-                            app:layout_constraintBottom_toBottomOf="@id/venmo_icon"
-                            style="@android:style/TextAppearance.Material.Medium"
-                            android:text="@string/dinerdetails_biographics_no_venmo"/>
-
-                        <ImageView
-                            android:id="@+id/cash_app_icon"
-                            android:layout_width="36dp"
-                            android:layout_height="36dp"
-                            app:layout_constraintTop_toBottomOf="@id/venmo_icon"
-                            app:layout_constraintBottom_toTopOf="@+id/algorand_icon"
-                            app:layout_constraintStart_toStartOf="parent"
-                            app:layout_constraintEnd_toStartOf="@+id/cash_app_address"
-                            android:layout_marginEnd="16dp"
-                            android:layout_marginBottom="8dp"
-                            android:src="@drawable/ic_payment_cash_app"/>
-
-                        <TextView
-                            android:id="@+id/cash_app_address"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            app:layout_constraintTop_toTopOf="@id/cash_app_icon"
-                            app:layout_constraintStart_toEndOf="@+id/cash_app_icon"
-                            app:layout_constraintEnd_toEndOf="parent"
-                            app:layout_constraintBottom_toBottomOf="@id/cash_app_icon"
-                            style="@android:style/TextAppearance.Material.Medium"
-                            android:text="@string/dinerdetails_biographics_no_cashtag"/>
-
-                        <ImageView
-                            android:id="@+id/algorand_icon"
-                            android:layout_width="36dp"
-                            android:layout_height="36dp"
-                            app:layout_constraintTop_toBottomOf="@id/cash_app_icon"
-                            app:layout_constraintBottom_toBottomOf="parent"
-                            app:layout_constraintStart_toStartOf="parent"
-                            app:layout_constraintEnd_toStartOf="@+id/algorand_address"
-                            android:layout_marginEnd="16dp"
-                            android:src="@drawable/ic_payment_algorand"/>
-
-                        <TextView
-                            android:id="@+id/algorand_address"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            app:layout_constraintTop_toTopOf="@id/algorand_icon"
-                            app:layout_constraintStart_toEndOf="@+id/algorand_icon"
-                            app:layout_constraintEnd_toEndOf="parent"
-                            app:layout_constraintBottom_toBottomOf="@id/algorand_icon"
-                            style="@android:style/TextAppearance.Material.Medium"
-                            android:text="@string/dinerdetails_biographics_no_algorand"/>
-
-                    </androidx.constraintlayout.widget.ConstraintLayout>
+                    <include
+                        android:id="@+id/algorand_biographics"
+                        layout="@layout/frag_diner_details_biographic_item"/>
 
                     <View
                         android:layout_width="match_parent"

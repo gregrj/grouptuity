@@ -126,7 +126,9 @@ class QRCodeScannerViewModel(app: Application): UIViewModel(app) {
 
     val hasBarcode get() = displayResults.value != null
 
-    val alias get() = verifiedAddress.value
+    fun getPaymentMethod() = paymentMethod.value
+    fun getDinerName() = dinerName.value
+    fun getVerifiedAddress() = verifiedAddress.value
 
     private fun requestUrl(url: String?): QRCodeParser.Status {
         Log.e("url", url ?: "")

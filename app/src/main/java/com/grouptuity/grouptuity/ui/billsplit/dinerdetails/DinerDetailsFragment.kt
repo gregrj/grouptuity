@@ -2,27 +2,40 @@ package com.grouptuity.grouptuity.ui.billsplit.dinerdetails
 
 import android.animation.Animator
 import android.animation.ValueAnimator
+import android.app.Activity
 import android.content.Context
+import android.content.Intent
 import android.graphics.Color
 import android.graphics.drawable.Animatable
 import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
+import android.text.InputFilter
 import android.util.Log
 import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.animation.AccelerateDecelerateInterpolator
+import android.widget.ArrayAdapter
 import androidx.activity.OnBackPressedCallback
+import androidx.activity.result.ActivityResult
+import androidx.activity.result.ActivityResultLauncher
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.appcompat.content.res.AppCompatResources
 import androidx.appcompat.widget.Toolbar
+import androidx.constraintlayout.motion.widget.MotionLayout
 import androidx.core.animation.doOnEnd
 import androidx.core.animation.doOnStart
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.graphics.ColorUtils
-import androidx.core.transition.addListener
 import androidx.core.view.doOnPreDraw
+import androidx.core.widget.addTextChangedListener
+import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
+import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.FragmentNavigatorExtras
@@ -43,13 +56,12 @@ import com.google.android.material.appbar.CollapsingToolbarLayout
 import com.google.android.material.imageview.ShapeableImageView
 import com.google.android.material.shape.CornerFamily
 import com.google.android.material.shape.RelativeCornerSize
+import com.google.android.material.textfield.TextInputLayout
 import com.google.android.material.transition.Hold
 import com.grouptuity.grouptuity.R
-import com.grouptuity.grouptuity.data.Debt
-import com.grouptuity.grouptuity.data.Diner
-import com.grouptuity.grouptuity.data.Discount
-import com.grouptuity.grouptuity.data.Item
+import com.grouptuity.grouptuity.data.*
 import com.grouptuity.grouptuity.databinding.*
+import com.grouptuity.grouptuity.ui.billsplit.qrcodescanner.QRCodeScannerActivity
 import com.grouptuity.grouptuity.ui.custom.CustomNavigator
 import com.grouptuity.grouptuity.ui.custom.transitions.CardViewExpandTransition
 import com.grouptuity.grouptuity.ui.custom.transitions.Revealable
@@ -64,20 +76,22 @@ import kotlinx.coroutines.withContext
 // TODO remove itemanimation on debt recyclerview causes abrupt changing to scroll position
 // TODO from collapsed state, diner image does not return to exact position of icon in diner list item
 
+// Note: Bug exists with programmatic changes to endIconMode so custom mode is used with a
+
 class DinerDetailsFragment: Fragment(), Revealable by RevealableImpl() {
     private var binding by setNullOnDestroy<FragDinerDetailsBinding>()
     private val args: DinerDetailsFragmentArgs by navArgs()
     private lateinit var viewModel: DinerDetailsViewModel
     private lateinit var backPressedCallback: OnBackPressedCallback
+    private lateinit var qrCodeScannerLauncher: ActivityResultLauncher<Intent>
     private var isToolBarCollapsed = false
-    private var isFABShowing = false
     private var itemsExpanded = false
     private var discountsExpanded = false
     private var reimbursementsExpanded = false
     private var startTransitionPending = false
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        viewModel = ViewModelProvider(requireActivity()).get(DinerDetailsViewModel::class.java)
+        viewModel = ViewModelProvider(requireActivity())[DinerDetailsViewModel::class.java]
         binding = FragDinerDetailsBinding.inflate(inflater, container, false)
         return binding.root
     }
@@ -175,7 +189,26 @@ class DinerDetailsFragment: Fragment(), Revealable by RevealableImpl() {
             }
         }
 
+        qrCodeScannerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                val paymentMethod = result.data?.extras?.get(requireContext().getString(R.string.intent_key_qrcode_payment_method))
+                val address = result.data?.extras?.get(requireContext().getString(R.string.intent_key_qrcode_payment_method_address)) as String
+
+                when (paymentMethod) {
+                    PaymentMethod.IOU_EMAIL -> { binding.emailBiographics.input.setText(address) }
+                    PaymentMethod.VENMO -> { binding.venmoBiographics.input.setText(address) }
+                    PaymentMethod.CASH_APP -> { binding.cashAppBiographics.input.setText(address) }
+                    PaymentMethod.ALGO -> { binding.algorandBiographics.input.setText(address) }
+                    else -> { }
+                }
+            } else {
+                Log.e("false", result.toString())
+            }
+        }
+
         setupToolbar()
+
+        setupBiographics()
 
         setupSubtotalSection()
 
@@ -187,14 +220,7 @@ class DinerDetailsFragment: Fragment(), Revealable by RevealableImpl() {
 
         setupDebtSection()
 
-        binding.fab.setOnClickListener {
-            editDiner()
-        }
-
-        viewModel.email.observe(viewLifecycleOwner) { binding.emailAddress.text = it }
-        viewModel.venmo.observe(viewLifecycleOwner) { binding.venmoAddress.text = it }
-        viewModel.cashtag.observe(viewLifecycleOwner) { binding.cashAppAddress.text = it }
-        viewModel.algorandAddress.observe(viewLifecycleOwner) { binding.algorandAddress.text = it }
+        binding.fab.setOnClickListener { viewModel.editBiographics() }
     }
 
     override fun onResume() {
@@ -247,8 +273,120 @@ class DinerDetailsFragment: Fragment(), Revealable by RevealableImpl() {
         requireActivity().onBackPressed()
     }
 
-    private fun editDiner() {
-        // TODO
+    private fun setupBiographics() {
+        viewModel.editingBiographics.observe(viewLifecycleOwner) {
+            if (it) {
+                binding.emailBiographics.container.transitionToEnd()
+                binding.venmoBiographics.container.transitionToEnd()
+                binding.cashAppBiographics.container.transitionToEnd()
+                binding.algorandBiographics.container.transitionToEnd()
+
+                binding.nestedScrollView.smoothScrollTo(0, 0)
+
+                binding.fab.hide()
+                binding.toolbar.menu.setGroupVisible(R.id.group_editor, false)
+            } else {
+                binding.emailBiographics.container.transitionToStart()
+                binding.venmoBiographics.container.transitionToStart()
+                binding.cashAppBiographics.container.transitionToStart()
+                binding.algorandBiographics.container.transitionToStart()
+
+                // Update edit controls unless fragment is transitioning
+                if (!viewModel.isInputLocked.value) {
+                    if(isToolBarCollapsed) {
+                        binding.toolbar.menu.setGroupVisible(R.id.group_editor, true)
+                    } else {
+                        binding.fab.show()
+                    }
+                }
+            }
+        }
+
+        setupBiographicsItem(PaymentMethod.IOU_EMAIL, binding.emailBiographics, viewModel.email)
+
+        setupBiographicsItem(PaymentMethod.VENMO, binding.venmoBiographics, viewModel.venmoAddress)
+
+        setupBiographicsItem(PaymentMethod.CASH_APP, binding.cashAppBiographics, viewModel.cashtag)
+
+        setupBiographicsItem(PaymentMethod.ALGO, binding.algorandBiographics, viewModel.algorandAddress)
+    }
+
+    private fun setupBiographicsItem(
+        method: PaymentMethod,
+        biographics: FragDinerDetailsBiographicItemBinding,
+        addressLiveData: LiveData<Triple<Boolean, String, Boolean>>) {
+
+        val addressName = requireContext().getString(method.addressNameStringId)
+        val scanIconContentDescription = requireContext().getString(R.string.dinerdetails_biographics_scan_qr_code)
+        val clearIconContentDescription = requireContext().getString(R.string.dinerdetails_biographics_clear_address)
+        val addressSetColor = TypedValue().also { requireContext().theme.resolveAttribute(R.attr.colorOnSurface, it, true) }.data
+        val addressUnsetColor = TypedValue().also { requireContext().theme.resolveAttribute(R.attr.colorOnSurfaceLowEmphasis, it, true) }.data
+        val inactiveAlpha = 0.25f
+
+        biographics.apply {
+            icon.setImageResource(method.paymentIconId)
+            inputLayout.hint = addressName
+
+            if (method.addressCanBeEmail) {
+                viewModel.dinerEmailAddresses.observe(viewLifecycleOwner) {
+                    if (it.isEmpty()) {
+                        input.setAdapter(null)
+                    } else {
+                        input.setAdapter(ArrayAdapter(
+                            requireContext(),
+                            R.layout.autocomplete_textview,
+                            it.take(3)))
+                    }
+                }
+            }
+
+            input.onFocusChangeListener = View.OnFocusChangeListener { view, focused ->
+                if (focused)
+                    input.showDropDown()
+            }
+
+            input.addTextChangedListener { editable ->
+                when {
+                    (editable?.isNotEmpty() == true) -> {
+                        inputLayout.endIconDrawable = AppCompatResources.getDrawable(requireContext(), R.drawable.ic_cancel)
+                        inputLayout.endIconContentDescription = clearIconContentDescription
+                        inputLayout.setEndIconOnClickListener {
+                            input.text = null
+                        }
+                    }
+                    method.addressCodeScannable -> {
+                        inputLayout.endIconDrawable = AppCompatResources.getDrawable(requireContext(), R.drawable.ic_qr_code_24dp)
+                        inputLayout.endIconContentDescription = scanIconContentDescription
+                        inputLayout.setEndIconOnClickListener {
+                            val intent = Intent(requireContext(), QRCodeScannerActivity::class.java)
+                            intent.putExtra(getString(R.string.intent_key_qrcode_payment_method), method)
+                            intent.putExtra(getString(R.string.intent_key_qrcode_diner_name), viewModel.loadedDiner.value?.name)
+                            qrCodeScannerLauncher.launch(intent)
+                        }
+                    }
+                    else -> {
+                        // Ripple from clearing text gets stuck unless the icon removal is delayed
+                        Handler(Looper.getMainLooper()).postDelayed({
+                            inputLayout.endIconDrawable = null
+                            inputLayout.setEndIconOnClickListener(null)
+                        }, 100)
+                    }
+                }
+            }
+        }
+
+        addressLiveData.observe(viewLifecycleOwner) {
+            biographics.address.text = it.second
+            if (it.first) {
+                biographics.icon.alpha = 1.0f
+                biographics.input.setText(it.second)
+                biographics.address.setTextColor(addressSetColor)
+            } else {
+                biographics.icon.alpha = if (it.third) 1.0f else inactiveAlpha
+                biographics.input.text = null
+                biographics.address.setTextColor(addressUnsetColor)
+            }
+        }
     }
 
     private fun setupToolbar() {
@@ -258,15 +396,14 @@ class DinerDetailsFragment: Fragment(), Revealable by RevealableImpl() {
 
         (requireView().findViewById(R.id.appbar_layout) as AppBarLayout).addOnOffsetChangedListener(
             AppBarLayout.OnOffsetChangedListener { appBarLayout, verticalOffset ->
-                if (viewModel.isInputLocked.value)
-                    return@OnOffsetChangedListener
-
                 when {
+                    viewModel.isInputLocked.value || viewModel.editingBiographics.value == true -> {
+                        return@OnOffsetChangedListener
+                    }
                     appBarLayout.totalScrollRange == 0 -> {
                         // View needs non-zero height to determine collapsed state
                         binding.toolbar.menu.setGroupVisible(R.id.group_editor, false)
                         binding.fab.hide()
-                        isFABShowing = false
                     }
                     verticalOffset == 0 -> {
                         // Fully expanded (hide toolbar icon and show fab)
@@ -275,21 +412,21 @@ class DinerDetailsFragment: Fragment(), Revealable by RevealableImpl() {
                         /* The FAB is rendered momentarily at the bottom of the screen if the user
                            drags the toolbar all the way to the expanded position. The anchor view
                            has the correct position and dimensions when this branch is called so the
-                           root cause is unclear. */
-                        binding.fab.show()
-                        isFABShowing = true
+                           root cause is unclear. A nominal delay before showing helps in some
+                           cases. */
+                        Handler(Looper.getMainLooper()).postDelayed({
+                            binding.fab.show()
+                        }, 100)
                     }
                     appBarLayout.totalScrollRange == -verticalOffset -> {
                         // Fully collapsed (show toolbar icon and hide fab)
                         binding.toolbar.menu.setGroupVisible(R.id.group_editor, true)
                         binding.fab.hide()
-                        isFABShowing = false
                     }
                     else -> {
                         // Partially collapsed (hide both toolbar icon and fab)
                         binding.toolbar.menu.setGroupVisible(R.id.group_editor, false)
                         binding.fab.hide()
-                        isFABShowing = false
                     }
                 }
             })
@@ -297,7 +434,7 @@ class DinerDetailsFragment: Fragment(), Revealable by RevealableImpl() {
         binding.toolbar.setOnMenuItemClickListener { item ->
             when (item.itemId) {
                 R.id.edit_diner -> {
-                    editDiner()
+                    viewModel.editBiographics()
                     true
                 }
                 else -> {

@@ -16,4 +16,8 @@
 
     <string name="intent_key_qrcode_payment_method">INTENT_KEY_QRCODE_PAYMENT_METHOD</string>
     <string name="intent_key_qrcode_diner_name">INTENT_KEY_QRCODE_DINER_NAME</string>
+    <string name="intent_key_qrcode_payment_method_address">INTENT_KEY_QRCODE_PAYMENT_METHOD_ADDRESS</string>
+    <string name="intent_key_qrcode_declined_camera_permission">INTENT_KEY_QRCODE_DECLINED_CAMERA_PERMISSION</string>
+    <string name="intent_key_qrcode_camera_error">INTENT_KEY_QRCODE_CAMERA_ERROR</string>
+    <string name="intent_key_qrcode_canceled">INTENT_KEY_QRCODE_CANCELED</string>
 </resources>

@@ -39,7 +39,7 @@ class Converters {
     fun aliasMapToJSON(aliasMap: MutableMap<PaymentMethod, String>) = Gson().toJson(aliasMap)
 
     @TypeConverter
-    fun jsonToAliasMap(json: String): MutableMap<PaymentMethod, String> = Gson().fromJson(json, aliasMapType)
+    fun jsonToAddressMap(json: String): MutableMap<PaymentMethod, String> = Gson().fromJson(json, aliasMapType)
 
     @TypeConverter
     fun paymentTemplateMapToJSON(template: MutableMap<String, PaymentTemplate>) = Gson().toJson(template)
@@ -52,9 +52,11 @@ class Converters {
 enum class PaymentMethod(val acceptedByRestaurant: Boolean,
                          val acceptedByPeer: Boolean,
                          val processedWithinApp: Boolean,
-                         val aliasCodeScannable: Boolean,
+                         val addressCodeScannable: Boolean,
+                         val addressCanBeEmail: Boolean,
+                         val addressNameStringId: Int,
                          val paymentInstructionStringId: Int,
-                         val aliasSelectionStringId: Int,
+                         val addressSelectionStringId: Int,
                          val paymentIconId: Int,
                          val isIconColorless: Boolean) {
     CASH(
@@ -62,6 +64,8 @@ enum class PaymentMethod(val acceptedByRestaurant: Boolean,
         true,
         false,
         false,
+        false,
+        R.string.payment_method_cash_address_name,
         R.string.payments_instruction_cash,
         R.string.placeholder_text,
         R.drawable.ic_payment_cash,
@@ -71,6 +75,8 @@ enum class PaymentMethod(val acceptedByRestaurant: Boolean,
         false,
         false,
         false,
+        false,
+        R.string.payment_method_credit_card_split_address_name,
         R.string.payments_instruction_credit_card_split,
         R.string.placeholder_text,
         R.drawable.ic_payment_credit_card_split,
@@ -80,6 +86,8 @@ enum class PaymentMethod(val acceptedByRestaurant: Boolean,
         false,
         false,
         false,
+        false,
+        R.string.payment_method_credit_card_individual_address_name,
         R.string.payments_instruction_credit_card_individual,
         R.string.placeholder_text,
         R.drawable.ic_payment_credit_card,
@@ -89,8 +97,10 @@ enum class PaymentMethod(val acceptedByRestaurant: Boolean,
         true,
         true,
         false,
+        true,
+        R.string.payment_method_iou_email_address_name,
         R.string.payments_instruction_iou_email,
-        R.string.payments_alias_entry_iou_email,
+        R.string.payments_address_entry_iou_email,
         R.drawable.ic_payment_iou_email,
         true),
     VENMO(
@@ -98,8 +108,10 @@ enum class PaymentMethod(val acceptedByRestaurant: Boolean,
         true,
         true,
         true,
+        true,
+        R.string.payment_method_venmo_address_name,
         R.string.payments_instruction_venmo,
-        R.string.payments_alias_entry_venmo,
+        R.string.payments_address_entry_venmo,
         R.drawable.ic_payment_venmo,
         false),
     CASH_APP(
@@ -107,8 +119,10 @@ enum class PaymentMethod(val acceptedByRestaurant: Boolean,
         true,
         true,
         true,
+        true,
+        R.string.payment_method_cash_app_address_name,
         R.string.payments_instruction_cash_app,
-        R.string.payments_alias_entry_cash_app,
+        R.string.payments_address_entry_cash_app,
         R.drawable.ic_payment_cash_app,
         false),
     ALGO(
@@ -116,8 +130,10 @@ enum class PaymentMethod(val acceptedByRestaurant: Boolean,
         true,
         true,
         true,
+        false,
+        R.string.payment_method_algorand_address_name,
         R.string.payments_instruction_algorand,
-        R.string.payments_alias_entry_algorand,
+        R.string.payments_address_entry_algorand,
         R.drawable.ic_payment_algorand,
         true)
 }
@@ -130,7 +146,7 @@ enum class PaymentMethod(val acceptedByRestaurant: Boolean,
 class Contact(@PrimaryKey val lookupKey: String,
               var name: String,
               var visibility: Int,
-              val paymentAliasDefaults: MutableMap<PaymentMethod, String> = mutableMapOf()): Parcelable {
+              val paymentAddressDefaults: MutableMap<PaymentMethod, String> = mutableMapOf()): Parcelable {
 
     @Ignore var photoUri: String? = null
 
@@ -176,7 +192,7 @@ class Contact(@PrimaryKey val lookupKey: String,
             this.writeString(lookupKey)
             this.writeString(name)
             this.writeInt(visibility)
-            this.writeString(Gson().toJson(paymentAliasDefaults))
+            this.writeString(Gson().toJson(paymentAddressDefaults))
             this.writeString(photoUri)
         }
     }
@@ -222,9 +238,9 @@ data class PaymentTemplate(val method: PaymentMethod,
                            val payerId: String,
                            val payeeId: String,
                            val surrogateId: String? = null,
-                           val payerAlias: String? = null,
-                           val payeeAlias: String? = null,
-                           val surrogateAlias: String? = null)
+                           val payerAddress: String? = null,
+                           val payeeAddress: String? = null,
+                           val surrogateAddress: String? = null)
 
 
 @Entity(tableName = "diner_table",
@@ -235,17 +251,17 @@ class Diner(@PrimaryKey val id: String,
             val listIndex: Int,
             val lookupKey: String,
             val name: String,
-            val paymentAliasDefaults: MutableMap<PaymentMethod, String> = mutableMapOf(),
+            val paymentAddressDefaults: MutableMap<PaymentMethod, String> = mutableMapOf(),
             val paymentTemplateMap: MutableMap<String, PaymentTemplate> = mutableMapOf()): Parcelable {
 
-    constructor(id: String, billId: String, listIndex: Int, contact: Contact): this(id, billId, listIndex, contact.lookupKey, contact.name, contact.paymentAliasDefaults) {
+    constructor(id: String, billId: String, listIndex: Int, contact: Contact): this(id, billId, listIndex, contact.lookupKey, contact.name, contact.paymentAddressDefaults) {
         photoUri = contact.photoUri
     }
 
     @Ignore var photoUri: String? = null
     @Ignore var emailAddresses: List<String> = emptyList()
 
-    fun asContact() = Contact(lookupKey, name, Contact.VISIBLE, paymentAliasDefaults).also { it.photoUri = photoUri }
+    fun asContact() = Contact(lookupKey, name, Contact.VISIBLE, paymentAddressDefaults).also { it.photoUri = photoUri }
 
     @Ignore private val itemIdsMutable = mutableListOf<String>()
     @Ignore private val debtOwedIdsMutable = mutableListOf<String>()
@@ -285,13 +301,13 @@ class Diner(@PrimaryKey val id: String,
         return lookupKey == Contact.cashPool.lookupKey
     }
 
-    fun getDefaultAliasForMethod(method: PaymentMethod) = paymentAliasDefaults[method]
+    fun getDefaultAddressForMethod(method: PaymentMethod) = paymentAddressDefaults[method]
 
-    fun setDefaultAliasForMethod(method: PaymentMethod, alias: String?) {
+    fun setDefaultAddressForMethod(method: PaymentMethod, alias: String?) {
         if (alias == null) {
-            paymentAliasDefaults.remove(method)
+            paymentAddressDefaults.remove(method)
         } else {
-            paymentAliasDefaults[method] = alias
+            paymentAddressDefaults[method] = alias
         }
     }
 
@@ -397,7 +413,7 @@ class Diner(@PrimaryKey val id: String,
             this.writeInt(listIndex)
             this.writeString(lookupKey)
             this.writeString(name)
-            this.writeString(Gson().toJson(paymentAliasDefaults))
+            this.writeString(Gson().toJson(paymentAddressDefaults))
             this.writeString(Gson().toJson(paymentTemplateMap))
             this.writeStringList(itemIds)
             this.writeStringList(debtOwedIds)

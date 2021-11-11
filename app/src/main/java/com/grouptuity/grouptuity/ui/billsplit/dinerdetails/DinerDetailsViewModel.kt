@@ -9,6 +9,8 @@ import com.grouptuity.grouptuity.data.*
 import com.grouptuity.grouptuity.ui.billsplit.payments.algorandAddressToString
 import com.grouptuity.grouptuity.ui.billsplit.payments.cashAppAddressToCashtag
 import com.grouptuity.grouptuity.ui.billsplit.payments.venmoAddressToString
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import java.text.NumberFormat
 import kotlin.math.abs
@@ -22,6 +24,7 @@ class DinerDetailsViewModel(app: Application): UIViewModel(app) {
     private val totalOwedByOthersString = app.resources.getString(R.string.dinerdetails_debts_total_owed_by_others)
 
     var loadedDiner = MutableStateFlow<Diner?>(null)
+    var dinerEmailAddresses = loadedDiner.map { it?.emailAddresses ?: emptyList() }.asLiveData()
     private var numDiners = repository.diners.mapLatest { it.size }
     private var numItems = repository.items.mapLatest { it.size }
     private val unusedDiscountAmount: Flow<Double?> =
@@ -33,23 +36,45 @@ class DinerDetailsViewModel(app: Application): UIViewModel(app) {
             discountsAcquired[diner]
         }
 
-    val email: LiveData<String> = loadedDiner.map {
-        it?.paymentAliasDefaults?.get(PaymentMethod.IOU_EMAIL) ?: context.getString(R.string.dinerdetails_biographics_no_email)
+    private val editingBiographicsMutable = MutableStateFlow(false)
+    val editingBiographics: LiveData<Boolean> = editingBiographicsMutable.asLiveData()
+
+    private val emailAddressNotSet = context.getString(R.string.dinerdetails_biographics_address_not_set, context.getString(PaymentMethod.IOU_EMAIL.addressNameStringId))
+    private val venmoAddressNotSet = context.getString(R.string.dinerdetails_biographics_address_not_set, context.getString(PaymentMethod.VENMO.addressNameStringId))
+    private val cashtagNotSet = context.getString(R.string.dinerdetails_biographics_address_not_set, context.getString(PaymentMethod.CASH_APP.addressNameStringId))
+    private val algoAddressNotSet = context.getString(R.string.dinerdetails_biographics_address_not_set, context.getString(PaymentMethod.ALGO.addressNameStringId))
+
+    val email: LiveData<Triple<Boolean, String, Boolean>> = combine(loadedDiner, editingBiographicsMutable) { diner, editing ->
+        val address = diner?.paymentAddressDefaults?.get(PaymentMethod.IOU_EMAIL)
+        if(address == null){
+            Triple(false, emailAddressNotSet, editing)
+        } else {
+            Triple(true, address, editing)
+        }
     }.asLiveData()
-    val venmo: LiveData<String> = loadedDiner.map { diner ->
-        diner?.paymentAliasDefaults?.get(PaymentMethod.VENMO)?.let {
-            venmoAddressToString(it)
-        } ?: context.getString(R.string.dinerdetails_biographics_no_venmo)
+    val venmoAddress: LiveData<Triple<Boolean, String, Boolean>> = combine(loadedDiner, editingBiographicsMutable) { diner, editing ->
+        val address = diner?.paymentAddressDefaults?.get(PaymentMethod.VENMO)
+        if(address == null){
+            Triple(false, venmoAddressNotSet, editing)
+        } else {
+            Triple(true, address, editing)
+        }
     }.asLiveData()
-    val cashtag: LiveData<String> = loadedDiner.map { diner ->
-        diner?.paymentAliasDefaults?.get(PaymentMethod.CASH_APP)?.let {
-            cashAppAddressToCashtag(it)
-        } ?: context.getString(R.string.dinerdetails_biographics_no_cashtag)
+    val cashtag: LiveData<Triple<Boolean, String, Boolean>> = combine(loadedDiner, editingBiographicsMutable) { diner, editing ->
+        val address = diner?.paymentAddressDefaults?.get(PaymentMethod.CASH_APP)
+        if(address == null){
+            Triple(false, cashtagNotSet, editing)
+        } else {
+            Triple(true, address, editing)
+        }
     }.asLiveData()
-    val algorandAddress: LiveData<String> = loadedDiner.map { diner ->
-        diner?.paymentAliasDefaults?.get(PaymentMethod.ALGO)?.let {
-            algorandAddressToString(it)
-        } ?: context.getString(R.string.dinerdetails_biographics_no_algorand)
+    val algorandAddress: LiveData<Triple<Boolean, String, Boolean>> = combine(loadedDiner, editingBiographicsMutable) { diner, editing ->
+        val address = diner?.paymentAddressDefaults?.get(PaymentMethod.ALGO)
+        if(address == null){
+            Triple(false, algoAddressNotSet, editing)
+        } else {
+            Triple(true, address, editing)
+        }
     }.asLiveData()
 
     val items: LiveData<List<Pair<Item,Triple<String, String, String?>>>> = loadedDiner.mapLatest {
@@ -474,6 +499,8 @@ class DinerDetailsViewModel(app: Application): UIViewModel(app) {
     fun initializeForDiner(diner: Diner?) {
         unFreezeOutput()
 
+        editingBiographicsMutable.value = false
+
         if(diner == null) {
             // Creating new diner
             loadedDiner.value = null
@@ -485,8 +512,17 @@ class DinerDetailsViewModel(app: Application): UIViewModel(app) {
 
     }
 
+    fun editBiographics() {
+        editingBiographicsMutable.value = true
+    }
+
     fun handleOnBackPressed(): Boolean {
-        return true
+        return if (editingBiographicsMutable.value) {
+            editingBiographicsMutable.value = false
+            false
+        } else {
+            true
+        }
     }
 
     fun removeDebt(debt: Debt) { repository.removeDebt(debt) }

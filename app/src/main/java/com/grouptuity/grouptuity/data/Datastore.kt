@@ -614,32 +614,32 @@ class Repository(context: Context) {
         payer: Diner,
         payee: Diner,
         surrogate: Diner? = null,
-        payerAlias: String? = null,
-        payeeAlias: String? = null,
-        surrogateAlias: String? = null) {
+        payerAddress: String? = null,
+        payeeAddress: String? = null,
+        surrogateAddress: String? = null) {
 
         val newTemplate = PaymentTemplate(
             method,
             payer.id,
             payee.id,
             surrogate?.id,
-            payerAlias,
-            payeeAlias,
-            surrogateAlias)
+            payerAddress,
+            payeeAddress,
+            surrogateAddress)
 
         payer.setPaymentTemplate(newTemplate)
 
-        if (payerAlias != null && payer.getDefaultAliasForMethod(method) == null) {
-            payer.setDefaultAliasForMethod(method, payerAlias)
+        if (payerAddress != null && payer.getDefaultAddressForMethod(method) == null) {
+            payer.setDefaultAddressForMethod(method, payerAddress)
         }
 
-        if (payeeAlias != null && payee.getDefaultAliasForMethod(method) == null) {
-            payee.setDefaultAliasForMethod(method, payeeAlias)
+        if (payeeAddress != null && payee.getDefaultAddressForMethod(method) == null) {
+            payee.setDefaultAddressForMethod(method, payeeAddress)
             database.saveDiner(payee)
         }
 
-        if (surrogateAlias != null && surrogate!!.getDefaultAliasForMethod(method) == null) {
-            surrogate.setDefaultAliasForMethod(method, surrogateAlias)
+        if (surrogateAddress != null && surrogate!!.getDefaultAddressForMethod(method) == null) {
+            surrogate.setDefaultAddressForMethod(method, surrogateAddress)
             database.saveDiner(surrogate)
         }
 

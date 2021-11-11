@@ -138,7 +138,7 @@ class PaymentsFragment: Fragment() {
             binding.noPaymentsHint.visibility = if (paymentsData.first.isEmpty()) View.VISIBLE else View.GONE
         }
 
-        paymentsViewModel.showSetAliasDialogEvent.observe(viewLifecycleOwner) { it.consume()?.apply { showSetAliasDialog(this.first, this.second, this.third) } }
+        paymentsViewModel.showSetAddressDialogEvent.observe(viewLifecycleOwner) { it.consume()?.apply { showSetAddressDialog(this.first, this.second, this.third) } }
 
         paymentsViewModel.processPaymentsEvent.observe(viewLifecycleOwner) { it.consume()?.apply { processPayments() } }
 
@@ -151,11 +151,11 @@ class PaymentsFragment: Fragment() {
         }
     }
 
-    private fun showSetAliasDialog(subject: Int, diner: Diner, method: PaymentMethod) {
+    private fun showSetAddressDialog(subject: Int, diner: Diner, method: PaymentMethod) {
 
         val items = mutableListOf<Triple<String, Int, () -> Unit>>()
 
-        if (method.aliasCodeScannable && requireContext().packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY)) {
+        if (method.addressCodeScannable && requireContext().packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_ANY)) {
             items.add(Triple(requireContext().getString(R.string.payments_scan_code), R.drawable.ic_qr_code_scanner_36dp) {
                 val intent = Intent(requireContext(), QRCodeScannerActivity::class.java)
                 intent.putExtra(getString(R.string.intent_key_qrcode_payment_method), method)
@@ -164,28 +164,30 @@ class PaymentsFragment: Fragment() {
             })
         }
 
-        diner.emailAddresses.forEach { email ->
-            items.add(Triple(email, R.drawable.ic_payment_iou_email) {
-                when(subject) {
-                    PaymentsViewModel.SELECTING_PAYER_ALIAS -> paymentsViewModel.setPayerAlias(email)
-                    PaymentsViewModel.SELECTING_PAYEE_ALIAS -> paymentsViewModel.setPayeeAlias(email)
-                    PaymentsViewModel.SELECTING_SURROGATE_ALIAS -> paymentsViewModel.setSurrogateAlias(email)
-                }
-            })
+        if (method.addressCanBeEmail) {
+            diner.emailAddresses.forEach { email ->
+                items.add(Triple(email, R.drawable.ic_payment_iou_email) {
+                    when(subject) {
+                        PaymentsViewModel.SELECTING_PAYER_ALIAS -> paymentsViewModel.setPayerAddress(email)
+                        PaymentsViewModel.SELECTING_PAYEE_ALIAS -> paymentsViewModel.setPayeeAddress(email)
+                        PaymentsViewModel.SELECTING_SURROGATE_ALIAS -> paymentsViewModel.setSurrogateAddress(email)
+                    }
+                })
+            }
         }
 
         items.add(Triple(requireContext().getString(R.string.payments_enter_manually), R.drawable.ic_edit_24dp_surface) {
             val editTextDialog = MaterialAlertDialogBuilder(ContextThemeWrapper(requireContext(), R.style.AlertDialog))
                 .setIcon(method.paymentIconId)
-                .setTitle(requireContext().getString(method.aliasSelectionStringId, diner.name))
+                .setTitle(requireContext().getString(method.addressSelectionStringId, diner.name))
                 .setView(R.layout.dialog_edit_text)
                 .setNegativeButton(resources.getString(R.string.cancel)) { _, _ -> }
                 .setPositiveButton(resources.getString(R.string.save)) { dialog, _ ->
                     (dialog as? AlertDialog)?.findViewById<EditText>(R.id.edit_text)?.text?.toString()?.apply {
                         when(subject) {
-                            PaymentsViewModel.SELECTING_PAYER_ALIAS -> paymentsViewModel.setPayerAlias(this)
-                            PaymentsViewModel.SELECTING_PAYEE_ALIAS -> paymentsViewModel.setPayeeAlias(this)
-                            PaymentsViewModel.SELECTING_SURROGATE_ALIAS -> paymentsViewModel.setSurrogateAlias(this)
+                            PaymentsViewModel.SELECTING_PAYER_ALIAS -> paymentsViewModel.setPayerAddress(this)
+                            PaymentsViewModel.SELECTING_PAYEE_ALIAS -> paymentsViewModel.setPayeeAddress(this)
+                            PaymentsViewModel.SELECTING_SURROGATE_ALIAS -> paymentsViewModel.setSurrogateAddress(this)
                         }
                     }
                 }.create()
@@ -217,7 +219,7 @@ class PaymentsFragment: Fragment() {
 
         MaterialAlertDialogBuilder(requireContext())
             .setIcon(method.paymentIconId)
-            .setTitle(requireContext().getString(method.aliasSelectionStringId, diner.name))
+            .setTitle(requireContext().getString(method.addressSelectionStringId, diner.name))
             .setAdapter(adapter) { _, position -> items[position].third() }
             .show()
     }

@@ -63,11 +63,9 @@
 
     <string name="dinerdetails_toolbar_title_new_diner">Create New Diner</string>
     <string name="dinerdetails_toolbar_edit">Edit diner</string>
-    <string name="dinerdetails_biographics_no_email">(email address not set)</string>
-    <string name="dinerdetails_biographics_no_venmo">(Venmo address not set)</string>
-    <string name="dinerdetails_biographics_no_cashtag">($Cashtag not set)</string>
-    <string name="dinerdetails_biographics_no_algorand">(Algorand address not set)</string>
-
+    <string name="dinerdetails_biographics_address_not_set">(%s not set)</string>
+    <string name="dinerdetails_biographics_scan_qr_code">Scan QR code</string>
+    <string name="dinerdetails_biographics_clear_address">Clear</string>
     <string name="dinerdetails_bill_section_title">Restaurant Bill</string>
     <string name="dinerdetails_items_subtotal_section">Subtotal</string>
     <plurals name="dinerdetails_item_split">
@@ -327,16 +325,24 @@
     <string name="payments_instruction_venmo">Pay %s with Venmo</string>
     <string name="payments_instruction_cash_app">Pay %s with the Cash App</string>
     <string name="payments_instruction_algorand">Pay %s with Algorand</string>
-    <string name="payments_alias_entry_iou_email">Email address for %s</string>
-    <string name="payments_alias_entry_venmo">Venmo for %s</string>
-    <string name="payments_alias_entry_cash_app">Cash App for %s</string>
-    <string name="payments_alias_entry_algorand">Algorand address for %s</string>
+    <string name="payments_address_entry_iou_email">Email address for %s</string>
+    <string name="payments_address_entry_venmo">Venmo for %s</string>
+    <string name="payments_address_entry_cash_app">Cash App for %s</string>
+    <string name="payments_address_entry_algorand">Algorand address for %s</string>
     <string name="payments_selection_instruction">Select restaurant payer</string>
     <string name="payments_close_selection_list">Close payment method list</string>
     <string name="payments_fab_process_payments">Process Payments</string>
     <string name="payments_scan_code">Scan code</string>
     <string name="payments_enter_manually">Enter manually</string>
     <string name="payments_ptp_username_hint">Enter username</string>
+
+    <string name="payment_method_cash_address_name">Cash</string>
+    <string name="payment_method_credit_card_individual_address_name">Credit card number</string>
+    <string name="payment_method_credit_card_split_address_name">Credit card number</string>
+    <string name="payment_method_iou_email_address_name">Email address</string>
+    <string name="payment_method_venmo_address_name">Venmo address</string>
+    <string name="payment_method_cash_app_address_name">$Cashtag</string>
+    <string name="payment_method_algorand_address_name">Algorand address</string>
 
     <string name="venmo_note">Settling the bill with Grouptuity</string>
 

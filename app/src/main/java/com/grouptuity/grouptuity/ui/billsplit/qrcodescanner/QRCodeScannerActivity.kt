@@ -83,10 +83,7 @@ class QRCodeScannerActivity: AppCompatActivity() {
                     supportFragmentManager,
                     it,
                     acceptCallback = {
-                        val data = Intent()
-                        data.putExtra("alias", viewModel.alias)
-                        setResult(Activity.RESULT_OK, data)
-                        finish()
+                        finishActivityWithResult(wasPermissionDenied = false, hasCameraError = false, wasCanceled = false)
                     },
                     retryCallback = {
                         viewModel.retryLoad()
@@ -107,10 +104,7 @@ class QRCodeScannerActivity: AppCompatActivity() {
                 viewModel.allowCameraUse()
             } else {
                 // Permission denied
-                val data = Intent()
-                data.putExtra("declined_camera_permission", true)
-                setResult(Activity.RESULT_CANCELED, data)
-                finish()
+                finishActivityWithResult(wasPermissionDenied = true, hasCameraError = false, wasCanceled = false)
             }
         }
 
@@ -120,10 +114,7 @@ class QRCodeScannerActivity: AppCompatActivity() {
                 permissionRequestLauncher.launch(Manifest.permission.CAMERA)
             } else {
                 // User dismissed dialog so finish activity
-                val data = Intent()
-                data.putExtra("declined_camera_permission", true)
-                setResult(Activity.RESULT_CANCELED, data)
-                finish()
+                finishActivityWithResult(wasPermissionDenied = true, hasCameraError = false, wasCanceled = false)
             }
         }
     }
@@ -132,10 +123,7 @@ class QRCodeScannerActivity: AppCompatActivity() {
         if (viewModel.hasBarcode) {
             viewModel.clearBarcode()
         } else {
-            val data = Intent()
-            data.putExtra("canceled", true)
-            setResult(Activity.RESULT_CANCELED, data)
-            finish()
+            finishActivityWithResult(wasPermissionDenied = false, hasCameraError = false, wasCanceled = true)
         }
     }
 
@@ -153,6 +141,24 @@ class QRCodeScannerActivity: AppCompatActivity() {
         } else {
             viewModel.allowCameraUse()
         }
+    }
+
+    private fun finishActivityWithResult(wasPermissionDenied: Boolean, hasCameraError: Boolean, wasCanceled: Boolean) {
+        val data = Intent()
+        data.putExtra(getString(R.string.intent_key_qrcode_payment_method), viewModel.getPaymentMethod())
+        data.putExtra(getString(R.string.intent_key_qrcode_diner_name), viewModel.getDinerName())
+        data.putExtra(getString(R.string.intent_key_qrcode_payment_method_address), viewModel.getVerifiedAddress())
+        data.putExtra(getString(R.string.intent_key_qrcode_declined_camera_permission), wasPermissionDenied)
+        data.putExtra(getString(R.string.intent_key_qrcode_camera_error), hasCameraError)
+        data.putExtra(getString(R.string.intent_key_qrcode_canceled), wasCanceled)
+
+        setResult(
+            if (wasPermissionDenied || hasCameraError || wasCanceled)
+                Activity.RESULT_CANCELED
+            else
+                Activity.RESULT_OK, data)
+
+        finish()
     }
 
     private fun startCamera() {
@@ -202,10 +208,7 @@ class QRCodeScannerActivity: AppCompatActivity() {
                     graphicOverlay.invalidate()
                 }, 100)
             } catch(e: Exception) {
-                val data = Intent()
-                data.putExtra("camera_error", true)
-                setResult(Activity.RESULT_CANCELED, data)
-                finish()
+                finishActivityWithResult(wasPermissionDenied = false, hasCameraError = true, wasCanceled = false)
             }
         }, ContextCompat.getMainExecutor(this))
     }
