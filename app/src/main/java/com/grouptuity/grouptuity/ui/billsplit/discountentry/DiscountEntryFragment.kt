@@ -28,6 +28,7 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.tabs.TabLayout
 import com.google.android.material.transition.Hold
+import com.grouptuity.grouptuity.MainActivity
 import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.databinding.*
 import com.grouptuity.grouptuity.ui.custom.transitions.*
@@ -40,7 +41,7 @@ import java.text.NumberFormat
 // TODO handle screen orientation change (also on other fragments)
 
 
-class DiscountEntryFragment: Fragment(), Revealable by RevealableImpl() {
+class DiscountEntryFragment: Fragment() {
     private val args: DiscountEntryFragmentArgs by navArgs()
     private var binding by setNullOnDestroy<FragDiscountEntryBinding>()
     private lateinit var discountEntryViewModel: DiscountEntryViewModel
@@ -59,7 +60,7 @@ class DiscountEntryFragment: Fragment(), Revealable by RevealableImpl() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Intercept user interactions while while fragment transitions and animations are running
+        // Intercept user interactions while fragment transitions and animations are running
         binding.rootLayout.attachLock(discountEntryViewModel.isInputLocked)
 
         // Intercept back pressed events to allow fragment-specific behaviors
@@ -82,7 +83,7 @@ class DiscountEntryFragment: Fragment(), Revealable by RevealableImpl() {
                 setupEnterTransitionNewFromTaxTip()
             } else {
                 // New discount entry starting from discount fragment
-                binding.innerCoveredFragment.setImageBitmap(coveredFragmentBitmap)
+                binding.coveredFragment.setImageBitmap(MainActivity.storedViewBitmap)
                 binding.innerCoveredFragment.visibility = View.VISIBLE
 
                 enterTransition = CircularRevealTransition(
@@ -100,7 +101,7 @@ class DiscountEntryFragment: Fragment(), Revealable by RevealableImpl() {
             }
         } else {
             // Editing existing discount
-            binding.coveredFragment.setImageBitmap(coveredFragmentBitmap)
+            binding.coveredFragment.setImageBitmap(MainActivity.storedViewBitmap)
             binding.fadeView.visibility = View.GONE
             binding.container.transitionName = "container" + (discountEntryViewModel.loadedDiscount.value?.id ?: "")
 
@@ -592,7 +593,7 @@ class DiscountEntryFragment: Fragment(), Revealable by RevealableImpl() {
         ).setOnTransitionStartCallback { _, _, _, _ -> discountEntryViewModel.notifyTransitionStarted() }
             .setOnTransitionEndCallback { _, _, _, _ -> discountEntryViewModel.notifyTransitionFinished() }
 
-        binding.coveredFragment.setImageBitmap(coveredFragmentBitmap)
+        binding.coveredFragment.setImageBitmap(MainActivity.storedViewBitmap)
     }
 
     private fun setupReturnTransitionToTaxTip(view: View, withNewDiscount: Boolean) {
@@ -676,7 +677,7 @@ class DiscountEntryFragment: Fragment(), Revealable by RevealableImpl() {
     }
 
     private fun setupReturnTransitionToDiscounts(view: View) {
-        binding.coveredFragment.setImageBitmap(coveredFragmentBitmap)
+        binding.coveredFragment.setImageBitmap(MainActivity.storedViewBitmap)
         binding.fadeView.visibility = View.GONE
         binding.container.transitionName = "container" + (discountEntryViewModel.loadedDiscount.value?.id ?: "")
 

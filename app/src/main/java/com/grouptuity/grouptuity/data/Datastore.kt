@@ -1,5 +1,6 @@
 package com.grouptuity.grouptuity.data
 
+import android.accounts.AccountManager
 import android.app.Application
 import android.content.Context
 import android.content.pm.PackageManager
@@ -79,8 +80,11 @@ class Repository(context: Context) {
     }
 
     inner class StoredPreference<T>(private val key: Preferences.Key<T>, private val defaultValue: T) {
+        var isSet: Boolean? = null
+            private set
+
         val stateFlow = preferenceDataStore.data.mapLatest { preferences ->
-            preferences[key] ?: defaultValue
+            preferences[key].also { isSet = true } ?: defaultValue.also { isSet = false }
         }.stateIn(CoroutineScope(Dispatchers.IO), SharingStarted.Eagerly, defaultValue)
 
         init {
@@ -116,7 +120,6 @@ class Repository(context: Context) {
     // App-level data
     val loadInProgress = MutableStateFlow(true)
     val requestProcessPaymentsEvent = MutableLiveData<Event<Boolean>>()
-    val requestoadInProgress = MutableStateFlow(true)
     val bills = database.getSavedBills()
     val selfContact = combine(userName.stateFlow, userPhotoUri.stateFlow) { userName, userPhotoUri ->
         Contact.updateSelfContactData(userName, userPhotoUri)
@@ -394,10 +397,14 @@ class Repository(context: Context) {
     }
 
     // Diner Functions
-    fun addSelfAsDiner(includeWithEveryone: Boolean = true) {
-        val selfDiner = Diner(newUUID(), mBill.id, ++maxDinerListIndex, Contact.self).also {
-            // TODO add emails
+    fun addSelfAsDiner(name: String? = null, includeWithEveryone: Boolean = true) {
+        // Save new name to Contact.self before instantiating the self Diner
+        if (name != null) {
+            Contact.updateSelfContactData(name, Contact.self.photoUri)
+            //TODO database.contactDao().save(Contact.self)
         }
+
+        val selfDiner = Diner(newUUID(), mBill.id, ++maxDinerListIndex, Contact.self)
 
         if (includeWithEveryone) {
             // TODO
@@ -409,7 +416,33 @@ class Repository(context: Context) {
         // TODO save contact to database?
 
         database.saveDiner(selfDiner)
+        // TODO commit updates for other entities affected by includeWithEveryone
+    }
+    fun createNewDiner(name: String,
+                       paymentAddresses: Map<PaymentMethod, String>,
+                       saveContact: Boolean = false,
+                       includeWithEveryone: Boolean = true): Diner {
+
+        val newContact = Contact(name, paymentAddresses)
+
+        val newDiner = Diner(newUUID(), mBill.id, ++maxDinerListIndex, newContact).also {
+            if(includeWithEveryone) {
+                // TODO add all-diner items/debts/discounts to this diner
+            }
+        }
+
+        mDiners.add(newDiner)
+
+        commitBill()
+
+        if (saveContact) {
+            database.saveContact(newContact)
+        }
+
+        database.saveDiner(newDiner)
         //TODO commit updates for other entities affected by includeWithEveryone
+
+        return newDiner
     }
     fun addContactsAsDiners(context: Context, dinerContacts: List<Contact>, includeWithEveryone: Boolean = true) {
         val diners: List<Diner> = dinerContacts.map { contact ->
@@ -420,9 +453,10 @@ class Repository(context: Context) {
 
                 CoroutineScope(Dispatchers.IO).launch {
                     AddressBook.getContactData(context, contact.lookupKey)?.apply {
-                        // Update photoUri and email addresses, but keep Diner saved name because the user
-                        // can edit this in the app
-                        it.emailAddresses = third
+                        // Update name, photoUri, and email addresses
+                        it.name = name
+                        it.photoUri = photoUri
+                        it.emailAddresses = emailAddresses
                     }
                 }
             }
@@ -676,6 +710,8 @@ class AddressBook(context: Context) {
             }
         }
 
+        data class ContactInfo(val name: String, val photoUri: String?, val emailAddresses: List<String>)
+
         private fun getEmailAddressesForContactId(context: Context, contactId: String): List<String> {
             val emailAddresses = mutableListOf<String>()
             var cursor: Cursor? = null
@@ -701,7 +737,18 @@ class AddressBook(context: Context) {
             return emailAddresses
         }
 
-        fun getContactData(context: Context, lookupKey: String): Triple<String, String?, List<String>>? {
+        fun getContactData(context: Context, lookupKey: String): ContactInfo? {
+            when {
+                lookupKey == Contact.self.lookupKey -> {
+                    // TODO pull data for self
+                    return null
+                }
+                lookupKey.startsWith(Contact.GROUPTUITY_LOOKUPKEY_PREFIX) -> {
+                    // Contact created by user in app. All information is already loaded.
+                    return null
+                }
+            }
+
             var contactName: String? = null
             var contactPhotoUri: String? = null
             var contactEmailAddresses: List<String>? = null
@@ -733,7 +780,7 @@ class AddressBook(context: Context) {
             }
 
             return if (contactName != null) {
-                Triple(contactName!!, contactPhotoUri, contactEmailAddresses ?: emptyList())
+                ContactInfo(contactName!!, contactPhotoUri, contactEmailAddresses ?: emptyList())
             } else {
                 null
             }
@@ -768,6 +815,8 @@ class AddressBook(context: Context) {
                     appContact.also {
                         it.name = deviceContact.name
                         it.photoUri = deviceContact.photoUri
+                        // Email addresses not needed for contacts displayed in the AddressBook and
+                        // will be queried only if the Contacts are added to the Bill as Diners
                     }
                 }
             }
@@ -927,18 +976,12 @@ abstract class AppDatabase: RoomDatabase() {
         val paymentMap = paymentDao().getPaymentsOnBill(billId).associateBy { it.id }
 
         dinerMap.forEach { (_, diner) ->
-
-            if (diner.lookupKey == Contact.self.lookupKey) {
-                // TODO pull data for self
-            } else {
-                AddressBook.getContactData(context, diner.lookupKey)?.apply {
-                    // Update photoUri and email addresses, but keep Diner saved name because the user
-                    // can edit this in the app
-                    diner.photoUri = second
-                    diner.emailAddresses = third
-                }
+            AddressBook.getContactData(context, diner.lookupKey)?.apply {
+                // Update name, photoUri, and email addresses
+                diner.name = name
+                diner.photoUri = photoUri
+                diner.emailAddresses = emailAddresses
             }
-
             diner.populateEntityLists(itemMap, debtMap, discountMap, paymentMap)
         }
         itemMap.forEach { (_, item) -> item.populateEntityLists(dinerMap, discountMap) }

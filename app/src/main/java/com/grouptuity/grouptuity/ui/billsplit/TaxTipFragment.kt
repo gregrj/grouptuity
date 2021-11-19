@@ -10,6 +10,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.FragmentNavigatorExtras
 import androidx.navigation.fragment.findNavController
 import com.google.android.material.transition.Hold
+import com.grouptuity.grouptuity.MainActivity
 import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.CalculationType
 import com.grouptuity.grouptuity.databinding.FragTaxTipBinding
@@ -76,6 +77,8 @@ class TaxTipFragment: Fragment() {
                 addTarget(requireParentFragment().requireView())
             }
 
+            (requireActivity() as MainActivity).storeViewAsBitmap(requireParentFragment().requireView())
+
             findNavController().navigate(BillSplitFragmentDirections.editTaxTip(
                 title = resources.getString(
                     R.string.calculator_toolbar_title_tax_pct,
@@ -95,6 +98,8 @@ class TaxTipFragment: Fragment() {
                 duration = 0L
                 addTarget(requireParentFragment().requireView())
             }
+
+            (requireActivity() as MainActivity).storeViewAsBitmap(requireParentFragment().requireView())
 
             findNavController().navigate(BillSplitFragmentDirections.editTaxTip(
                 title = resources.getString(
@@ -116,6 +121,8 @@ class TaxTipFragment: Fragment() {
                 addTarget(requireParentFragment().requireView())
             }
 
+            (requireActivity() as MainActivity).storeViewAsBitmap(requireParentFragment().requireView())
+
             findNavController().navigate(BillSplitFragmentDirections.editTaxTip(
                 title = resources.getString(
                     R.string.calculator_toolbar_title_tip_pct,
@@ -135,6 +142,8 @@ class TaxTipFragment: Fragment() {
                 duration = 0L
                 addTarget(requireParentFragment().requireView())
             }
+
+            (requireActivity() as MainActivity).storeViewAsBitmap(requireParentFragment().requireView())
 
             findNavController().navigate(BillSplitFragmentDirections.editTaxTip(
                 title = resources.getString(
@@ -156,6 +165,8 @@ class TaxTipFragment: Fragment() {
                 addTarget(requireParentFragment().requireView())
             }
 
+            (requireActivity() as MainActivity).storeViewAsBitmap(requireParentFragment().requireView())
+
             findNavController().navigate(BillSplitFragmentDirections.createFirstDiscount(editedDiscount = null, originParams = null),
                 FragmentNavigatorExtras(
                     binding.addDiscountsContainer to binding.addDiscountsContainer.transitionName,
@@ -170,6 +181,8 @@ class TaxTipFragment: Fragment() {
                 duration = 0L
                 addTarget(requireParentFragment().requireView())
             }
+
+            (requireActivity() as MainActivity).storeViewAsBitmap(requireParentFragment().requireView())
 
             findNavController().navigate(
                 BillSplitFragmentDirections.manageDiscounts(null),

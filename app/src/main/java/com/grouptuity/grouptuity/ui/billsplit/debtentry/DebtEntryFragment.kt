@@ -31,13 +31,12 @@ import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.transition.Hold
 import com.grouptuity.grouptuity.AppViewModel
+import com.grouptuity.grouptuity.MainActivity
 import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.Diner
 import com.grouptuity.grouptuity.databinding.FragDebtentryBinding
 import com.grouptuity.grouptuity.databinding.FragDebtentryListdinerBinding
 import com.grouptuity.grouptuity.ui.custom.transitions.CardViewExpandTransition
-import com.grouptuity.grouptuity.ui.custom.transitions.Revealable
-import com.grouptuity.grouptuity.ui.custom.transitions.RevealableImpl
 import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
 import com.grouptuity.grouptuity.ui.custom.views.slideUpFAB
 import kotlinx.coroutines.Dispatchers
@@ -51,7 +50,7 @@ import kotlinx.coroutines.withContext
 
 // Warn if launching diner not part of debt
 
-class DebtEntryFragment: Fragment(), Revealable by RevealableImpl() {
+class DebtEntryFragment: Fragment() {
     private var binding by setNullOnDestroy<FragDebtentryBinding>()
     private val args: DebtEntryFragmentArgs by navArgs()
     private lateinit var appViewModel: AppViewModel
@@ -74,7 +73,7 @@ class DebtEntryFragment: Fragment(), Revealable by RevealableImpl() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Intercept user interactions while while fragment transitions are running
+        // Intercept user interactions while fragment transitions are running
         binding.rootLayout.attachLock(debtEntryViewModel.isInputLocked)
 
         // Intercept back pressed events to allow fragment-specific behaviors
@@ -402,7 +401,7 @@ class DebtEntryFragment: Fragment(), Revealable by RevealableImpl() {
         val propCornerRadius = "com.grouptuity.grouptuity:CardViewExpandTransition:button_corner_radius"
 
         binding.addDebtButton.visibility = View.VISIBLE
-        binding.coveredFragment.setImageBitmap(coveredFragmentBitmap)
+        binding.coveredFragment.setImageBitmap(MainActivity.storedViewBitmap)
 
         sharedElementEnterTransition = CardViewExpandTransition(binding.debtEntryContainer.transitionName, binding.coordinatorLayout.id, true)
             .addElement(binding.addDebtButton.transitionName,

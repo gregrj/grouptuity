@@ -25,6 +25,7 @@ import androidx.transition.Transition
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.transition.Hold
 import com.grouptuity.grouptuity.AppViewModel
+import com.grouptuity.grouptuity.MainActivity
 import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.Diner
 import com.grouptuity.grouptuity.databinding.FragItementryBinding
@@ -33,8 +34,6 @@ import com.grouptuity.grouptuity.ui.custom.views.RecyclerViewListener
 import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
 import com.grouptuity.grouptuity.ui.custom.transitions.CardViewExpandTransition
 import com.grouptuity.grouptuity.ui.custom.transitions.CircularRevealTransition
-import com.grouptuity.grouptuity.ui.custom.transitions.Revealable
-import com.grouptuity.grouptuity.ui.custom.transitions.RevealableImpl
 import com.grouptuity.grouptuity.ui.custom.views.slideUpFAB
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -47,7 +46,7 @@ import kotlinx.coroutines.withContext
 
 
 
-class ItemEntryFragment: Fragment(), Revealable by RevealableImpl() {
+class ItemEntryFragment: Fragment() {
     private var binding by setNullOnDestroy<FragItementryBinding>()
     private val args: ItemEntryFragmentArgs by navArgs()
     private lateinit var appViewModel: AppViewModel
@@ -68,7 +67,7 @@ class ItemEntryFragment: Fragment(), Revealable by RevealableImpl() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Intercept user interactions while while fragment transitions are running
+        // Intercept user interactions while fragment transitions are running
         binding.rootLayout.attachLock(itemEntryViewModel.isInputLocked)
 
         // Intercept back pressed events to allow fragment-specific behaviors
@@ -116,7 +115,7 @@ class ItemEntryFragment: Fragment(), Revealable by RevealableImpl() {
         //Reset state and setup transitions
         if(args.editedItem == null) {
             // New item
-            binding.innerCoveredFragment.setImageBitmap(coveredFragmentBitmap)
+            binding.innerCoveredFragment.setImageBitmap(MainActivity.storedViewBitmap)
 
             bottomSheetBehavior.state = BottomSheetBehavior.STATE_EXPANDED
             binding.priceTextview.setOnClickListener(null)
@@ -464,7 +463,7 @@ class ItemEntryFragment: Fragment(), Revealable by RevealableImpl() {
             addTarget(view)
         }
 
-        binding.coveredFragment.setImageBitmap(coveredFragmentBitmap)
+        binding.coveredFragment.setImageBitmap(MainActivity.storedViewBitmap)
 
         postponeEnterTransition()
     }

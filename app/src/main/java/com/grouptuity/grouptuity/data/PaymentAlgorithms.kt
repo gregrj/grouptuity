@@ -5,6 +5,7 @@ import kotlin.math.max
 
 const val PRECISION = 1e-6
 
+
 class TransactionMap(private val allParticipants: Collection<Diner>, initialMap: Map<Pair<Diner, Diner>, Double>? = null) {
     private val pairMap: MutableMap<Pair<Diner, Diner>, Double> = initialMap?.toMutableMap() ?: mutableMapOf()
     val amountsPaid: Map<Diner, Double>
@@ -79,6 +80,9 @@ class TransactionMap(private val allParticipants: Collection<Diner>, initialMap:
 
     internal fun toList() = pairMap.map { Triple(it.key.first, it.key.second, it.value) }
 }
+
+// TODO need to operate only on immutable data across entire calculation
+
 
 class BillCalculation(private val bill: Bill,
                       private val cashPool: Diner,

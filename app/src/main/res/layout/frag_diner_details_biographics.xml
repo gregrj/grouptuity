@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content">
+
+    <include
+        android:id="@+id/email_biographics"
+        layout="@layout/frag_diner_details_biographic_item"/>
+
+    <include
+        android:id="@+id/venmo_biographics"
+        layout="@layout/frag_diner_details_biographic_item"/>
+
+    <include
+        android:id="@+id/cash_app_biographics"
+        layout="@layout/frag_diner_details_biographic_item"/>
+
+    <include
+        android:id="@+id/algorand_biographics"
+        layout="@layout/frag_diner_details_biographic_item"/>
+
+</LinearLayout>

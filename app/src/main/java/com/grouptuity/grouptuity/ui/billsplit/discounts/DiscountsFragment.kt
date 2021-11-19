@@ -26,14 +26,13 @@ import androidx.recyclerview.widget.SimpleItemAnimator
 import androidx.transition.Transition
 import androidx.transition.TransitionValues
 import com.google.android.material.transition.Hold
+import com.grouptuity.grouptuity.MainActivity
 import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.Discount
 import com.grouptuity.grouptuity.databinding.FragDiscountsBinding
 import com.grouptuity.grouptuity.databinding.FragDiscountsListitemBinding
 import com.grouptuity.grouptuity.ui.custom.transitions.CardViewExpandTransition
 import com.grouptuity.grouptuity.ui.custom.transitions.CircularRevealTransition
-import com.grouptuity.grouptuity.ui.custom.transitions.Revealable
-import com.grouptuity.grouptuity.ui.custom.transitions.RevealableImpl
 import com.grouptuity.grouptuity.ui.custom.views.RecyclerViewBottomOffset
 import com.grouptuity.grouptuity.ui.custom.views.RecyclerViewListener
 import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
@@ -46,7 +45,7 @@ import kotlinx.coroutines.withContext
 //TODO prevent update to list item during removal showing empty discount data
 //TODO menu button to clear all discounts
 
-class DiscountsFragment: Fragment(), Revealable by RevealableImpl() {
+class DiscountsFragment: Fragment() {
     private val args: DiscountsFragmentArgs by navArgs()
     private var binding by setNullOnDestroy<FragDiscountsBinding>()
     private lateinit var discountsViewModel: DiscountsViewModel
@@ -61,7 +60,7 @@ class DiscountsFragment: Fragment(), Revealable by RevealableImpl() {
     }
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        // Intercept user interactions while while fragment transitions and animations are running
+        // Intercept user interactions while fragment transitions and animations are running
         binding.rootLayout.attachLock(discountsViewModel.isInputLocked)
 
         // Intercept back pressed events to allow fragment-specific behaviors
@@ -77,6 +76,7 @@ class DiscountsFragment: Fragment(), Revealable by RevealableImpl() {
         setupList()
 
         binding.fab.setOnClickListener {
+            (requireActivity() as MainActivity).storeViewAsBitmap(requireView())
             findNavController().navigate(
                 DiscountsFragmentDirections.editDiscount(
                     editedDiscount = null,
@@ -99,6 +99,8 @@ class DiscountsFragment: Fragment(), Revealable by RevealableImpl() {
                     }
 
                     val viewBinding = FragDiscountsListitemBinding.bind(view)
+
+                    (requireActivity() as MainActivity).storeViewAsBitmap(requireView())
 
                     findNavController().navigate(
                         DiscountsFragmentDirections.editDiscount(view.tag as Discount, null),
@@ -220,7 +222,7 @@ class DiscountsFragment: Fragment(), Revealable by RevealableImpl() {
             }
         )
 
-        binding.coveredFragment.setImageBitmap(coveredFragmentBitmap)
+        binding.coveredFragment.setImageBitmap(MainActivity.storedViewBitmap)
     }
 
     private fun setupReturnTransitionToTaxTip(view: View) {

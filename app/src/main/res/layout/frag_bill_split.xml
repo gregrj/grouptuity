@@ -40,6 +40,16 @@
         android:layout_height="match_parent"
         app:layout_behavior="@string/appbar_scrolling_view_behavior"/>
 
+    <include
+        android:id="@+id/new_diner_shared_element"
+        layout="@layout/frag_diners_listitem"
+        android:visibility="gone"/>
+
+    <include
+        android:id="@+id/new_item_shared_element"
+        layout="@layout/frag_items_listitem"
+        android:visibility="gone"/>
+
     <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
         android:id="@+id/payment_fab"
         android:layout_width="wrap_content"

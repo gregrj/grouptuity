@@ -3,6 +3,7 @@ package com.grouptuity.grouptuity.ui.custom.transitions
 import android.animation.Animator
 import android.animation.ValueAnimator
 import android.graphics.Color
+import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.view.animation.AccelerateDecelerateInterpolator
@@ -12,6 +13,12 @@ import androidx.transition.TransitionListenerAdapter
 import androidx.transition.TransitionValues
 import com.grouptuity.grouptuity.R
 
+
+fun progressWindow(progress: Float, startFraction: Float, endFraction: Float) =
+    ((progress - startFraction)/(endFraction - startFraction)).coerceIn(0f, 1f)
+
+
+// Does not include corners. Too small to notice.
 
 class CardViewExpandTransition(private val containerTransitionName: String,
                                private val contentId: Int,
@@ -227,7 +234,7 @@ class CardViewExpandTransition(private val containerTransitionName: String,
             val progress = AccelerateDecelerateInterpolator().getInterpolation(it.animatedFraction)
             val eightyTo100Progress = (5f*progress - 4f).coerceIn(0f, 1f)
 
-            // Fade out shaded overlay behind detailed diner view
+            // Fade out shaded overlay behind the CardView
             scrim.alpha = startScrimAlpha + (endScrimAlpha - startScrimAlpha) * eightyTo100Progress
 
             startView.translationX = (endX - startX) * progress

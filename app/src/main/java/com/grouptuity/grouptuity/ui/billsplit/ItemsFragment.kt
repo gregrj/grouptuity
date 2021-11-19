@@ -17,6 +17,7 @@ import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.SimpleItemAnimator
 import com.google.android.material.transition.Hold
+import com.grouptuity.grouptuity.MainActivity
 import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.Item
 import com.grouptuity.grouptuity.databinding.FragItemsBinding
@@ -40,6 +41,7 @@ class ItemsFragment: Fragment() {
     private var binding by setNullOnDestroy<FragItemsBinding>()
     private lateinit var itemsViewModel: ItemsViewModel
     private var suppressAutoScroll = false
+    private var itemIdForNewItemTransition: String? = null
 
     // TODO align text in each list item based on max length of price to avoid offsets due to different numbers?
     // TODO Contact Chips text alignment
@@ -67,6 +69,8 @@ class ItemsFragment: Fragment() {
                 }
 
                 val viewBinding = FragItemsListitemBinding.bind(view)
+
+                (requireActivity() as MainActivity).storeViewAsBitmap(requireParentFragment().requireView())
 
                 findNavController().navigate(
                     BillSplitFragmentDirections.createNewItem(view.tag as Item, null),
@@ -101,13 +105,13 @@ class ItemsFragment: Fragment() {
         binding.list.apply {
             adapter = recyclerAdapter
 
-            requireParentFragment().apply {
-                postponeEnterTransition()
-                viewTreeObserver.addOnPreDrawListener {
-                    startPostponedEnterTransition()
-                    true
-                }
-            }
+//            requireParentFragment().apply {
+//                postponeEnterTransition()
+//                viewTreeObserver.addOnPreDrawListener {
+//                    startPostponedEnterTransition()
+//                    true
+//                }
+//            }
 
             // Add a spacer to the last item in the list to ensure it is not cut off when the toolbar
             // and floating action button are visible
@@ -126,6 +130,10 @@ class ItemsFragment: Fragment() {
         itemsViewModel.numberOfDiners.observe(viewLifecycleOwner) { count ->
             lifecycleScope.launch { recyclerAdapter.updateDataSet(numberOfDiners = count) }
         }
+    }
+
+    fun setSharedElementItemId(itemId: String) {
+        itemIdForNewItemTransition = itemId
     }
 }
 

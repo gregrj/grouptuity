@@ -150,12 +150,19 @@ class Contact(@PrimaryKey val lookupKey: String,
 
     @Ignore var photoUri: String? = null
 
+    constructor(name: String, defaults: Map<PaymentMethod, String>): this(
+        GROUPTUITY_LOOKUPKEY_PREFIX + UUID.randomUUID(),
+        name,
+        VISIBLE,
+        defaults.toMutableMap())
+
     fun getInitials() = nameToInitials(name)
 
     companion object {
         const val VISIBLE = 0
         const val FAVORITE = 1
         const val HIDDEN = 2
+        const val GROUPTUITY_LOOKUPKEY_PREFIX = "grouptuity_lookupkey_"
 
         private var selfName: String = "You" // Value overwritten from xml during database creation
         private var selfPhotoUri: String? = null
@@ -208,14 +215,14 @@ class Contact(@PrimaryKey val lookupKey: String,
  */
 @Entity(tableName = "bill_table")
 class Bill(@PrimaryKey val id: String,
-                val title: String,
-                val timeCreated: Long,
-                val tax: Double,
-                val taxAsPercent: Boolean,
-                val tip: Double,
-                val tipAsPercent: Boolean,
-                val isTaxTipped: Boolean,
-                val discountsReduceTip: Boolean) {
+           val title: String,
+           val timeCreated: Long,
+           val tax: Double,
+           val taxAsPercent: Boolean,
+           val tip: Double,
+           val tipAsPercent: Boolean,
+           val isTaxTipped: Boolean,
+           val discountsReduceTip: Boolean) {
 
     fun withTitle(title: String) =
         Bill(this.id, title, this.timeCreated, this.tax, this.taxAsPercent, this.tip, this.tipAsPercent, this.isTaxTipped, this.discountsReduceTip)
@@ -250,11 +257,12 @@ class Diner(@PrimaryKey val id: String,
             val billId: String,
             val listIndex: Int,
             val lookupKey: String,
-            val name: String,
+            var name: String,
             val paymentAddressDefaults: MutableMap<PaymentMethod, String> = mutableMapOf(),
             val paymentTemplateMap: MutableMap<String, PaymentTemplate> = mutableMapOf()): Parcelable {
 
-    constructor(id: String, billId: String, listIndex: Int, contact: Contact): this(id, billId, listIndex, contact.lookupKey, contact.name, contact.paymentAddressDefaults) {
+    constructor(id: String, billId: String, listIndex: Int, contact: Contact):
+            this(id, billId, listIndex, contact.lookupKey, contact.name, contact.paymentAddressDefaults) {
         photoUri = contact.photoUri
     }
 
@@ -425,7 +433,7 @@ class Diner(@PrimaryKey val id: String,
         }
     }
 
-    companion object CREATOR : Parcelable.Creator<Diner> {
+    companion object CREATOR: Parcelable.Creator<Diner> {
         override fun createFromParcel(parcel: Parcel) = Diner(
             parcel.readString()!!,
             parcel.readString()!!,

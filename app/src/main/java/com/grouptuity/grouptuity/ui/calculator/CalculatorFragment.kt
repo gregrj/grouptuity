@@ -19,12 +19,11 @@ import androidx.navigation.fragment.navArgs
 import androidx.transition.Transition
 import androidx.transition.TransitionValues
 import com.google.android.material.transition.Hold
+import com.grouptuity.grouptuity.MainActivity
 import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.CalculationType
 import com.grouptuity.grouptuity.databinding.FragCalculatorBinding
 import com.grouptuity.grouptuity.ui.custom.transitions.CardViewExpandTransition
-import com.grouptuity.grouptuity.ui.custom.transitions.Revealable
-import com.grouptuity.grouptuity.ui.custom.transitions.RevealableImpl
 import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
 
 // TODO handle inset changes
@@ -32,7 +31,7 @@ import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
 const val CALCULATOR_RETURN_KEY = "calculatorReturnKey"
 
 
-class CalculatorFragment: Fragment(), Revealable by RevealableImpl() {
+class CalculatorFragment: Fragment() {
     private val args: CalculatorFragmentArgs by navArgs()
     private var binding by setNullOnDestroy<FragCalculatorBinding>()
     private lateinit var calculatorViewModel: CalculatorViewModel
@@ -237,7 +236,7 @@ class CalculatorFragment: Fragment(), Revealable by RevealableImpl() {
         ).setOnTransitionStartCallback { _, _, _, _ -> calculatorViewModel.notifyTransitionStarted() }
             .setOnTransitionEndCallback { _, _, _, _ -> calculatorViewModel.notifyTransitionFinished() }
 
-        binding.coveredFragment.setImageBitmap(coveredFragmentBitmap)
+        binding.coveredFragment.setImageBitmap(MainActivity.storedViewBitmap)
     }
 
     private fun setupReturnTransition() {

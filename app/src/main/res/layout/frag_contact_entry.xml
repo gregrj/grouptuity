@@ -1,0 +1,309 @@
+<?xml version="1.0" encoding="utf-8"?>
+<com.grouptuity.grouptuity.ui.custom.views.LockableFrameLayout
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    android:id="@+id/root_layout"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:theme="@style/Theme.Grouptuity.Secondary"
+    tools:context=".ui.billsplit.dinerdetails.DinerDetailsFragment">
+
+    <ImageView
+        android:id="@+id/covered_fragment"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        tools:ignore="ContentDescription" />
+
+    <View
+        android:id="@+id/scrim"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="#000000"
+        android:alpha="0"/>
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/container"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        app:cardElevation="0dp"
+        app:cardCornerRadius="0dp">
+
+        <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+            android:id="@+id/new_contact_button"
+            android:transitionName="new_contact_button_transition_name"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:gravity="center"
+            app:iconGravity="textStart"
+            android:visibility="gone"
+            android:text="@string/addressbook_fab_new_contact"
+            app:icon="@drawable/ic_add_person"
+            android:textColor="?attr/colorOnSecondary"
+            app:backgroundTint="?attr/colorSecondary" />
+
+        <androidx.coordinatorlayout.widget.CoordinatorLayout
+            android:id="@+id/coordinator_layout"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent">
+
+            <com.google.android.material.appbar.AppBarLayout
+                android:id="@+id/appbar_layout"
+                android:layout_height="wrap_content"
+                android:layout_width="match_parent">
+
+                <View
+                    android:id="@+id/status_bar_background_view"
+                    android:layout_width="match_parent"
+                    android:layout_height="@dimen/status_bar_height"
+                    android:background="?attr/colorSecondaryVariant"/>
+
+                <androidx.appcompat.widget.Toolbar
+                    android:id="@+id/toolbar"
+                    android:layout_width="match_parent"
+                    android:layout_height="?attr/actionBarSize"
+                    app:title="@string/discounts_toolbar_title"
+                    style="@style/Widget.MaterialComponents.Toolbar.Primary"/>
+            </com.google.android.material.appbar.AppBarLayout>
+
+            <androidx.core.widget.NestedScrollView
+                android:id="@+id/nested_scroll_view"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                app:layout_behavior="@string/appbar_scrolling_view_behavior"
+                tools:context=".ScrollingActivity">
+
+                <androidx.constraintlayout.widget.ConstraintLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginEnd="24dp"
+                    android:layout_marginVertical="16dp">
+
+                    <ImageView
+                        android:id="@+id/name_icon"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:layout_margin="16dp"
+                        app:layout_constraintBottom_toTopOf="@+id/name_email_barrier"
+                        app:layout_constraintEnd_toStartOf="@+id/name_input_layout"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toTopOf="parent"
+                        android:src="@drawable/ic_person_24dp"
+                        tools:ignore="ContentDescription" />
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/name_input_layout"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        app:layout_constraintBottom_toTopOf="@+id/name_email_barrier"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toEndOf="@+id/name_icon"
+                        app:layout_constraintTop_toTopOf="parent"
+                        android:hint="@string/contact_entry_name_hint"
+                        app:endIconMode="custom"
+                        app:endIconContentDescription="@string/dinerdetails_biographics_scan_qr_code">
+
+                        <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                            android:id="@+id/name_input"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:paddingStart="16dp"
+                            android:paddingEnd="16dp"
+                            android:textColor="?attr/colorOnSurface"
+                            android:importantForAutofill="no"
+                            android:inputType="textPersonName|textAutoComplete"/>
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <androidx.constraintlayout.widget.Barrier
+                        android:id="@+id/name_email_barrier"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        app:barrierDirection="bottom"
+                        app:constraint_referenced_ids="name_icon, name_input_layout" />
+
+                    <ImageView
+                        android:id="@+id/email_icon"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:layout_margin="16dp"
+                        app:layout_constraintBottom_toTopOf="@id/email_venmo_barrier"
+                        app:layout_constraintEnd_toStartOf="@+id/email_input_layout"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@+id/name_email_barrier"
+                        android:src="@drawable/ic_payment_iou_email"
+                        app:tint="?attr/colorOnSurfaceMediumEmphasis"
+                        tools:ignore="ContentDescription" />
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/email_input_layout"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        app:layout_constraintBottom_toTopOf="@+id/email_venmo_barrier"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toEndOf="@+id/email_icon"
+                        app:layout_constraintTop_toBottomOf="@+id/name_email_barrier"
+                        android:hint="@string/payment_method_iou_email_address_name"
+                        app:endIconMode="custom"
+                        app:endIconContentDescription="@string/dinerdetails_biographics_scan_qr_code">
+
+                        <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                            android:id="@+id/email_input"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:paddingStart="16dp"
+                            android:paddingEnd="16dp"
+                            android:textColor="?attr/colorOnSurface"
+                            android:importantForAutofill="no"
+                            android:inputType="textEmailAddress|textAutoComplete"/>
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <androidx.constraintlayout.widget.Barrier
+                        android:id="@+id/email_venmo_barrier"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        app:barrierDirection="bottom"
+                        app:constraint_referenced_ids="email_icon, email_input_layout" />
+
+                    <ImageView
+                        android:id="@+id/venmo_icon"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:layout_margin="16dp"
+                        app:layout_constraintBottom_toTopOf="@+id/venmo_cash_app_barrier"
+                        app:layout_constraintEnd_toStartOf="@+id/venmo_input_layout"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@+id/email_venmo_barrier"
+                        android:src="@drawable/ic_payment_venmo"
+                        tools:ignore="ContentDescription" />
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/venmo_input_layout"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        app:layout_constraintBottom_toTopOf="@+id/venmo_cash_app_barrier"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toEndOf="@+id/venmo_icon"
+                        app:layout_constraintTop_toBottomOf="@+id/email_venmo_barrier"
+                        android:hint="@string/payment_method_venmo_address_name"
+                        app:endIconMode="custom"
+                        app:endIconDrawable="@drawable/ic_qr_code_24dp"
+                        app:endIconContentDescription="@string/dinerdetails_biographics_scan_qr_code">
+
+                        <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                            android:id="@+id/venmo_input"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:paddingStart="16dp"
+                            android:paddingEnd="16dp"
+                            android:textColor="?attr/colorOnSurface"
+                            android:importantForAutofill="no"
+                            android:inputType="textAutoComplete"/>
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <androidx.constraintlayout.widget.Barrier
+                        android:id="@+id/venmo_cash_app_barrier"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        app:barrierDirection="bottom"
+                        app:constraint_referenced_ids="email_icon, email_input_layout" />
+
+                    <ImageView
+                        android:id="@+id/cash_app_icon"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:layout_margin="16dp"
+                        app:layout_constraintBottom_toTopOf="@+id/cash_app_algorand_barrier"
+                        app:layout_constraintEnd_toStartOf="@+id/cash_app_input_layout"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@+id/venmo_cash_app_barrier"
+                        android:src="@drawable/ic_payment_cash_app"
+                        tools:ignore="ContentDescription" />
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/cash_app_input_layout"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        app:layout_constraintBottom_toTopOf="@id/cash_app_algorand_barrier"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toEndOf="@+id/cash_app_icon"
+                        app:layout_constraintTop_toBottomOf="@+id/venmo_cash_app_barrier"
+                        android:hint="@string/payment_method_cash_app_address_name"
+                        app:endIconMode="custom"
+                        app:endIconDrawable="@drawable/ic_qr_code_24dp"
+                        app:endIconContentDescription="@string/dinerdetails_biographics_scan_qr_code">
+
+                        <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                            android:id="@+id/cash_app_input"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:paddingStart="16dp"
+                            android:paddingEnd="16dp"
+                            android:textColor="?attr/colorOnSurface"
+                            android:importantForAutofill="no"
+                            android:inputType="textAutoComplete"/>
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                    <androidx.constraintlayout.widget.Barrier
+                        android:id="@+id/cash_app_algorand_barrier"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        app:barrierDirection="bottom"
+                        app:constraint_referenced_ids="email_icon, email_input_layout" />
+
+                    <ImageView
+                        android:id="@+id/algorand_icon"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:layout_margin="16dp"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toStartOf="@+id/algorand_input_layout"
+                        app:layout_constraintStart_toStartOf="parent"
+                        app:layout_constraintTop_toBottomOf="@+id/cash_app_algorand_barrier"
+                        android:src="@drawable/ic_payment_algorand"
+                        app:tint="?attr/colorOnSurfaceMediumEmphasis"
+                        tools:ignore="ContentDescription" />
+
+                    <com.google.android.material.textfield.TextInputLayout
+                        android:id="@+id/algorand_input_layout"
+                        style="@style/Widget.MaterialComponents.TextInputLayout.OutlinedBox"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        app:layout_constraintBottom_toBottomOf="parent"
+                        app:layout_constraintEnd_toEndOf="parent"
+                        app:layout_constraintStart_toEndOf="@+id/algorand_icon"
+                        app:layout_constraintTop_toBottomOf="@+id/cash_app_algorand_barrier"
+                        android:hint="@string/payment_method_algorand_address_name"
+                        app:endIconMode="custom"
+                        app:endIconDrawable="@drawable/ic_qr_code_24dp"
+                        app:endIconContentDescription="@string/dinerdetails_biographics_scan_qr_code">
+
+                        <com.google.android.material.textfield.MaterialAutoCompleteTextView
+                            android:id="@+id/algorand_input"
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:paddingStart="16dp"
+                            android:paddingEnd="16dp"
+                            android:textColor="?attr/colorOnSurface"
+                            android:importantForAutofill="no"
+                            android:inputType="textAutoComplete|textCapCharacters"/>
+                    </com.google.android.material.textfield.TextInputLayout>
+
+                </androidx.constraintlayout.widget.ConstraintLayout>
+            </androidx.core.widget.NestedScrollView>
+
+            <com.google.android.material.floatingactionbutton.FloatingActionButton
+                android:id="@+id/fab"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="@dimen/fab_margin"
+                android:layout_gravity="end|bottom"
+                android:src="@drawable/ic_done"
+                android:visibility="invisible"
+                android:contentDescription="@string/contact_entry_create_diner" />
+        </androidx.coordinatorlayout.widget.CoordinatorLayout>
+    </com.google.android.material.card.MaterialCardView>
+</com.grouptuity.grouptuity.ui.custom.views.LockableFrameLayout>

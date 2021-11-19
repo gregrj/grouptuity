@@ -35,6 +35,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.transition.Hold
 import com.grouptuity.grouptuity.AppViewModel
+import com.grouptuity.grouptuity.MainActivity
 import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.Contact
 import com.grouptuity.grouptuity.databinding.FragAddressBookBinding
@@ -42,8 +43,6 @@ import com.grouptuity.grouptuity.databinding.FragAddressBookListitemBinding
 import com.grouptuity.grouptuity.ui.custom.views.RecyclerViewListener
 import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
 import com.grouptuity.grouptuity.ui.custom.transitions.CircularRevealTransition
-import com.grouptuity.grouptuity.ui.custom.transitions.Revealable
-import com.grouptuity.grouptuity.ui.custom.transitions.RevealableImpl
 import com.grouptuity.grouptuity.ui.custom.views.extendFABToCenter
 import com.grouptuity.grouptuity.ui.custom.views.shrinkFABToCorner
 import kotlinx.coroutines.Dispatchers
@@ -52,7 +51,7 @@ import kotlinx.coroutines.withContext
 
 // TODO rewind when someone is favorited
 
-
+// TODO Re-load in background when opening
 // TODO hiding non-device contacts (e.g., Contact 6-x-F)
 // TODO after selecting contact in search mode, should list re-sort? otherwise, stays in search order
 // TODO AddressBook Sections by letter for rapidly finding right place when scrolling
@@ -69,7 +68,7 @@ const val RESET_HIDDEN_CONTACTS_KEY = "reset_hidden_contacts_key"
 const val RESET_FAVORITE_CONTACTS_KEY = "reset_favorite_contacts_key"
 
 
-class AddressBookFragment: Fragment(), Revealable by RevealableImpl() {
+class AddressBookFragment: Fragment() {
     private val args: AddressBookFragmentArgs by navArgs()
     private lateinit var appViewModel: AppViewModel
     private lateinit var addressBookViewModel: AddressBookViewModel
@@ -81,8 +80,8 @@ class AddressBookFragment: Fragment(), Revealable by RevealableImpl() {
     private var pendingRewind: Boolean = false
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        appViewModel = ViewModelProvider(requireActivity()).get(AppViewModel::class.java)
-        addressBookViewModel = ViewModelProvider(requireActivity()).get(AddressBookViewModel::class.java)
+        appViewModel = ViewModelProvider(requireActivity())[AppViewModel::class.java]
+        addressBookViewModel = ViewModelProvider(requireActivity())[AddressBookViewModel::class.java]
         addressBookViewModel.initialize()
 
         binding = FragAddressBookBinding.inflate(inflater, container, false)
@@ -92,7 +91,7 @@ class AddressBookFragment: Fragment(), Revealable by RevealableImpl() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Intercept user interactions while while fragment transitions are running
+        // Intercept user interactions while fragment transitions are running
         binding.rootLayout.attachLock(addressBookViewModel.isInputLocked)
 
         // Intercept back pressed events to allow fragment-specific behaviors
@@ -105,7 +104,7 @@ class AddressBookFragment: Fragment(), Revealable by RevealableImpl() {
         }
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, backPressedCallback)
 
-        binding.coveredFragment.setImageBitmap(coveredFragmentBitmap)
+        binding.coveredFragment.setImageBitmap(MainActivity.storedViewBitmap)
 
         enterTransition = CircularRevealTransition(
                 binding.fadeView,
@@ -205,7 +204,9 @@ class AddressBookFragment: Fragment(), Revealable by RevealableImpl() {
                     it.topMargin = binding.fab.y.toInt()
                 }
 
-                findNavController().navigate(AddressBookFragmentDirections.createDiner(null),
+                (requireActivity() as MainActivity).storeViewAsBitmap(requireView())
+
+                findNavController().navigate(AddressBookFragmentDirections.createDiner(),
                     FragmentNavigatorExtras(
                         binding.newContactButtonContainer to binding.newContactButtonContainer.transitionName,
                         binding.fab to binding.fab.transitionName

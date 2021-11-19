@@ -23,10 +23,10 @@ class DinerDetailsViewModel(app: Application): UIViewModel(app) {
     private val totalOwedToOthersString = app.resources.getString(R.string.dinerdetails_debts_total_owed_to_others)
     private val totalOwedByOthersString = app.resources.getString(R.string.dinerdetails_debts_total_owed_by_others)
 
-    var loadedDiner = MutableStateFlow<Diner?>(null)
-    var dinerEmailAddresses = loadedDiner.map { it?.emailAddresses ?: emptyList() }.asLiveData()
-    private var numDiners = repository.diners.mapLatest { it.size }
-    private var numItems = repository.items.mapLatest { it.size }
+    val loadedDiner = MutableStateFlow<Diner?>(null)
+    val dinerEmailAddresses = loadedDiner.map { it?.emailAddresses ?: emptyList() }.asLiveData()
+    private val numDiners = repository.diners.mapLatest { it.size }
+    private val numItems = repository.items.mapLatest { it.size }
     private val unusedDiscountAmount: Flow<Double?> =
         combine(loadedDiner, repository.individualExcessDiscountsReleased) { diner, discountsReleased ->
             discountsReleased[diner]
@@ -35,6 +35,8 @@ class DinerDetailsViewModel(app: Application): UIViewModel(app) {
         combine(loadedDiner, repository.individualExcessDiscountsAcquired) { diner, discountsAcquired ->
             discountsAcquired[diner]
         }
+
+    val toolbarTitle = loadedDiner.mapNotNull { it?.name }.asLiveData()
 
     private val editingBiographicsMutable = MutableStateFlow(false)
     val editingBiographics: LiveData<Boolean> = editingBiographicsMutable.asLiveData()
@@ -496,20 +498,12 @@ class DinerDetailsViewModel(app: Application): UIViewModel(app) {
         }
     }
 
-    fun initializeForDiner(diner: Diner?) {
+    fun initializeForDiner(diner: Diner) {
         unFreezeOutput()
 
         editingBiographicsMutable.value = false
 
-        if(diner == null) {
-            // Creating new diner
-            loadedDiner.value = null
-
-        } else {
-            // Editing existing diner
-            loadedDiner.value = diner
-        }
-
+        loadedDiner.value = diner
     }
 
     fun editBiographics() {

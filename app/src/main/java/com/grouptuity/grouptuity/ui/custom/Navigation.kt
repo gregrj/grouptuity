@@ -1,21 +1,14 @@
 package com.grouptuity.grouptuity.ui.custom
 
-import android.app.Activity
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.Rect
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
-import android.view.PixelCopy
-import android.view.View
 import androidx.annotation.IdRes
 import androidx.fragment.app.FragmentManager
 import androidx.navigation.NavDestination
 import androidx.navigation.NavOptions
 import androidx.navigation.Navigator
 import androidx.navigation.fragment.FragmentNavigator
-import com.grouptuity.grouptuity.ui.custom.transitions.Revealable
+
 
 @Navigator.Name("nav_fragment")
 class CustomNavigator(private val context: Context, private val manager: FragmentManager, private val containerId: Int): FragmentNavigator(context, manager, containerId) {
@@ -33,7 +26,6 @@ class CustomNavigator(private val context: Context, private val manager: Fragmen
         mBackStack.removeLast()
         return true
     }
-
 
     override fun navigate(destination: Destination, args: Bundle?, navOptions: NavOptions?, navigatorExtras: Navigator.Extras?): NavDestination? {
         if (manager.isStateSaved) {
@@ -61,16 +53,6 @@ class CustomNavigator(private val context: Context, private val manager: Fragmen
             popEnterAnim = if (popEnterAnim != -1) popEnterAnim else 0
             popExitAnim = if (popExitAnim != -1) popExitAnim else 0
             ft.setCustomAnimations(enterAnim, exitAnim, popEnterAnim, popExitAnim)
-        }
-
-        if(frag is Revealable) {
-            (manager.primaryNavigationFragment)?.apply {
-                view?.apply {
-                    copyViewToBitmap(requireActivity(), this) {
-                        (frag as Revealable).coveredFragmentBitmap = it
-                    }
-                }
-            }
         }
 
         ft.replace(containerId, frag)
@@ -141,26 +123,6 @@ class CustomNavigator(private val context: Context, private val manager: Fragmen
     }
 
     private fun generateBackStackName(backStackIndex: Int, destId: Int) = "$backStackIndex-$destId"
-
-    private fun copyViewToBitmap(activity: Activity, view: View, callback: (Bitmap) -> Unit) {
-        activity.window?.let { window ->
-            val bitmap = Bitmap.createBitmap(view.width, view.height, Bitmap.Config.ARGB_8888)
-            val locationOfViewInWindow = IntArray(2)
-            view.getLocationInWindow(locationOfViewInWindow)
-            try {
-                PixelCopy.request(
-                        window,
-                        Rect(locationOfViewInWindow[0], locationOfViewInWindow[1], locationOfViewInWindow[0] + view.width, locationOfViewInWindow[1] + view.height),
-                        bitmap,
-                        { callback(bitmap) },
-                        Handler(Looper.getMainLooper())
-                )
-            } catch (e: IllegalArgumentException) {
-                e.printStackTrace()
-                callback(bitmap)
-            }
-        }
-    }
 
     companion object {
         private const val KEY_BACK_STACK_IDS = "androidx-nav-fragment:navigator:backStackIds"

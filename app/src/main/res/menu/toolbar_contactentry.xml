@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<menu xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context=".ui.billsplit.contactentry.ContactEntryFragment">
+
+    <group android:id="@+id/group_cancel_entry">
+        <item
+            android:id="@+id/cancel_field_entry"
+            android:title="@string/contact_entry_cancel_field_entry"
+            android:icon="@drawable/ic_close"
+            android:visible="false"
+            app:showAsAction="ifRoom"/>
+    </group>
+    <group android:id="@+id/group_finish_entry">
+        <item
+            android:id="@+id/finish_field_entry"
+            android:title="@string/contact_entry_finish_field_entry"
+            android:icon="@drawable/ic_done"
+            android:visible="false"
+            app:showAsAction="ifRoom"/>
+    </group>
+</menu>

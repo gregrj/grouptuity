@@ -46,6 +46,7 @@ import com.grouptuity.grouptuity.ui.billsplit.PaymentsViewModel.Companion.SHOWIN
 import com.grouptuity.grouptuity.ui.billsplit.qrcodescanner.QRCodeScannerActivity
 import com.grouptuity.grouptuity.ui.billsplit.payments.getVenmoAppIntent
 import com.grouptuity.grouptuity.ui.custom.views.RecyclerViewBottomOffset
+import com.grouptuity.grouptuity.ui.custom.views.focusAndShowKeyboard
 import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -113,13 +114,13 @@ class PaymentsFragment: Fragment() {
             adapter = recyclerAdapter
 
             //TODO start transition getting called on all 4 tab fragments?
-            requireParentFragment().apply {
-                postponeEnterTransition()
-                viewTreeObserver.addOnPreDrawListener {
-                    startPostponedEnterTransition()
-                    true
-                }
-            }
+//            requireParentFragment().apply {
+//                postponeEnterTransition()
+//                viewTreeObserver.addOnPreDrawListener {
+//                    startPostponedEnterTransition()
+//                    true
+//                }
+//            }
 
             // Add a spacer to the last item in the list to ensure it is not cut off when the toolbar
             // and floating action button are visible
@@ -180,7 +181,7 @@ class PaymentsFragment: Fragment() {
             val editTextDialog = MaterialAlertDialogBuilder(ContextThemeWrapper(requireContext(), R.style.AlertDialog))
                 .setIcon(method.paymentIconId)
                 .setTitle(requireContext().getString(method.addressSelectionStringId, diner.name))
-                .setView(R.layout.dialog_edit_text)
+                .setView(R.layout.dialog_edit_text_ptp)
                 .setNegativeButton(resources.getString(R.string.cancel)) { _, _ -> }
                 .setPositiveButton(resources.getString(R.string.save)) { dialog, _ ->
                     (dialog as? AlertDialog)?.findViewById<EditText>(R.id.edit_text)?.text?.toString()?.apply {
@@ -198,13 +199,10 @@ class PaymentsFragment: Fragment() {
             editTextDialog.findViewById<EditText>(R.id.edit_text)?.also { editText ->
                 editText.requestFocus()
                 editText.addTextChangedListener {
-                    editTextDialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = !it.isNullOrEmpty()
+                    editTextDialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = !it.isNullOrBlank()
                 }
+                editText.focusAndShowKeyboard()
             }
-
-            // Focus on EditText and show keyboard
-            editTextDialog.window?.clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM)
-            editTextDialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE)
         })
 
         val adapter = object: ArrayAdapter<Triple<String, Int, () -> Unit>>(requireContext(), android.R.layout.select_dialog_item, items) {

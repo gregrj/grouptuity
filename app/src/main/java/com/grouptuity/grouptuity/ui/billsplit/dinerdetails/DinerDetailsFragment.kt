@@ -12,7 +12,6 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
-import android.text.InputFilter
 import android.util.Log
 import android.util.TypedValue
 import android.view.LayoutInflater
@@ -26,14 +25,12 @@ import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.content.res.AppCompatResources
 import androidx.appcompat.widget.Toolbar
-import androidx.constraintlayout.motion.widget.MotionLayout
 import androidx.core.animation.doOnEnd
 import androidx.core.animation.doOnStart
 import androidx.core.content.res.ResourcesCompat
 import androidx.core.graphics.ColorUtils
 import androidx.core.view.doOnPreDraw
 import androidx.core.widget.addTextChangedListener
-import androidx.core.widget.doOnTextChanged
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModelProvider
@@ -56,16 +53,14 @@ import com.google.android.material.appbar.CollapsingToolbarLayout
 import com.google.android.material.imageview.ShapeableImageView
 import com.google.android.material.shape.CornerFamily
 import com.google.android.material.shape.RelativeCornerSize
-import com.google.android.material.textfield.TextInputLayout
 import com.google.android.material.transition.Hold
+import com.grouptuity.grouptuity.MainActivity
 import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.*
 import com.grouptuity.grouptuity.databinding.*
 import com.grouptuity.grouptuity.ui.billsplit.qrcodescanner.QRCodeScannerActivity
 import com.grouptuity.grouptuity.ui.custom.CustomNavigator
 import com.grouptuity.grouptuity.ui.custom.transitions.CardViewExpandTransition
-import com.grouptuity.grouptuity.ui.custom.transitions.Revealable
-import com.grouptuity.grouptuity.ui.custom.transitions.RevealableImpl
 import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -78,7 +73,7 @@ import kotlinx.coroutines.withContext
 
 // Note: Bug exists with programmatic changes to endIconMode so custom mode is used with a
 
-class DinerDetailsFragment: Fragment(), Revealable by RevealableImpl() {
+class DinerDetailsFragment: Fragment() {
     private var binding by setNullOnDestroy<FragDinerDetailsBinding>()
     private val args: DinerDetailsFragmentArgs by navArgs()
     private lateinit var viewModel: DinerDetailsViewModel
@@ -105,7 +100,7 @@ class DinerDetailsFragment: Fragment(), Revealable by RevealableImpl() {
         // TODO replace with dedicated lock? Should everything just be handled in the onResume method?
         viewModel.notifyTransitionStarted()
 
-        // Intercept user interactions while while fragment transitions are running
+        // Intercept user interactions while fragment transitions are running
         binding.rootLayout.attachLock(viewModel.isInputLocked)
 
         // Intercept back pressed events to allow fragment-specific behaviors
@@ -119,36 +114,10 @@ class DinerDetailsFragment: Fragment(), Revealable by RevealableImpl() {
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, backPressedCallback)
 
         val loadedDiner = args.diner
-        if (loadedDiner == null) {
-            // Creating a Diner using a new Contact
-            viewModel.initializeForDiner(null)
-            binding.toolbar.title = getString(R.string.dinerdetails_toolbar_title_new_diner)
+        viewModel.initializeForDiner(loadedDiner)
 
-            binding.appbarLayout.setExpanded(false, false)
-            binding.nestedScrollView.isNestedScrollingEnabled = false
-
-            if (findNavController().navigatorProvider.getNavigator(CustomNavigator::class.java).lastNavigationWasBackward) {
-                // Returning from DebtEntryFragment
-                findNavController().currentBackStackEntry?.savedStateHandle?.getLiveData<Boolean>(
-                    "DebtEntryNavBack")?.observe(viewLifecycleOwner) {
-
-                    if (it) {
-                        startTransitionPending = true
-                    } else {
-                        view.doOnPreDraw { startPostponedEnterTransition() }
-                    }
-                }
-            } else {
-                // Opening fragment from AddressBookFragment
-                setupNewEnterTransition()
-                view.doOnPreDraw { startPostponedEnterTransition() }
-            }
-        } else {
-            // Inspecting details for existing diner
-            viewModel.initializeForDiner(loadedDiner)
-            binding.toolbar.title = loadedDiner.name
-
-            if (findNavController().navigatorProvider.getNavigator(CustomNavigator::class.java).lastNavigationWasBackward) {
+        when {
+            (findNavController().navigatorProvider.getNavigator(CustomNavigator::class.java).lastNavigationWasBackward) -> {
                 // Returning from DebtEntryFragment
                 binding.appbarLayout.setExpanded(false, false)
 
@@ -172,9 +141,9 @@ class DinerDetailsFragment: Fragment(), Revealable by RevealableImpl() {
                         view.doOnPreDraw { startPostponedEnterTransition() }
                     }
                 }
-            } else {
+            }
+            else -> {
                 // Opening fragment from DinerFragment
-
                 if (loadedDiner.photoUri == null) {
                     binding.nestedScrollView.isNestedScrollingEnabled = false
                     binding.appbarLayout.setExpanded(false, false)
@@ -203,6 +172,7 @@ class DinerDetailsFragment: Fragment(), Revealable by RevealableImpl() {
                 }
             } else {
                 Log.e("false", result.toString())
+                // TODO show snackbar
             }
         }
 
@@ -257,20 +227,75 @@ class DinerDetailsFragment: Fragment(), Revealable by RevealableImpl() {
 //            // TODO
 //        }
 
-        val loadedDiner = viewModel.loadedDiner.value
-        when {
-            loadedDiner == null -> {
-                setupNewReturnTransition()
-            }
-            isToolBarCollapsed -> {
-                setupCollapsedReturnTransition(loadedDiner)
-            } else -> {
-                setupExpandedReturnTransition(loadedDiner)
+        viewModel.loadedDiner.value?.also {
+            if (isToolBarCollapsed) {
+                setupCollapsedReturnTransition(it)
+            } else {
+                setupExpandedReturnTransition(it)
             }
         }
 
         // Close fragment using default onBackPressed behavior
         requireActivity().onBackPressed()
+    }
+
+    private fun setupToolbar() {
+        binding.toolbar.inflateMenu(R.menu.toolbar_dinerdetails)
+        binding.toolbar.setNavigationIcon(R.drawable.ic_arrow_back_light)
+        binding.toolbar.setNavigationOnClickListener { viewModel.handleOnBackPressed() }
+
+        viewModel.toolbarTitle.observe(viewLifecycleOwner) {
+            binding.toolbar.title = it
+        }
+
+        (requireView().findViewById(R.id.appbar_layout) as AppBarLayout).addOnOffsetChangedListener(
+            AppBarLayout.OnOffsetChangedListener { appBarLayout, verticalOffset ->
+                when {
+                    viewModel.isInputLocked.value || viewModel.editingBiographics.value == true -> {
+                        return@OnOffsetChangedListener
+                    }
+                    appBarLayout.totalScrollRange == 0 -> {
+                        // View needs non-zero height to determine collapsed state
+                        binding.toolbar.menu.setGroupVisible(R.id.group_editor, false)
+                        binding.fab.hide()
+                    }
+                    verticalOffset == 0 -> {
+                        // Fully expanded (hide toolbar icon and show fab)
+                        binding.toolbar.menu.setGroupVisible(R.id.group_editor, false)
+
+                        /* The FAB is rendered momentarily at the bottom of the screen if the user
+                           drags the toolbar all the way to the expanded position. The anchor view
+                           has the correct position and dimensions when this branch is called so the
+                           root cause is unclear. A nominal delay before showing helps in some
+                           cases. */
+                        Handler(Looper.getMainLooper()).postDelayed({
+                            binding.fab.show()
+                        }, 100)
+                    }
+                    appBarLayout.totalScrollRange == -verticalOffset -> {
+                        // Fully collapsed (show toolbar icon and hide fab)
+                        binding.toolbar.menu.setGroupVisible(R.id.group_editor, true)
+                        binding.fab.hide()
+                    }
+                    else -> {
+                        // Partially collapsed (hide both toolbar icon and fab)
+                        binding.toolbar.menu.setGroupVisible(R.id.group_editor, false)
+                        binding.fab.hide()
+                    }
+                }
+            })
+
+        binding.toolbar.setOnMenuItemClickListener { item ->
+            when (item.itemId) {
+                R.id.edit_diner -> {
+                    viewModel.editBiographics()
+                    true
+                }
+                else -> {
+                    false
+                }
+            }
+        }
     }
 
     private fun setupBiographics() {
@@ -360,7 +385,7 @@ class DinerDetailsFragment: Fragment(), Revealable by RevealableImpl() {
                         inputLayout.setEndIconOnClickListener {
                             val intent = Intent(requireContext(), QRCodeScannerActivity::class.java)
                             intent.putExtra(getString(R.string.intent_key_qrcode_payment_method), method)
-                            intent.putExtra(getString(R.string.intent_key_qrcode_diner_name), viewModel.loadedDiner.value?.name)
+                            intent.putExtra(getString(R.string.intent_key_qrcode_diner_name), viewModel.toolbarTitle.value)
                             qrCodeScannerLauncher.launch(intent)
                         }
                     }
@@ -385,61 +410,6 @@ class DinerDetailsFragment: Fragment(), Revealable by RevealableImpl() {
                 biographics.icon.alpha = if (it.third) 1.0f else inactiveAlpha
                 biographics.input.text = null
                 biographics.address.setTextColor(addressUnsetColor)
-            }
-        }
-    }
-
-    private fun setupToolbar() {
-        binding.toolbar.inflateMenu(R.menu.toolbar_dinerdetails)
-        binding.toolbar.setNavigationIcon(R.drawable.ic_arrow_back_light)
-        binding.toolbar.setNavigationOnClickListener { viewModel.handleOnBackPressed() }
-
-        (requireView().findViewById(R.id.appbar_layout) as AppBarLayout).addOnOffsetChangedListener(
-            AppBarLayout.OnOffsetChangedListener { appBarLayout, verticalOffset ->
-                when {
-                    viewModel.isInputLocked.value || viewModel.editingBiographics.value == true -> {
-                        return@OnOffsetChangedListener
-                    }
-                    appBarLayout.totalScrollRange == 0 -> {
-                        // View needs non-zero height to determine collapsed state
-                        binding.toolbar.menu.setGroupVisible(R.id.group_editor, false)
-                        binding.fab.hide()
-                    }
-                    verticalOffset == 0 -> {
-                        // Fully expanded (hide toolbar icon and show fab)
-                        binding.toolbar.menu.setGroupVisible(R.id.group_editor, false)
-
-                        /* The FAB is rendered momentarily at the bottom of the screen if the user
-                           drags the toolbar all the way to the expanded position. The anchor view
-                           has the correct position and dimensions when this branch is called so the
-                           root cause is unclear. A nominal delay before showing helps in some
-                           cases. */
-                        Handler(Looper.getMainLooper()).postDelayed({
-                            binding.fab.show()
-                        }, 100)
-                    }
-                    appBarLayout.totalScrollRange == -verticalOffset -> {
-                        // Fully collapsed (show toolbar icon and hide fab)
-                        binding.toolbar.menu.setGroupVisible(R.id.group_editor, true)
-                        binding.fab.hide()
-                    }
-                    else -> {
-                        // Partially collapsed (hide both toolbar icon and fab)
-                        binding.toolbar.menu.setGroupVisible(R.id.group_editor, false)
-                        binding.fab.hide()
-                    }
-                }
-            })
-
-        binding.toolbar.setOnMenuItemClickListener { item ->
-            when (item.itemId) {
-                R.id.edit_diner -> {
-                    viewModel.editBiographics()
-                    true
-                }
-                else -> {
-                    false
-                }
             }
         }
     }
@@ -699,6 +669,8 @@ class DinerDetailsFragment: Fragment(), Revealable by RevealableImpl() {
                 addTarget(requireView())
             }
 
+            (requireActivity() as MainActivity).storeViewAsBitmap(requireView())
+
             findNavController().navigate(
                 DinerDetailsFragmentDirections.addDebt(args.diner),
                 FragmentNavigatorExtras(
@@ -710,7 +682,7 @@ class DinerDetailsFragment: Fragment(), Revealable by RevealableImpl() {
     }
 
     private fun setupNewEnterTransition() {
-        binding.coveredFragment.setImageBitmap(coveredFragmentBitmap)
+        binding.coveredFragment.setImageBitmap(MainActivity.storedViewBitmap)
         binding.newContactButton.visibility = View.VISIBLE
         binding.container.transitionName = "new_contact_container_transition_name"
 
@@ -776,7 +748,7 @@ class DinerDetailsFragment: Fragment(), Revealable by RevealableImpl() {
     }
 
     private fun setupExpandedEnterTransition(diner: Diner) {
-        binding.coveredFragment.setImageBitmap(coveredFragmentBitmap)
+        binding.coveredFragment.setImageBitmap(MainActivity.storedViewBitmap)
 
         binding.toolbar.menu.setGroupVisible(R.id.group_editor, false)
 
@@ -796,8 +768,8 @@ class DinerDetailsFragment: Fragment(), Revealable by RevealableImpl() {
             })
             .into(binding.dinerImage)
 
-        binding.container.transitionName = "container" + diner.lookupKey
-        binding.dinerImage.transitionName = "image" + diner.lookupKey
+        binding.container.transitionName = "container" + diner.id
+        binding.dinerImage.transitionName = "image" + diner.id
         val PROP_IMAGE_HEIGHT = "com.grouptuity.grouptuity:CardViewExpandTransition:image_height"
         val PROP_IMAGE_WIDTH = "com.grouptuity.grouptuity:CardViewExpandTransition:image_width"
         val PROP_IMAGE_MARGIN = "com.grouptuity.grouptuity:CardViewExpandTransition:image_margin"
@@ -892,8 +864,8 @@ class DinerDetailsFragment: Fragment(), Revealable by RevealableImpl() {
     }
 
     private fun setupCollapsedEnterTransition(diner: Diner) {
-        binding.coveredFragment.setImageBitmap(coveredFragmentBitmap)
-        binding.container.transitionName = "container" + diner.lookupKey
+        binding.coveredFragment.setImageBitmap(MainActivity.storedViewBitmap)
+        binding.container.transitionName = "container" + diner.id
 
         binding.toolbar.menu.setGroupVisible(R.id.group_editor, true)
 
@@ -942,13 +914,9 @@ class DinerDetailsFragment: Fragment(), Revealable by RevealableImpl() {
             })
     }
 
-    private fun setupNewExitTransition() {
-        // TODO
-    }
-
     private fun setupExpandedReturnTransition(diner: Diner) {
-        binding.container.transitionName = "container" + diner.lookupKey
-        binding.dinerImage.transitionName = "image" + diner.lookupKey
+        binding.container.transitionName = "container" + diner.id
+        binding.dinerImage.transitionName = "image" + diner.id
 
         val PROP_IMAGE_HEIGHT = "com.grouptuity.grouptuity:CardViewExpandTransition:image_height"
         val PROP_IMAGE_WIDTH = "com.grouptuity.grouptuity:CardViewExpandTransition:image_width"
@@ -1054,7 +1022,7 @@ class DinerDetailsFragment: Fragment(), Revealable by RevealableImpl() {
     }
 
     private fun setupCollapsedReturnTransition(diner: Diner) {
-        binding.container.transitionName = "container" + diner.lookupKey
+        binding.container.transitionName = "container" + diner.id
 
         binding.dinerImage.visibility = View.INVISIBLE
 
@@ -1098,69 +1066,8 @@ class DinerDetailsFragment: Fragment(), Revealable by RevealableImpl() {
             addTarget(requireView())
         }
     }
-
-    private fun setupNewReturnTransition() {
-        binding.container.transitionName = "new_contact_container_transition_name"
-        val propCornerRadius = "com.grouptuity.grouptuity:CardViewExpandTransition:button_corner_radius"
-
-        binding.newContactButton.alpha = 0f
-        binding.newContactButton.visibility = View.VISIBLE
-
-        sharedElementReturnTransition = CardViewExpandTransition(binding.container.transitionName, binding.coordinatorLayout.id, false)
-            .addElement(binding.newContactButton.transitionName, object: CardViewExpandTransition.Element{
-                override fun captureStartValues(transition: Transition, transitionValues: TransitionValues) {
-                    transitionValues.values[propCornerRadius] = 0
-                }
-
-                override fun captureEndValues(transition: Transition, transitionValues: TransitionValues) {
-                    transitionValues.values[propCornerRadius] = 0.5
-                }
-
-                override fun createAnimator(transition: Transition, sceneRoot: ViewGroup, startValues: TransitionValues, endValues: TransitionValues): Animator? {
-                    val animator = ValueAnimator.ofFloat(0f, 1f)
-                    animator.doOnStart {
-                        val surfaceColor = TypedValue().also { requireContext().theme.resolveAttribute(R.attr.colorSurface, it, true) }.data
-                        binding.container.setCardBackgroundColor(surfaceColor)
-                        binding.container.elevation = 0f
-
-                        binding.coordinatorLayout.alpha = 1f
-
-                        sceneRoot.findViewById<View>(R.id.fade_view)?.apply {
-                            this.visibility = View.GONE
-                        }
-                    }
-
-                    animator.addUpdateListener {
-                        val progress = AccelerateDecelerateInterpolator().getInterpolation(it.animatedFraction)
-
-                        // Fade out discount button after its shape matches background container
-                        val twentyTo80Progress = (1.666667f*progress - 0.33333f).coerceIn(0f, 1f)
-                        binding.newContactButton.alpha = twentyTo80Progress
-                        binding.coordinatorLayout.alpha = 1f - twentyTo80Progress
-
-                        if(progress >= 0.8) {
-                            binding.container.setCardBackgroundColor(Color.TRANSPARENT)
-                            binding.coordinatorLayout.visibility = View.GONE
-                        }
-
-                        // Adjust shape of discount button to final state
-                        val eightyTo100Progress = (5f*progress - 4f).coerceIn(0f, 1f)
-                        binding.newContactButton.shapeAppearanceModel = binding.newContactButton.shapeAppearanceModel
-                            .withCornerSize(RelativeCornerSize(0.5f * eightyTo100Progress))
-                    }
-
-                    return animator
-                }
-            }
-        ).setOnTransitionStartCallback { _, _, _, _ -> viewModel.notifyTransitionStarted() }
-
-        // Return transition is needed to prevent next fragment from appearing immediately
-        returnTransition = Hold().apply {
-            duration = 0L
-            addTarget(requireView())
-        }
-    }
 }
+
 
 private class ItemRecyclerViewAdapter(val context: Context): RecyclerView.Adapter<ItemRecyclerViewAdapter.ViewHolder>() {
     var mItemData = emptyList<Pair<Item, Triple<String, String, String?>>>()

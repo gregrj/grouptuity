@@ -34,6 +34,7 @@ import java.util.concurrent.Executors
 import kotlin.math.min
 
 
+
 class QRCodeScannerActivity: AppCompatActivity() {
     private lateinit var viewModel: QRCodeScannerViewModel
     private lateinit var binding: ActivityCameraBinding
@@ -48,8 +49,10 @@ class QRCodeScannerActivity: AppCompatActivity() {
 
         viewModel = ViewModelProvider(this)[QRCodeScannerViewModel::class.java].also {
             it.initialize(
-                intent?.getSerializableExtra(getString(R.string.intent_key_qrcode_payment_method)) as? PaymentMethod ?: PaymentMethod.CASH,
-                intent?.getSerializableExtra(getString(R.string.intent_key_qrcode_diner_name)) as? String ?: ""
+                intent?.getSerializableExtra(getString(R.string.intent_key_qrcode_payment_method)) as? PaymentMethod
+                    ?: PaymentMethod.CASH,
+                intent?.getSerializableExtra(getString(R.string.intent_key_qrcode_diner_name)) as? String
+                    ?: getString(R.string.qrcodescanner_unspecified_diner)
             )
         }
 
@@ -134,7 +137,7 @@ class QRCodeScannerActivity: AppCompatActivity() {
         if (!viewModel.isPermissionGranted(Manifest.permission.CAMERA)) {
             viewModel.blockCameraUse()
             if (shouldShowRequestPermissionRationale(Manifest.permission.CAMERA)) {
-                RationaleDialogFragment().show(supportFragmentManager, getString(R.string.rationale_key_camera))
+                RationaleDialogFragment(viewModel.getPaymentMethod()).show(supportFragmentManager, getString(R.string.rationale_key_camera))
             } else {
                 permissionRequestLauncher.launch(Manifest.permission.CAMERA)
             }
@@ -341,7 +344,7 @@ class QRCodeScannerActivity: AppCompatActivity() {
 }
 
 
-class RationaleDialogFragment: DialogFragment() {
+class RationaleDialogFragment(val method: PaymentMethod): DialogFragment() {
     init {
         isCancelable = false
     }
@@ -349,7 +352,9 @@ class RationaleDialogFragment: DialogFragment() {
     override fun onCreateDialog(savedInstanceState: Bundle?): Dialog {
         return MaterialAlertDialogBuilder(requireContext(), R.style.AlertDialogPosSuggestionSecondary)
             .setTitle(resources.getString(R.string.qrcodescanner_permission_rationale_title))
-            .setMessage(resources.getString(R.string.qrcodescanner_camera_permission_rationale_message))
+            .setMessage(resources.getString(
+                R.string.qrcodescanner_camera_permission_rationale_message,
+                requireContext().getString(method.addressNameStringId)))
             .setCancelable(false)
             .setPositiveButton(resources.getString(R.string.proceed)) { _, _ ->
                 setFragmentResult(resources.getString(R.string.rationale_key_camera), bundleOf("resultKey" to true))

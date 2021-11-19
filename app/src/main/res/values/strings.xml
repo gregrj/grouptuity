@@ -22,6 +22,8 @@
     <string name="billsplit_menu_settings">Settings</string>
 
     <string name="diners_add_self">Include yourself</string>
+    <string name="diners_add_self_name_entry_title">Your name</string>
+    <string name="diners_add_self_name_entry_hint">Enter your name</string>
     <string name="diners_zero_items">0 items</string>
     <plurals name="diners_num_items_with_subtotal">
         <item quantity="one">%2$s (1 item)</item>
@@ -61,7 +63,12 @@
     <string name="addressbook_snackbar_unhidden">Contacts unhidden</string>
     <string name="addressbook_listitem_hidden">(contact hidden)</string>
 
-    <string name="dinerdetails_toolbar_title_new_diner">Create New Diner</string>
+    <string name="contact_entry_toolbar_title_new_diner">Create New Diner</string>
+    <string name="contact_entry_cancel_field_entry">Cancel Entry</string>
+    <string name="contact_entry_finish_field_entry">Finish Entry</string>
+    <string name="contact_entry_create_diner">Create Diner</string>
+    <string name="contact_entry_name_hint">Contact Name</string>
+
     <string name="dinerdetails_toolbar_edit">Edit diner</string>
     <string name="dinerdetails_biographics_address_not_set">(%s not set)</string>
     <string name="dinerdetails_biographics_scan_qr_code">Scan QR code</string>
@@ -367,7 +374,7 @@
     <string name="qrcodescanner_close_button">Back</string>
     <string name="qrcodescanner_camera_flash_button">Toggle camera flash</string>
     <string name="qrcodescanner_permission_rationale_title">Camera Access</string>
-    <string name="qrcodescanner_camera_permission_rationale_message">Scanning Venmo or Cash App usernames from QR codes requires access to your device camera</string>
+    <string name="qrcodescanner_camera_permission_rationale_message">Scanning %s from a QR code requires access to your device camera</string>
     <string name="qrcodescanner_chip_instruction_general">Scan code for %s</string>
     <string name="qrcodescanner_chip_instruction_venmo">Scan code in %s\'s Venmo app</string>
     <string name="qrcodescanner_chip_instruction_cash_app">Scan code in %s\'s Cash App</string>
@@ -387,6 +394,7 @@
     <string name="qrcodescanner_title_valid_venmo">Venmo Address for %s:</string>
     <string name="qrcodescanner_title_valid_cash_app">$Cashtag for %s:</string>
     <string name="qrcodescanner_title_valid_algorand">Algorand address for %s:</string>
+    <string name="qrcodescanner_unspecified_diner">contact</string>
 
     <string name="ok">OK</string>
     <string name="cancel">Cancel</string>
@@ -394,6 +402,7 @@
     <string name="accept">Accept</string>
     <string name="keep_editing">Keep Editing</string>
     <string name="save">Save</string>
+    <string name="skip">Skip</string>
     <string name="proceed">Continue</string>
     <string name="keep">Keep</string>
     <string name="discard">Discard</string>
