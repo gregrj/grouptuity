@@ -52,8 +52,6 @@ class ContactEntryFragment: Fragment() {
     private lateinit var backPressedCallback: OnBackPressedCallback
     private lateinit var qrCodeScannerLauncher: ActivityResultLauncher<Intent>
 
-    // TODO click outside text view and lose focus
-
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         viewModel = ViewModelProvider(requireActivity())[ContactEntryViewModel::class.java].apply {
             initialize()
@@ -101,7 +99,7 @@ class ContactEntryFragment: Fragment() {
 
         setupFocusListeners()
 
-        setupTextListeners()
+        setupTextChangedListeners()
 
         binding.fab.setOnClickListener {
             if (viewModel.enableCreateContact.value == true) {
@@ -112,16 +110,20 @@ class ContactEntryFragment: Fragment() {
         viewModel.enableCreateContact.observe(viewLifecycleOwner) {
             if (it) {
                 binding.fab.show()
-                enableField(binding.emailIcon, binding.emailInputLayout)
+
+                // Enable entry in other fields since a valid contact name has been provided
+                enableField(binding.emailIcon, binding.emailInputLayout, binding.emailInput)
                 enableFieldWithQRScan(binding.venmoIcon, binding.venmoInputLayout, binding.venmoInput, PaymentMethod.VENMO)
                 enableFieldWithQRScan(binding.cashAppIcon, binding.cashAppInputLayout, binding.cashAppInput, PaymentMethod.CASH_APP)
                 enableFieldWithQRScan(binding.algorandIcon, binding.algorandInputLayout, binding.algorandInput, PaymentMethod.ALGO)
             } else {
                 binding.fab.hide()
-                disableField(binding.emailIcon, binding.emailInputLayout)
-                disableField(binding.venmoIcon, binding.venmoInputLayout)
-                disableField(binding.cashAppIcon, binding.cashAppInputLayout)
-                disableField(binding.algorandIcon, binding.algorandInputLayout)
+
+                // Disable entry in other fields until a valid contact name is provided
+                disableField(binding.emailIcon, binding.emailInputLayout, binding.emailInput)
+                disableField(binding.venmoIcon, binding.venmoInputLayout, binding.venmoInput)
+                disableField(binding.cashAppIcon, binding.cashAppInputLayout, binding.cashAppInput)
+                disableField(binding.algorandIcon, binding.algorandInputLayout, binding.algorandInput)
             }
         }
 
@@ -187,49 +189,91 @@ class ContactEntryFragment: Fragment() {
 
     private fun setupFocusListeners() {
         binding.nameInput.setOnFocusChangeListener { _, focused ->
-            if (focused)
+            if (focused) {
                 viewModel.activateField(ContactEntryViewModel.NAME)
-            else
+                if (binding.nameInput.text.isNotEmpty()) {
+                    setEndIconToClearText(binding.nameInputLayout, binding.nameInput)
+                }
+            }
+            else {
                 viewModel.deactivateField(ContactEntryViewModel.NAME)
+                removeEndIcon(binding.nameInputLayout)
+            }
         }
 
         binding.emailInput.setOnFocusChangeListener { _, focused ->
-            if (focused)
+            if (focused) {
                 viewModel.activateField(ContactEntryViewModel.EMAIL)
-            else
+                if (binding.emailInput.text.isNotEmpty()) {
+                    setEndIconToClearText(binding.emailInputLayout, binding.emailInput)
+                }
+            }
+            else {
                 viewModel.deactivateField(ContactEntryViewModel.EMAIL)
+                removeEndIcon(binding.emailInputLayout)
+            }
         }
 
         binding.venmoInput.setOnFocusChangeListener { _, focused ->
-            if (focused)
+            if (focused) {
                 viewModel.activateField(ContactEntryViewModel.VENMO)
-            else
+                if (binding.venmoInput.text.isNotEmpty()) {
+                    setEndIconToClearText(binding.venmoInputLayout, binding.venmoInput)
+                }
+            }
+            else {
                 viewModel.deactivateField(ContactEntryViewModel.VENMO)
+                if (binding.venmoInput.text.isEmpty()) {
+                    setEndIconToScanQRCode(binding.venmoInputLayout, PaymentMethod.VENMO)
+                } else {
+                    removeEndIcon(binding.venmoInputLayout)
+                }
+            }
         }
 
         binding.cashAppInput.setOnFocusChangeListener { _, focused ->
-            if (focused)
+            if (focused) {
                 viewModel.activateField(ContactEntryViewModel.CASH_APP)
-            else
+                if (binding.cashAppInput.text.isNotEmpty()) {
+                    setEndIconToClearText(binding.cashAppInputLayout, binding.cashAppInput)
+                }
+            }
+            else {
                 viewModel.deactivateField(ContactEntryViewModel.CASH_APP)
+                if (binding.cashAppInput.text.isEmpty()) {
+                    setEndIconToScanQRCode(binding.cashAppInputLayout, PaymentMethod.CASH_APP)
+                } else {
+                    removeEndIcon(binding.cashAppInputLayout)
+                }
+            }
         }
 
         binding.algorandInput.setOnFocusChangeListener { _, focused ->
-            if (focused)
+            if (focused) {
                 viewModel.activateField(ContactEntryViewModel.ALGORAND)
-            else
+                if (binding.algorandInput.text.isNotEmpty()) {
+                    setEndIconToClearText(binding.algorandInputLayout, binding.algorandInput)
+                }
+            }
+            else {
                 viewModel.deactivateField(ContactEntryViewModel.ALGORAND)
+                if (binding.algorandInput.text.isEmpty()) {
+                    setEndIconToScanQRCode(binding.algorandInputLayout, PaymentMethod.ALGO)
+                } else {
+                    removeEndIcon(binding.algorandInputLayout)
+                }
+            }
         }
     }
 
-    private fun setupTextListeners() {
+    private fun setupTextChangedListeners() {
         binding.nameInput.addTextChangedListener { editable ->
             viewModel.setNameInput(editable.toString())
 
             if (editable?.isNotEmpty() == true) {
                 setEndIconToClearText(binding.nameInputLayout, binding.nameInput)
             } else {
-                removeEndIcon(binding.nameInputLayout, binding.nameInput)
+                removeEndIcon(binding.nameInputLayout)
             }
         }
 
@@ -239,7 +283,7 @@ class ContactEntryFragment: Fragment() {
             if (editable?.isNotEmpty() == true) {
                 setEndIconToClearText(binding.emailInputLayout, binding.emailInput)
             } else {
-                removeEndIcon(binding.emailInputLayout, binding.emailInput)
+                removeEndIcon(binding.emailInputLayout)
             }
         }
 
@@ -274,18 +318,12 @@ class ContactEntryFragment: Fragment() {
         }
     }
 
-    private fun removeEndIcon(textInputLayout: TextInputLayout, textInput: AppCompatAutoCompleteTextView) {
+    private fun removeEndIcon(textInputLayout: TextInputLayout) {
         // Ripple from clearing text gets stuck unless the icon removal is delayed
         Handler(Looper.getMainLooper()).postDelayed({
             textInputLayout.endIconDrawable = null
             textInputLayout.setEndIconOnClickListener(null)
         }, 100)
-
-        textInput.runAfterGainingFocus {
-            if (textInput.text.isNotEmpty()) {
-                setEndIconToClearText(textInputLayout, textInput)
-            }
-        }
     }
 
     private fun setEndIconToClearText(textInputLayout: TextInputLayout, textInput: AppCompatAutoCompleteTextView) {
@@ -295,8 +333,6 @@ class ContactEntryFragment: Fragment() {
         textInputLayout.setEndIconOnClickListener {
             textInput.text = null
         }
-
-        textInput.runAfterLosingFocus { removeEndIcon(textInputLayout, textInput) }
     }
 
     private fun setEndIconToScanQRCode(textInputLayout: TextInputLayout, method: PaymentMethod) {
@@ -311,21 +347,30 @@ class ContactEntryFragment: Fragment() {
         }
     }
 
-    private fun enableField(icon: ImageView, textInputLayout: TextInputLayout) {
+    private fun enableField(icon: ImageView, textInputLayout: TextInputLayout, textInput: AppCompatAutoCompleteTextView) {
         icon.alpha = 1.0f
+
+        textInput.setTextColor(TypedValue().also { requireContext().theme.resolveAttribute(R.attr.colorOnSurface, it, true) }.data)
+
         textInputLayout.isEnabled = true
     }
 
     private fun enableFieldWithQRScan(icon: ImageView, textInputLayout: TextInputLayout, textInput: AppCompatAutoCompleteTextView, method: PaymentMethod) {
         icon.alpha = 1.0f
+
+        textInput.setTextColor(TypedValue().also { requireContext().theme.resolveAttribute(R.attr.colorOnSurface, it, true) }.data)
+
         textInputLayout.isEnabled = true
         if (textInput.text.isNullOrEmpty()) {
             setEndIconToScanQRCode(textInputLayout, method)
         }
     }
 
-    private fun disableField(icon: ImageView, textInputLayout: TextInputLayout) {
+    private fun disableField(icon: ImageView, textInputLayout: TextInputLayout, textInput: AppCompatAutoCompleteTextView) {
         icon.alpha = 0.25f
+
+        textInput.setTextColor(TypedValue().also { requireContext().theme.resolveAttribute(R.attr.colorOnSurfaceLowEmphasis, it, true) }.data)
+
         textInputLayout.isEnabled = false
         textInputLayout.endIconDrawable = null
         textInputLayout.setEndIconOnClickListener(null)

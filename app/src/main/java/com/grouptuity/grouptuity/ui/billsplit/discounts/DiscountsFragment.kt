@@ -18,7 +18,6 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.FragmentNavigatorExtras
 import androidx.navigation.fragment.findNavController
-import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.LinearLayoutManager
 import androidx.recyclerview.widget.RecyclerView
@@ -46,7 +45,6 @@ import kotlinx.coroutines.withContext
 //TODO menu button to clear all discounts
 
 class DiscountsFragment: Fragment() {
-    private val args: DiscountsFragmentArgs by navArgs()
     private var binding by setNullOnDestroy<FragDiscountsBinding>()
     private lateinit var discountsViewModel: DiscountsViewModel
     private lateinit var backPressedCallback: OnBackPressedCallback
@@ -55,7 +53,7 @@ class DiscountsFragment: Fragment() {
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         binding = FragDiscountsBinding.inflate(inflater, container, false)
-        discountsViewModel = ViewModelProvider(this).get(DiscountsViewModel::class.java)
+        discountsViewModel = ViewModelProvider(this)[DiscountsViewModel::class.java]
         return binding.root
     }
 
@@ -77,6 +75,9 @@ class DiscountsFragment: Fragment() {
 
         binding.fab.setOnClickListener {
             (requireActivity() as MainActivity).storeViewAsBitmap(requireView())
+
+            discountsViewModel.notifyTransitionStarted()
+
             findNavController().navigate(
                 DiscountsFragmentDirections.editDiscount(
                     editedDiscount = null,
@@ -84,6 +85,14 @@ class DiscountsFragment: Fragment() {
                 )
             )
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        // Reset UI input/output locks leftover from aborted transitions/animations
+        discountsViewModel.unLockInput()
+        discountsViewModel.unFreezeOutput()
     }
 
     private fun setupList() {
@@ -101,6 +110,8 @@ class DiscountsFragment: Fragment() {
                     val viewBinding = FragDiscountsListitemBinding.bind(view)
 
                     (requireActivity() as MainActivity).storeViewAsBitmap(requireView())
+
+                    discountsViewModel.notifyTransitionStarted()
 
                     findNavController().navigate(
                         DiscountsFragmentDirections.editDiscount(view.tag as Discount, null),
@@ -220,7 +231,13 @@ class DiscountsFragment: Fragment() {
                     return animator
                 }
             }
-        )
+        ).addListener(object : Transition.TransitionListener {
+            override fun onTransitionStart(transition: Transition) { discountsViewModel.notifyTransitionStarted() }
+            override fun onTransitionEnd(transition: Transition) { discountsViewModel.notifyTransitionFinished() }
+            override fun onTransitionCancel(transition: Transition) {}
+            override fun onTransitionPause(transition: Transition) {}
+            override fun onTransitionResume(transition: Transition) {}
+        })
 
         binding.coveredFragment.setImageBitmap(MainActivity.storedViewBitmap)
     }
@@ -296,7 +313,13 @@ class DiscountsFragment: Fragment() {
                     return animator
                 }
             }
-        )
+        ).addListener(object : Transition.TransitionListener {
+            override fun onTransitionStart(transition: Transition) { discountsViewModel.notifyTransitionStarted() }
+            override fun onTransitionEnd(transition: Transition) { discountsViewModel.notifyTransitionFinished() }
+            override fun onTransitionCancel(transition: Transition) {}
+            override fun onTransitionPause(transition: Transition) {}
+            override fun onTransitionResume(transition: Transition) {}
+        })
 
         // Return transition is needed to prevent next fragment from appearing immediately
         returnTransition = Hold().apply {

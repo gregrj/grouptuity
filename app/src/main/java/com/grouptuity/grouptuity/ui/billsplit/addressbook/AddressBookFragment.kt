@@ -43,8 +43,6 @@ import com.grouptuity.grouptuity.databinding.FragAddressBookListitemBinding
 import com.grouptuity.grouptuity.ui.custom.views.RecyclerViewListener
 import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
 import com.grouptuity.grouptuity.ui.custom.transitions.CircularRevealTransition
-import com.grouptuity.grouptuity.ui.custom.views.extendFABToCenter
-import com.grouptuity.grouptuity.ui.custom.views.shrinkFABToCorner
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -97,8 +95,9 @@ class AddressBookFragment: Fragment() {
         // Intercept back pressed events to allow fragment-specific behaviors
         backPressedCallback = object: OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                when(val addSelectionsToBill = addressBookViewModel.handleOnBackPressed()) {
-                    true, false -> closeFragment(addSelectionsToBill)
+                val addSelectionsToBill = addressBookViewModel.handleOnBackPressed()
+                if(addSelectionsToBill != null) {
+                    closeFragment(addSelectionsToBill)
                 }
             }
         }
@@ -483,11 +482,11 @@ class AddressBookFragment: Fragment() {
             when(it) {
                 null -> { binding.fab.hide() }
                 true -> {
-                    extendFABToCenter(binding.fab, R.drawable.ic_add_person)
+                    binding.fab.extendFABToCenter(R.drawable.ic_add_person)
                     binding.fab.show()
                 }
                 false -> {
-                    shrinkFABToCorner(binding.fab, R.drawable.ic_arrow_forward)
+                    binding.fab.shrinkFABToCorner(R.drawable.ic_arrow_forward)
                     binding.fab.show()
                 }
             }

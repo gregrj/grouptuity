@@ -50,13 +50,12 @@
         layout="@layout/frag_items_listitem"
         android:visibility="gone"/>
 
-    <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+    <com.grouptuity.grouptuity.ui.custom.views.EnhancedExtendedFAB
         android:id="@+id/payment_fab"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:layout_gravity="center_horizontal|bottom"
         android:layout_margin="@dimen/fab_margin"
-        app:layout_behavior="com.google.android.material.behavior.HideBottomViewOnScrollBehavior"
         android:text="@string/payments_fab_process_payments"
         android:visibility="invisible"/>
 

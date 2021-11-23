@@ -1,22 +1,24 @@
 package com.grouptuity.grouptuity.ui.custom.views
 
-import android.app.Activity
 import android.content.Context
-import android.graphics.Bitmap
-import android.graphics.Rect
-import android.os.Handler
-import android.os.Looper
-import android.util.Log
-import android.view.PixelCopy
 import android.view.View
 import android.view.ViewTreeObserver
 import android.view.inputmethod.InputMethodManager
-import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.DefaultLifecycleObserver
 import androidx.lifecycle.LifecycleOwner
+import java.util.*
 import kotlin.properties.ReadWriteProperty
 import kotlin.reflect.KProperty
+
+
+class ExtensionPropertyField<K, V>() {
+    private val map = WeakHashMap<K, V?>()
+
+    operator fun getValue(thisRef: K, property: KProperty<*>): V? = map[thisRef]
+
+    operator fun setValue(thisRef: K, property: KProperty<*>, value: V) { map[thisRef] = value }
+}
 
 
 fun <T> Fragment.setNullOnDestroy(initialValue: T? = null): ReadWriteProperty<LifecycleOwner, T> =

@@ -38,7 +38,6 @@ class ContactEntryViewModel(app: Application): UIViewModel(app) {
     val name: StateFlow<String?> = nameInput
 
     val toolbarButtonState: LiveData<Int> = combine(activeField, nameInput, emailInput, venmoInput, cashAppInput, algorandInput) {
-        Log.e(""+it[0], ""+it[1])
         when (it[0] as Int?) {
             NAME -> if (it[1] == null) CANCEL else FINISH
             EMAIL -> if (it[2] == null) CANCEL else FINISH

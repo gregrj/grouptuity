@@ -83,7 +83,7 @@
                 app:cardCornerRadius="0dp"
                 app:cardElevation="0dp"/>
 
-            <com.google.android.material.floatingactionbutton.ExtendedFloatingActionButton
+            <com.grouptuity.grouptuity.ui.custom.views.EnhancedExtendedFAB
                 android:id="@+id/fab"
                 android:transitionName="new_contact_button_transition_name"
                 android:layout_width="wrap_content"

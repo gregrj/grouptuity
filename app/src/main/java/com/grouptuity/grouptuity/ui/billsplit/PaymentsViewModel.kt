@@ -7,7 +7,6 @@ import androidx.lifecycle.asLiveData
 import com.grouptuity.grouptuity.Event
 import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.*
-import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.mapLatest
 import java.text.NumberFormat
@@ -43,7 +42,7 @@ class PaymentsViewModel(app: Application): UIViewModel(app) {
 
     val processPaymentsEvent: LiveData<Event<Boolean>> = repository.requestProcessPaymentsEvent
 
-    private val activePaymentAndMethod = MutableStateFlow<Pair<Payment?, PaymentMethod?>>(Pair(null, null))
+    private val activePaymentAndMethod = repository.activePaymentAndMethod
     private var cachedMethod: PaymentMethod? = null
     private var cachedPayerAddress: String? = null
     private var cachedPayeeAddress: String? = null

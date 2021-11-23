@@ -88,7 +88,6 @@ class PaymentsFragment: Fragment() {
         }
         requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, backPressedCallback)
 
-
         val recyclerAdapter = PaymentRecyclerViewAdapter(
             requireContext(),
             object: PaymentRecyclerViewAdapter.PaymentRecyclerViewListener {

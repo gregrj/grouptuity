@@ -38,7 +38,7 @@ import com.grouptuity.grouptuity.databinding.FragDebtentryBinding
 import com.grouptuity.grouptuity.databinding.FragDebtentryListdinerBinding
 import com.grouptuity.grouptuity.ui.custom.transitions.CardViewExpandTransition
 import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
-import com.grouptuity.grouptuity.ui.custom.views.slideUpFAB
+import com.grouptuity.grouptuity.ui.custom.views.slideUp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -149,7 +149,7 @@ class DebtEntryFragment: Fragment() {
         debtEntryViewModel.areDebtInputsValid.observe(viewLifecycleOwner, {
             if(it) {
                 binding.fab.show()
-                slideUpFAB(binding.fab)
+                binding.fab.slideUp()
             } else {
                 binding.fab.hide()
             }
@@ -372,7 +372,7 @@ class DebtEntryFragment: Fragment() {
         binding.selectAllCreditors.setOnClickListener {
             if (binding.selectAllCreditors.isChecked) {
                 debtEntryViewModel.selectAllCreditors()
-                slideUpFAB(binding.fab) // Slide up FAB into view if it was hidden by scrolling
+                binding.fab.slideUp()  // Slide up FAB into view if it was hidden by scrolling
             } else {
                 debtEntryViewModel.clearCreditorSelections()
             }
@@ -381,7 +381,7 @@ class DebtEntryFragment: Fragment() {
         binding.selectAllDebtors.setOnClickListener {
             if (binding.selectAllDebtors.isChecked) {
                 debtEntryViewModel.selectAllDebtors()
-                slideUpFAB(binding.fab) // Slide up FAB into view if it was hidden by scrolling
+                binding.fab.slideUp()  // Slide up FAB into view if it was hidden by scrolling
             } else {
                 debtEntryViewModel.clearDebtorSelections()
             }

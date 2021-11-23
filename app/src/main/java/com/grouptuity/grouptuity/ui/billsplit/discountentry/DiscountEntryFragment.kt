@@ -34,7 +34,7 @@ import com.grouptuity.grouptuity.databinding.*
 import com.grouptuity.grouptuity.ui.custom.transitions.*
 import com.grouptuity.grouptuity.ui.custom.views.TabLayoutMediator
 import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
-import com.grouptuity.grouptuity.ui.custom.views.slideUpFAB
+import com.grouptuity.grouptuity.ui.custom.views.slideUp
 import java.text.NumberFormat
 
 // TODO handle inset changes
@@ -83,7 +83,7 @@ class DiscountEntryFragment: Fragment() {
                 setupEnterTransitionNewFromTaxTip()
             } else {
                 // New discount entry starting from discount fragment
-                binding.coveredFragment.setImageBitmap(MainActivity.storedViewBitmap)
+                binding.innerCoveredFragment.setImageBitmap(MainActivity.storedViewBitmap)
                 binding.innerCoveredFragment.visibility = View.VISIBLE
 
                 enterTransition = CircularRevealTransition(
@@ -101,9 +101,9 @@ class DiscountEntryFragment: Fragment() {
             }
         } else {
             // Editing existing discount
-            binding.coveredFragment.setImageBitmap(MainActivity.storedViewBitmap)
             binding.fadeView.visibility = View.GONE
             binding.container.transitionName = "container" + (discountEntryViewModel.loadedDiscount.value?.id ?: "")
+            binding.coveredFragment.setImageBitmap(MainActivity.storedViewBitmap)
 
             sharedElementEnterTransition = CardViewExpandTransition(binding.container.transitionName, binding.revealedLayout.id, true)
                 .setOnTransitionProgressCallback { _: Transition, sceneRoot: ViewGroup, _: View, animator: ValueAnimator ->
@@ -115,7 +115,6 @@ class DiscountEntryFragment: Fragment() {
                 .setOnTransitionStartCallback { _, _, _, _ -> discountEntryViewModel.notifyTransitionStarted() }
                 .setOnTransitionEndCallback { _, _, _, _ -> discountEntryViewModel.notifyTransitionFinished() }
         }
-
 
         setupToolbar()
 
@@ -487,7 +486,7 @@ class DiscountEntryFragment: Fragment() {
                 allowReshowFABOnHidden = false
                 binding.fab.hide(object: FloatingActionButton.OnVisibilityChangedListener() {
                     override fun onHidden(fab: FloatingActionButton) {
-                        slideUpFAB(binding.fab)
+                        binding.fab.slideUp()
                     }
                 })
             } else {
@@ -496,7 +495,7 @@ class DiscountEntryFragment: Fragment() {
                     binding.fab.hide(object: FloatingActionButton.OnVisibilityChangedListener() {
                         override fun onHidden(fab: FloatingActionButton) {
                             binding.fab.setImageResource(it)
-                            slideUpFAB(binding.fab)
+                            binding.fab.slideUp()
 
                             if(allowReshowFABOnHidden)
                                 binding.fab.show()
@@ -504,16 +503,16 @@ class DiscountEntryFragment: Fragment() {
                     })
                 } else {
                     binding.fab.setImageResource(it)
-                    slideUpFAB(binding.fab)
+                    binding.fab.slideUp()
                     binding.fab.show()
                 }
             }
         })
 
         // If selections change and FAB should be showing, ensure FAB is not out of view
-        discountEntryViewModel.dinerSelections.observe(viewLifecycleOwner, { if(it.isNotEmpty()) slideUpFAB(binding.fab) })
-        discountEntryViewModel.itemSelections.observe(viewLifecycleOwner, { if(it.isNotEmpty()) slideUpFAB(binding.fab) })
-        discountEntryViewModel.reimburseeSelections.observe(viewLifecycleOwner, { if(it.isNotEmpty()) slideUpFAB(binding.fab) })
+        discountEntryViewModel.dinerSelections.observe(viewLifecycleOwner, { if(it.isNotEmpty()) binding.fab.slideUp() })
+        discountEntryViewModel.itemSelections.observe(viewLifecycleOwner, { if(it.isNotEmpty()) binding.fab.slideUp() })
+        discountEntryViewModel.reimburseeSelections.observe(viewLifecycleOwner, { if(it.isNotEmpty()) binding.fab.slideUp() })
 
         binding.fab.setOnClickListener {
             when(discountEntryViewModel.fabIcon.value) {
@@ -528,6 +527,7 @@ class DiscountEntryFragment: Fragment() {
         val propTopInset = "com.grouptuity.grouptuity:CardViewExpandTransition:discount_button_top_inset"
         val propCornerRadius = "com.grouptuity.grouptuity:CardViewExpandTransition:discount_button_corner_radius"
 
+        binding.coveredFragment.setImageBitmap(MainActivity.storedViewBitmap)
         binding.addDiscountButton.transitionName = "discountButtonTransitionName"
         binding.addDiscountButton.visibility = View.VISIBLE
         binding.editDiscountsButton.transitionName = null
@@ -592,8 +592,6 @@ class DiscountEntryFragment: Fragment() {
             }
         ).setOnTransitionStartCallback { _, _, _, _ -> discountEntryViewModel.notifyTransitionStarted() }
             .setOnTransitionEndCallback { _, _, _, _ -> discountEntryViewModel.notifyTransitionFinished() }
-
-        binding.coveredFragment.setImageBitmap(MainActivity.storedViewBitmap)
     }
 
     private fun setupReturnTransitionToTaxTip(view: View, withNewDiscount: Boolean) {
@@ -677,7 +675,6 @@ class DiscountEntryFragment: Fragment() {
     }
 
     private fun setupReturnTransitionToDiscounts(view: View) {
-        binding.coveredFragment.setImageBitmap(MainActivity.storedViewBitmap)
         binding.fadeView.visibility = View.GONE
         binding.container.transitionName = "container" + (discountEntryViewModel.loadedDiscount.value?.id ?: "")
 

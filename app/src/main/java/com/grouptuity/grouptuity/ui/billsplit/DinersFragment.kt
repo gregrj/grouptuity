@@ -138,7 +138,6 @@ class DinersFragment: Fragment() {
             binding.list.viewTreeObserver.addOnPreDrawListener(object: ViewTreeObserver.OnPreDrawListener {
                 override fun onPreDraw(): Boolean {
                     binding.list.viewTreeObserver.removeOnPreDrawListener(this)
-                    Log.e("Triggering start","DinersFragment")
                     requireParentFragment().startPostponedEnterTransition()
                     return true
                 }

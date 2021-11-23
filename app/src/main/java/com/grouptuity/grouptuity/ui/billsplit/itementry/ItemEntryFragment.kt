@@ -34,7 +34,7 @@ import com.grouptuity.grouptuity.ui.custom.views.RecyclerViewListener
 import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
 import com.grouptuity.grouptuity.ui.custom.transitions.CardViewExpandTransition
 import com.grouptuity.grouptuity.ui.custom.transitions.CircularRevealTransition
-import com.grouptuity.grouptuity.ui.custom.views.slideUpFAB
+import com.grouptuity.grouptuity.ui.custom.views.slideUp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -363,7 +363,7 @@ class ItemEntryFragment: Fragment() {
             object: RecyclerViewListener {
                 override fun onClick(view: View) {
                     itemEntryViewModel.toggleDinerSelection(view.tag as Diner)
-                    slideUpFAB(binding.fab) // Slide up FAB into view if it was hidden by scrolling
+                    binding.fab.slideUp()  // Slide up FAB into view if it was hidden by scrolling
                 }
                 override fun onLongClick(view: View): Boolean { return false }
             }
@@ -402,7 +402,7 @@ class ItemEntryFragment: Fragment() {
 
         binding.selectAll.setOnClickListener {
             itemEntryViewModel.selectAllDiners()
-            slideUpFAB(binding.fab) // Slide up FAB into view if it was hidden by scrolling
+            binding.fab.slideUp()  // Slide up FAB into view if it was hidden by scrolling
         }
 
         itemEntryViewModel.dinerData.observe(viewLifecycleOwner, { data -> lifecycleScope.launch { recyclerAdapter.updateDataSet(dinerData = data) } })

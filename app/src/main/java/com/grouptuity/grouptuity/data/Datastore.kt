@@ -1,6 +1,5 @@
 package com.grouptuity.grouptuity.data
 
-import android.accounts.AccountManager
 import android.app.Application
 import android.content.Context
 import android.content.pm.PackageManager
@@ -120,6 +119,7 @@ class Repository(context: Context) {
     // App-level data
     val loadInProgress = MutableStateFlow(true)
     val requestProcessPaymentsEvent = MutableLiveData<Event<Boolean>>()
+    val activePaymentAndMethod = MutableStateFlow<Pair<Payment?, PaymentMethod?>>(Pair(null, null))
     val bills = database.getSavedBills()
     val selfContact = combine(userName.stateFlow, userPhotoUri.stateFlow) { userName, userPhotoUri ->
         Contact.updateSelfContactData(userName, userPhotoUri)

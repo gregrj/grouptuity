@@ -6,7 +6,6 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.animation.AccelerateDecelerateInterpolator
-import android.view.animation.Animation
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
@@ -26,30 +25,16 @@ import com.grouptuity.grouptuity.databinding.FragItemsListitemBinding
 import com.grouptuity.grouptuity.ui.custom.transitions.CardViewExpandTransition
 import com.grouptuity.grouptuity.ui.custom.transitions.CircularRevealTransition
 import com.grouptuity.grouptuity.ui.custom.transitions.progressWindow
-import com.grouptuity.grouptuity.ui.custom.views.hideExtendedFAB
 import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
-import com.grouptuity.grouptuity.ui.custom.views.showExtendedFAB
 
 // TODO prevent double tap on fab causing navigation error
 
 class BillSplitFragment: Fragment() {
     private var binding by setNullOnDestroy<FragBillSplitBinding>()
     private lateinit var billSplitViewModel: BillSplitViewModel
-    private var fabPageIndexActual = 0
-    private var fabPageIndexTarget = 0
-    private var fabAnimatorsLive = false
-    private var payFABHideAnimation: Animation? = null
-    private var payFABShowAnimation: Animation? = null
-
+    private var fabActiveDrawableId: Int? = R.drawable.ic_add_person
     private var newDinerIdForTransition: String? = null
     private var newItemKeyForTransition: String? = null
-
-    companion object {
-        const val FRAG_POSITION_DINERS = 0
-        const val FRAG_POSITION_ITEMS = 1
-        const val FRAG_POSITION_TAX_TIP = 2
-        const val FRAG_POSITION_PAYMENTS = 3
-    }
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         billSplitViewModel = ViewModelProvider(this)[BillSplitViewModel::class.java]
@@ -84,41 +69,21 @@ class BillSplitFragment: Fragment() {
             override fun getItemCount() = 4
 
             override fun createFragment(position: Int) = when (position) {
-                FRAG_POSITION_DINERS -> DinersFragment.newInstance().also { frag ->
+                BillSplitViewModel.FRAG_DINERS -> DinersFragment.newInstance().also { frag ->
                     newDinerIdForTransition?.also { frag.setSharedElementDinerId(it) }
                 }
-                FRAG_POSITION_ITEMS -> ItemsFragment.newInstance().also { frag ->
+                BillSplitViewModel.FRAG_ITEMS -> ItemsFragment.newInstance().also { frag ->
                     newItemKeyForTransition?.also { frag.setSharedElementItemId(it) }
                 }
-                FRAG_POSITION_TAX_TIP -> TaxTipFragment()
-                FRAG_POSITION_PAYMENTS -> PaymentsFragment.newInstance()
+                BillSplitViewModel.FRAG_TAX_TIP -> TaxTipFragment()
+                BillSplitViewModel.FRAG_PAYMENTS -> PaymentsFragment.newInstance()
                 else -> { Fragment() /* Not reachable */ }
             }
         }
 
         binding.viewPager.registerOnPageChangeCallback(object: ViewPager2.OnPageChangeCallback() {
             override fun onPageSelected(position: Int) {
-                fabPageIndexTarget = position
-
-                if (fabPageIndexActual != fabPageIndexTarget && binding.fab.isOrWillBeShown) {
-
-                    if (fabPageIndexTarget != 3) {
-                        payFABShowAnimation?.apply {
-                            if (!this.hasEnded()) {
-                                payFABShowAnimation?.cancel()
-                                payFABShowAnimation = null
-                            }
-                        }
-
-                        if (payFABHideAnimation == null || payFABHideAnimation!!.hasEnded()) {
-                            payFABHideAnimation = hideExtendedFAB(binding.paymentFab)
-                        }
-                    }
-
-                    hideFAB()
-                } else {
-                    showFAB()
-                }
+                billSplitViewModel.activeFragmentIndex.value = position
             }
         })
 
@@ -128,16 +93,17 @@ class BillSplitFragment: Fragment() {
 
         TabLayoutMediator(binding.tabLayout, binding.viewPager) { tab, position ->
             tab.text = when (position) {
-                0 -> getString(R.string.billsplit_tab_diners)
-                1 -> getString(R.string.billsplit_tab_items)
-                2 -> getString(R.string.billsplit_tab_taxtip)
-                else -> getString(R.string.billsplit_tab_payment)
+                BillSplitViewModel.FRAG_DINERS -> getString(R.string.billsplit_tab_diners)
+                BillSplitViewModel.FRAG_ITEMS -> getString(R.string.billsplit_tab_items)
+                BillSplitViewModel.FRAG_TAX_TIP -> getString(R.string.billsplit_tab_taxtip)
+                BillSplitViewModel.FRAG_PAYMENTS -> getString(R.string.billsplit_tab_payment)
+                else -> ""
             }
         }.attach()
 
         // Overlay badge on diners tab showing how many diners are on the bill
         billSplitViewModel.dinerCount.observe(viewLifecycleOwner) {
-            binding.tabLayout.getTabAt(FRAG_POSITION_DINERS)?.apply {
+            binding.tabLayout.getTabAt(BillSplitViewModel.FRAG_DINERS)?.apply {
                 if(it > 0) {
                     orCreateBadge.number = it
                 } else {
@@ -148,7 +114,7 @@ class BillSplitFragment: Fragment() {
 
         // Overlay badge on items tab showing how many items are on the bill
         billSplitViewModel.itemCount.observe(viewLifecycleOwner) {
-            binding.tabLayout.getTabAt(FRAG_POSITION_ITEMS)?.apply {
+            binding.tabLayout.getTabAt(BillSplitViewModel.FRAG_ITEMS)?.apply {
                 if(it > 0) {
                     orCreateBadge.number = it
                 } else {
@@ -157,58 +123,60 @@ class BillSplitFragment: Fragment() {
             }
         }
 
-        // Override payments FAB visibility if no payments need to be processed
-        billSplitViewModel.hasPaymentsToProcess.observe(viewLifecycleOwner) {
-            if (fabPageIndexActual == 3) {
-                showFAB()
+        billSplitViewModel.fabDrawableId.observe(viewLifecycleOwner) { drawableId ->
+            if (drawableId != fabActiveDrawableId) {
+                if (binding.fab.isOrWillBeShown) {
+                    binding.fab.hide(object: FloatingActionButton.OnVisibilityChangedListener() {
+                        override fun onHidden(fab: FloatingActionButton) {
+                            super.onHidden(fab)
+                            fabActiveDrawableId = billSplitViewModel.fabDrawableId.value?.also {
+                                binding.fab.setImageResource(it)
+                                binding.fab.show()
+                            }
+                        }
+                    })
+                } else {
+                    fabActiveDrawableId = billSplitViewModel.fabDrawableId.value?.also {
+                        binding.fab.setImageResource(it)
+                        binding.fab.show()
+                    }
+                }
+            }
+        }
+
+        billSplitViewModel.showProcessPaymentsButton.observe(viewLifecycleOwner) {
+            if (it) {
+                binding.paymentFab.showWithAnimation()
+            } else {
+                binding.paymentFab.hideWithAnimation()
             }
         }
 
         binding.fab.setOnClickListener {
             when(binding.viewPager.currentItem) {
-                0 -> {
+                BillSplitViewModel.FRAG_DINERS -> {
                     // Show address book for contact selection
                     (requireActivity() as MainActivity).storeViewAsBitmap(requireView())
                     findNavController().navigate(BillSplitFragmentDirections.openAddressbook(CircularRevealTransition.OriginParams(binding.fab)))
                 }
-                1 -> {  // Show fragment for item entry
+                BillSplitViewModel.FRAG_ITEMS -> {
+                    // Show fragment for item entry
                     (requireActivity() as MainActivity).storeViewAsBitmap(requireView())
                     findNavController().navigate(BillSplitFragmentDirections.createNewItem(editedItem = null, CircularRevealTransition.OriginParams(binding.fab)))
                 }
             }
         }
 
-        binding.paymentFab.setOnClickListener { billSplitViewModel.requestProcessPayments() }
+        binding.paymentFab.setOnClickListener {
+            // TODO
+        }
     }
 
     override fun onViewStateRestored(savedInstanceState: Bundle?) {
         super.onViewStateRestored(savedInstanceState)
 
-        fabPageIndexTarget = binding.viewPager.currentItem
-        fabPageIndexActual = fabPageIndexTarget
-        when (fabPageIndexActual) {
-            0 -> {
-                binding.fab.setImageResource(R.drawable.ic_add_person)
-                binding.fab.show()
-                binding.paymentFab.visibility = View.INVISIBLE
-            }
-            1 -> {
-                binding.fab.setImageResource(R.drawable.ic_add_item)
-                binding.fab.show()
-                binding.paymentFab.visibility = View.INVISIBLE
-            }
-            2 -> {
-                binding.fab.hide()
-                binding.paymentFab.visibility = View.INVISIBLE
-            }
-            3 -> {
-                binding.fab.hide()
-
-                if (billSplitViewModel.hasPaymentsToProcess.value == true) {
-                    binding.paymentFab.visibility = View.VISIBLE
-                }
-            }
-        }
+        fabActiveDrawableId = R.drawable.ic_add_person
+        billSplitViewModel.activeFragmentIndex.value = binding.viewPager.currentItem
     }
 
     override fun onResume() {
@@ -221,74 +189,7 @@ class BillSplitFragment: Fragment() {
         newItemKeyForTransition = null
     }
 
-    private fun hideFAB() {
-        binding.fab.hide(object: FloatingActionButton.OnVisibilityChangedListener() {
-            override fun onHidden(fab: FloatingActionButton) {
-                super.onHidden(fab)
-                showFAB()
-            }
-        })
-    }
-
-    private fun showFAB() {
-        fabPageIndexActual = fabPageIndexTarget
-
-        if (fabPageIndexActual == 3) {
-            binding.fab.hide()
-
-            if (billSplitViewModel.hasPaymentsToProcess.value == true) {
-                payFABHideAnimation?.apply {
-                    if (!this.hasEnded()) {
-                        payFABHideAnimation?.cancel()
-                        payFABHideAnimation = null
-                    }
-                }
-
-                if (payFABShowAnimation == null || payFABShowAnimation!!.hasEnded()) {
-                    payFABShowAnimation = showExtendedFAB(binding.paymentFab)
-                }
-            } else {
-                payFABShowAnimation?.apply {
-                    if (!this.hasEnded()) {
-                        payFABShowAnimation?.cancel()
-                        payFABShowAnimation = null
-                    }
-                }
-
-                if (payFABHideAnimation == null || payFABHideAnimation!!.hasEnded()) {
-                    payFABHideAnimation = hideExtendedFAB(binding.paymentFab)
-                }
-            }
-        } else {
-            payFABShowAnimation?.apply {
-                if (!this.hasEnded()) {
-                    payFABShowAnimation?.cancel()
-                    payFABShowAnimation = null
-                }
-            }
-
-            if (payFABHideAnimation == null || payFABHideAnimation!!.hasEnded()) {
-                payFABHideAnimation = hideExtendedFAB(binding.paymentFab)
-            }
-
-            when (fabPageIndexActual) {
-                0 -> {
-                    binding.fab.setImageResource(R.drawable.ic_add_person)
-                    binding.fab.show()
-                }
-                1 -> {
-                    binding.fab.setImageResource(R.drawable.ic_add_item)
-                    binding.fab.show()
-                }
-                2 -> {
-                    binding.fab.hide()
-                }
-            }
-        }
-    }
-
     fun startNewDinerReturnTransition(viewBinding: FragDinersListitemBinding, newDiner: Diner, dinerSubtotal: String) {
-        Log.e("running", "startNewDinerReturnTransition")
         binding.newDinerSharedElement.apply {
 
             contactIcon.setContact(newDiner.asContact(), false)
@@ -319,7 +220,7 @@ class BillSplitFragment: Fragment() {
             binding.newDinerSharedElement.cardBackground.transitionName,
             binding.newDinerSharedElement.cardContent.id,
             false)
-            .setOnTransitionStartCallback { transition: Transition, sceneRoot: ViewGroup, startView: View, _: View ->
+            .setOnTransitionStartCallback { transition: Transition, _: ViewGroup, startView: View, _: View ->
                 // Fade out content of the ContactEntryFragment
                 startView.findViewById<CoordinatorLayout>(R.id.coordinator_layout)?.apply {
                     this.animate().setDuration(transition.duration).setUpdateListener { animator ->
@@ -335,6 +236,48 @@ class BillSplitFragment: Fragment() {
     }
 
     fun startNewItemReturnTransition(viewBinding: FragItemsListitemBinding, newItem: Item, dinerSubtotal: String) {
+        binding.newItemSharedElement.apply {
 
+            contactIcon.setContact(newDiner.asContact(), false)
+            name.text = newDiner.name
+
+            if(newDiner.itemIds.isEmpty()) {
+                message.text = resources.getString(R.string.diners_zero_items)
+            } else {
+                message.text = resources.getQuantityString(
+                    R.plurals.diners_num_items_with_subtotal,
+                    newDiner.itemIds.size,
+                    newDiner.itemIds.size,
+                    dinerSubtotal)
+            }
+
+            cardBackground.apply {
+                transitionName = "new_diner" + newDiner.id
+
+                (layoutParams as CoordinatorLayout.LayoutParams).also {
+                    it.topMargin = viewBinding.cardBackground.top + binding.appbarLayout.height
+                }
+
+                visibility = View.VISIBLE
+            }
+        }
+
+        sharedElementEnterTransition = CardViewExpandTransition(
+            binding.newDinerSharedElement.cardBackground.transitionName,
+            binding.newDinerSharedElement.cardContent.id,
+            false)
+            .setOnTransitionStartCallback { transition: Transition, _: ViewGroup, startView: View, _: View ->
+                // Fade out content of the ContactEntryFragment
+                startView.findViewById<CoordinatorLayout>(R.id.coordinator_layout)?.apply {
+                    this.animate().setDuration(transition.duration).setUpdateListener { animator ->
+                        this.alpha = 1f - progressWindow(
+                            AccelerateDecelerateInterpolator().getInterpolation(animator.animatedFraction),
+                            0f,
+                            0.4f)
+                    }.start()
+                }
+            }
+
+        startPostponedEnterTransition()
     }
 }

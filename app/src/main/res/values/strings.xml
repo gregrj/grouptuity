@@ -321,6 +321,7 @@
     <string name="discountentry_alert_invalid_cost">Please specify a reimbursement cost greater than zero</string>
     <string name="discountentry_alert_missing_purchasers">Please specify at least one diner to be reimbursed</string>
 
+    <string name="payments_fab_process_payments">Process Payments</string>
     <string name="payments_instruction_from_cash_pool">Receive cash from group pool</string>
     <string name="payments_instruction_into_cash_pool">Pay cash into group pool</string>
     <string name="payments_instruction_restaurant_payee">restaurant</string>
@@ -338,7 +339,6 @@
     <string name="payments_address_entry_algorand">Algorand address for %s</string>
     <string name="payments_selection_instruction">Select restaurant payer</string>
     <string name="payments_close_selection_list">Close payment method list</string>
-    <string name="payments_fab_process_payments">Process Payments</string>
     <string name="payments_scan_code">Scan code</string>
     <string name="payments_enter_manually">Enter manually</string>
     <string name="payments_ptp_username_hint">Enter username</string>
