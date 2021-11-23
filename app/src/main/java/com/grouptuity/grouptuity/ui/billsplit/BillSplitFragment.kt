@@ -238,46 +238,46 @@ class BillSplitFragment: Fragment() {
     fun startNewItemReturnTransition(viewBinding: FragItemsListitemBinding, newItem: Item, dinerSubtotal: String) {
         binding.newItemSharedElement.apply {
 
-            contactIcon.setContact(newDiner.asContact(), false)
-            name.text = newDiner.name
-
-            if(newDiner.itemIds.isEmpty()) {
-                message.text = resources.getString(R.string.diners_zero_items)
-            } else {
-                message.text = resources.getQuantityString(
-                    R.plurals.diners_num_items_with_subtotal,
-                    newDiner.itemIds.size,
-                    newDiner.itemIds.size,
-                    dinerSubtotal)
-            }
-
-            cardBackground.apply {
-                transitionName = "new_diner" + newDiner.id
-
-                (layoutParams as CoordinatorLayout.LayoutParams).also {
-                    it.topMargin = viewBinding.cardBackground.top + binding.appbarLayout.height
-                }
-
-                visibility = View.VISIBLE
-            }
+//            contactIcon.setContact(newDiner.asContact(), false)
+//            name.text = newDiner.name
+//
+//            if(newDiner.itemIds.isEmpty()) {
+//                message.text = resources.getString(R.string.diners_zero_items)
+//            } else {
+//                message.text = resources.getQuantityString(
+//                    R.plurals.diners_num_items_with_subtotal,
+//                    newDiner.itemIds.size,
+//                    newDiner.itemIds.size,
+//                    dinerSubtotal)
+//            }
+//
+//            cardBackground.apply {
+//                transitionName = "new_diner" + newDiner.id
+//
+//                (layoutParams as CoordinatorLayout.LayoutParams).also {
+//                    it.topMargin = viewBinding.cardBackground.top + binding.appbarLayout.height
+//                }
+//
+//                visibility = View.VISIBLE
+//            }
         }
-
-        sharedElementEnterTransition = CardViewExpandTransition(
-            binding.newDinerSharedElement.cardBackground.transitionName,
-            binding.newDinerSharedElement.cardContent.id,
-            false)
-            .setOnTransitionStartCallback { transition: Transition, _: ViewGroup, startView: View, _: View ->
-                // Fade out content of the ContactEntryFragment
-                startView.findViewById<CoordinatorLayout>(R.id.coordinator_layout)?.apply {
-                    this.animate().setDuration(transition.duration).setUpdateListener { animator ->
-                        this.alpha = 1f - progressWindow(
-                            AccelerateDecelerateInterpolator().getInterpolation(animator.animatedFraction),
-                            0f,
-                            0.4f)
-                    }.start()
-                }
-            }
-
+//
+//        sharedElementEnterTransition = CardViewExpandTransition(
+//            binding.newDinerSharedElement.cardBackground.transitionName,
+//            binding.newDinerSharedElement.cardContent.id,
+//            false)
+//            .setOnTransitionStartCallback { transition: Transition, _: ViewGroup, startView: View, _: View ->
+//                // Fade out content of the ContactEntryFragment
+//                startView.findViewById<CoordinatorLayout>(R.id.coordinator_layout)?.apply {
+//                    this.animate().setDuration(transition.duration).setUpdateListener { animator ->
+//                        this.alpha = 1f - progressWindow(
+//                            AccelerateDecelerateInterpolator().getInterpolation(animator.animatedFraction),
+//                            0f,
+//                            0.4f)
+//                    }.start()
+//                }
+//            }
+//
         startPostponedEnterTransition()
     }
 }

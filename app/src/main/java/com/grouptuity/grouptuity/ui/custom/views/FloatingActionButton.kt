@@ -19,7 +19,7 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.grouptuity.grouptuity.R
 
 
-class EnhancedExtendedFAB @JvmOverloads constructor(context: Context, attrs: AttributeSet? = null, defStyleAttr: Int = 0): ExtendedFloatingActionButton(context, attrs, defStyleAttr) {
+class EnhancedExtendedFAB(context: Context, attrs: AttributeSet): ExtendedFloatingActionButton(context, attrs) {
     companion object {
         const val HIDDEN = 0
         const val HIDING = 1
@@ -32,9 +32,6 @@ class EnhancedExtendedFAB @JvmOverloads constructor(context: Context, attrs: Att
 
     init {
         showState = if (visibility == View.VISIBLE) SHOWN else HIDDEN
-
-        pivotX = 0.5f
-        pivotY = 0.5f
 
         val linearInterpolator = LinearInterpolator()
         val animationDuration = resources.getInteger(R.integer.viewprop_animation_duration).toLong()
@@ -63,7 +60,7 @@ class EnhancedExtendedFAB @JvmOverloads constructor(context: Context, attrs: Att
                             visibility = View.INVISIBLE
                             HIDDEN
                         }
-                        SHOWING -> SHOWING
+                        SHOWING -> SHOWN
                         else -> SHOWN // should never be called
                     }
                     active = false
@@ -120,7 +117,7 @@ class EnhancedExtendedFAB @JvmOverloads constructor(context: Context, attrs: Att
         }, 50)
     }
 
-    private fun showWithAnimation() {
+    fun showWithAnimation() {
         when (showState) {
             SHOWN, SHOWING -> {
                 return
@@ -138,7 +135,7 @@ class EnhancedExtendedFAB @JvmOverloads constructor(context: Context, attrs: Att
         }
     }
 
-    private fun hideWithAnimation(){
+    fun hideWithAnimation(){
         when (showState) {
             HIDDEN, HIDING -> {
                 return
