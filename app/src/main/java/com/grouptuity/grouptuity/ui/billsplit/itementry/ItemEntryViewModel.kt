@@ -178,23 +178,21 @@ class ItemEntryViewModel(app: Application): UIViewModel(app) {
         _selections.value = selectionSet.toSet()
     }
 
-    fun addItemToBill() {
+    fun addNewItemToBill(): Item? = selections.value?.let {
+        repository.createNewItem(
+            calculator.numericalValue.value ?: 0.0,
+            itemName.value ?: "Item",
+            diners.value.filter { diner -> it.contains(diner) })
+    }
+
+    fun saveItemEdits() {
         loadedItem.value.also { editedItem ->
-            if (editedItem == null) {
-                selections.value?.apply {
-                    repository.addItem(
-                        calculator.numericalValue.value ?: 0.0,
-                        itemName.value ?: "Item",
-                        diners.value.filter { diner -> this.contains(diner) })
-                }
-            } else {
-                selections.value?.apply {
-                    repository.editItem(
-                        editedItem,
-                        calculator.numericalValue.value ?: 0.0,
-                        itemName.value ?: "Item",
-                        diners.value.filter { diner -> this.contains(diner) })
-                }
+            selections.value?.apply {
+                repository.editItem(
+                    editedItem!!,
+                    calculator.numericalValue.value ?: 0.0,
+                    itemName.value ?: "Item",
+                    diners.value.filter { diner -> this.contains(diner) })
             }
         }
     }

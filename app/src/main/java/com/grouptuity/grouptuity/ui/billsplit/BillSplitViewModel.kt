@@ -44,7 +44,7 @@ class BillSplitViewModel(application: Application): UIViewModel(application) {
     }.asLiveData()
 
     init {
-        // Clear active payment if active fragment changes to non
+        // Clear active payment if active fragment changes to something other than payments
         activeFragmentIndex.onEach {
             if (it != FRAG_PAYMENTS) {
                 repository.activePaymentAndMethod.value = Pair(null, null)

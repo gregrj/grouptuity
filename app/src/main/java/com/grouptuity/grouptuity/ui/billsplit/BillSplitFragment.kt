@@ -2,10 +2,13 @@ package com.grouptuity.grouptuity.ui.billsplit
 
 import android.os.Bundle
 import android.util.Log
+import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.animation.AccelerateDecelerateInterpolator
+import android.widget.ImageView
+import android.widget.LinearLayout
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
@@ -25,7 +28,9 @@ import com.grouptuity.grouptuity.databinding.FragItemsListitemBinding
 import com.grouptuity.grouptuity.ui.custom.transitions.CardViewExpandTransition
 import com.grouptuity.grouptuity.ui.custom.transitions.CircularRevealTransition
 import com.grouptuity.grouptuity.ui.custom.transitions.progressWindow
+import com.grouptuity.grouptuity.ui.custom.views.ContactIcon
 import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
+import java.text.NumberFormat
 
 // TODO prevent double tap on fab causing navigation error
 
@@ -34,7 +39,7 @@ class BillSplitFragment: Fragment() {
     private lateinit var billSplitViewModel: BillSplitViewModel
     private var fabActiveDrawableId: Int? = R.drawable.ic_add_person
     private var newDinerIdForTransition: String? = null
-    private var newItemKeyForTransition: String? = null
+    private var newItemIdForTransition: String? = null
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
         billSplitViewModel = ViewModelProvider(this)[BillSplitViewModel::class.java]
@@ -55,7 +60,7 @@ class BillSplitFragment: Fragment() {
                 val newItem = args.getParcelable<Item>("new_item")
                 if (newItem != null) {
                     postponeEnterTransition()
-                    newDinerIdForTransition = newItem.id
+                    newItemIdForTransition = newItem.id
                 }
             }
             args.clear()
@@ -73,7 +78,7 @@ class BillSplitFragment: Fragment() {
                     newDinerIdForTransition?.also { frag.setSharedElementDinerId(it) }
                 }
                 BillSplitViewModel.FRAG_ITEMS -> ItemsFragment.newInstance().also { frag ->
-                    newItemKeyForTransition?.also { frag.setSharedElementItemId(it) }
+                    newItemIdForTransition?.also { frag.setSharedElementItemId(it) }
                 }
                 BillSplitViewModel.FRAG_TAX_TIP -> TaxTipFragment()
                 BillSplitViewModel.FRAG_PAYMENTS -> PaymentsFragment.newInstance()
@@ -176,7 +181,9 @@ class BillSplitFragment: Fragment() {
         super.onViewStateRestored(savedInstanceState)
 
         fabActiveDrawableId = R.drawable.ic_add_person
-        billSplitViewModel.activeFragmentIndex.value = binding.viewPager.currentItem
+        binding.viewPager.currentItem = billSplitViewModel.activeFragmentIndex.value
+        Log.e("restoring to", ""+binding.viewPager.currentItem)
+        fix tihs
     }
 
     override fun onResume() {
@@ -186,7 +193,7 @@ class BillSplitFragment: Fragment() {
         binding.newDinerSharedElement.cardBackground.visibility = View.GONE
         binding.newItemSharedElement.cardBackground.visibility = View.GONE
         newDinerIdForTransition = null
-        newItemKeyForTransition = null
+        newItemIdForTransition = null
     }
 
     fun startNewDinerReturnTransition(viewBinding: FragDinersListitemBinding, newDiner: Diner, dinerSubtotal: String) {
@@ -235,49 +242,76 @@ class BillSplitFragment: Fragment() {
         startPostponedEnterTransition()
     }
 
-    fun startNewItemReturnTransition(viewBinding: FragItemsListitemBinding, newItem: Item, dinerSubtotal: String) {
+    fun startNewItemReturnTransition(viewBinding: FragItemsListitemBinding, newItem: Item) {
         binding.newItemSharedElement.apply {
 
-//            contactIcon.setContact(newDiner.asContact(), false)
-//            name.text = newDiner.name
-//
-//            if(newDiner.itemIds.isEmpty()) {
-//                message.text = resources.getString(R.string.diners_zero_items)
-//            } else {
-//                message.text = resources.getQuantityString(
-//                    R.plurals.diners_num_items_with_subtotal,
-//                    newDiner.itemIds.size,
-//                    newDiner.itemIds.size,
-//                    dinerSubtotal)
-//            }
-//
-//            cardBackground.apply {
-//                transitionName = "new_diner" + newDiner.id
-//
-//                (layoutParams as CoordinatorLayout.LayoutParams).also {
-//                    it.topMargin = viewBinding.cardBackground.top + binding.appbarLayout.height
-//                }
-//
-//                visibility = View.VISIBLE
-//            }
+            name.text = newItem.name
+
+            itemPrice.text = NumberFormat.getCurrencyInstance().format(newItem.price)
+
+            dinerIcons.removeAllViews()
+
+            when(newItem.diners.size) {
+                0 -> {
+                    dinerSummary.setText(R.string.items_no_diners_warning)
+                    dinerSummary.setTextColor(
+                        TypedValue().also {
+                            requireContext().theme.resolveAttribute(R.attr.colorPrimary, it, true)
+                        }.data
+                    )
+                }
+                billSplitViewModel.dinerCount.value -> {
+                    dinerSummary.setText(R.string.items_shared_by_everyone)
+                }
+                else -> {
+                    dinerSummary.text = ""
+                    newItem.diners.forEach { diner ->
+                        val icon = ContactIcon(requireContext())
+                        icon.setSelectable(false)
+
+                        val dim = (24 * requireContext().resources.displayMetrics.density).toInt()
+                        val params = LinearLayout.LayoutParams(dim, dim)
+                        params.marginEnd = (2 * requireContext().resources.displayMetrics.density).toInt()
+                        icon.layoutParams = params
+
+                        icon.setContact(diner.asContact(), false)
+                        dinerIcons.addView(icon)
+                    }
+                }
+            }
+
+            cardBackground.apply {
+                transitionName = "new_item" + newItem.id
+
+                (layoutParams as CoordinatorLayout.LayoutParams).also {
+                    it.topMargin = viewBinding.cardBackground.top + binding.appbarLayout.height
+                }
+
+                visibility = View.VISIBLE
+            }
         }
-//
-//        sharedElementEnterTransition = CardViewExpandTransition(
-//            binding.newDinerSharedElement.cardBackground.transitionName,
-//            binding.newDinerSharedElement.cardContent.id,
-//            false)
-//            .setOnTransitionStartCallback { transition: Transition, _: ViewGroup, startView: View, _: View ->
-//                // Fade out content of the ContactEntryFragment
-//                startView.findViewById<CoordinatorLayout>(R.id.coordinator_layout)?.apply {
-//                    this.animate().setDuration(transition.duration).setUpdateListener { animator ->
-//                        this.alpha = 1f - progressWindow(
-//                            AccelerateDecelerateInterpolator().getInterpolation(animator.animatedFraction),
-//                            0f,
-//                            0.4f)
-//                    }.start()
-//                }
-//            }
-//
+
+        sharedElementEnterTransition = CardViewExpandTransition(
+            binding.newItemSharedElement.cardBackground.transitionName,
+            binding.newItemSharedElement.cardContent.id,
+            false)
+            .setOnTransitionStartCallback { transition: Transition, _: ViewGroup, startView: View, _: View ->
+                // Remove covered fragment from ItemEntryFragment at start of transition
+                startView.findViewById<ImageView>(R.id.inner_covered_fragment)?.apply {
+                    this.visibility = View.GONE
+                }
+
+                // Fade out content of the ItemEntryFragment
+                startView.findViewById<CoordinatorLayout>(R.id.coordinator_layout)?.apply {
+                    this.animate().setDuration(transition.duration).setUpdateListener { animator ->
+                        this.alpha = 1f - progressWindow(
+                            AccelerateDecelerateInterpolator().getInterpolation(animator.animatedFraction),
+                            0f,
+                            0.4f)
+                    }.start()
+                }
+            }
+
         startPostponedEnterTransition()
     }
 }

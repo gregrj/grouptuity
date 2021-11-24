@@ -178,7 +178,7 @@ class DinersFragment: Fragment() {
         editTextDialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE)
     }
 
-    inner class DinersRecyclerViewAdapter(private val context: Context,
+    private inner class DinersRecyclerViewAdapter(private val context: Context,
                                     private val dinersViewModel: DinersViewModel,
                                     private val listener: RecyclerViewListener): RecyclerView.Adapter<DinersRecyclerViewAdapter.ViewHolder>() {
 

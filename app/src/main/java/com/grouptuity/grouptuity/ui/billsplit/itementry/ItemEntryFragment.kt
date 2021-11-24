@@ -6,6 +6,7 @@ import android.annotation.SuppressLint
 import android.app.SearchManager
 import android.content.Context
 import android.os.Bundle
+import android.util.Log
 import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
@@ -19,6 +20,8 @@ import androidx.core.view.doOnPreDraw
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
+import androidx.navigation.fragment.FragmentNavigatorExtras
+import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
 import androidx.recyclerview.widget.*
 import androidx.transition.Transition
@@ -30,6 +33,7 @@ import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.Diner
 import com.grouptuity.grouptuity.databinding.FragItementryBinding
 import com.grouptuity.grouptuity.databinding.ListDinerBinding
+import com.grouptuity.grouptuity.ui.billsplit.contactentry.ContactEntryFragmentDirections
 import com.grouptuity.grouptuity.ui.custom.views.RecyclerViewListener
 import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
 import com.grouptuity.grouptuity.ui.custom.transitions.CardViewExpandTransition
@@ -56,8 +60,8 @@ class ItemEntryFragment: Fragment() {
     private var toolbarInTertiaryState = false
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        appViewModel = ViewModelProvider(requireActivity()).get(AppViewModel::class.java)
-        itemEntryViewModel = ViewModelProvider(requireActivity()).get(ItemEntryViewModel::class.java)
+        appViewModel = ViewModelProvider(requireActivity())[AppViewModel::class.java]
+        itemEntryViewModel = ViewModelProvider(requireActivity())[ItemEntryViewModel::class.java]
         itemEntryViewModel.initializeForItem(args.editedItem)
         binding = FragItementryBinding.inflate(inflater, container, false)
         return binding.root
@@ -73,8 +77,9 @@ class ItemEntryFragment: Fragment() {
         // Intercept back pressed events to allow fragment-specific behaviors
         backPressedCallback = object: OnBackPressedCallback(true) {
             override fun handleOnBackPressed() {
-                when(val addItemToBill = itemEntryViewModel.handleOnBackPressed()) {
-                    true, false -> closeFragment(addItemToBill)
+                val addItemToBill = itemEntryViewModel.handleOnBackPressed()
+                if (addItemToBill != null) {
+                    closeFragment(addItemToBill)
                 }
             }
         }
@@ -140,7 +145,7 @@ class ItemEntryFragment: Fragment() {
             bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
             binding.priceTextview.setOnClickListener { itemEntryViewModel.openCalculator() }
 
-            setupReEditTransitions(view)
+            setupEnterTransition()
         }
 
         postponeEnterTransition()
@@ -176,26 +181,51 @@ class ItemEntryFragment: Fragment() {
         // Freeze UI in place as the fragment closes
         itemEntryViewModel.freezeOutput()
 
-        // Add item to bill
-        if(addItemToBill) {
-            itemEntryViewModel.addItemToBill()
-        }
+        if (args.editedItem == null) {
+            // Working with new item
+            if (addItemToBill) {
+                itemEntryViewModel.addNewItemToBill()?.also { newItem ->
 
-        // Closing animation shrinking fragment into the FAB of the previous fragment.
-        // Transition is defined here to incorporate dynamic changes to window insets.
-        if(args.editedItem == null) {
-            returnTransition = CircularRevealTransition(
-                binding.fadeView,
-                binding.revealedLayout,
-                args.originParams!!.withInsetsOn(binding.fab),
-                resources.getInteger(R.integer.frag_transition_duration).toLong(),
-                false)
+                    binding.itemEntryContainer.transitionName = "new_item" + newItem.id
+
+                    // Exit transition is needed to prevent next fragment from appearing immediately
+                    exitTransition = Hold().apply {
+                        duration = 0L
+                        addTarget(requireView())
+                    }
+
+                    // Close fragment by popping up to the BillSplitFragment
+                    findNavController().navigate(
+                        ItemEntryFragmentDirections.itemEntryToBillSplit(newItem = newItem),
+                        FragmentNavigatorExtras(
+                            binding.itemEntryContainer to binding.itemEntryContainer.transitionName
+                        )
+                    )
+                }
+            } else {
+                // Closing animation shrinking fragment into the FAB of the previous fragment.
+                // Transition is defined here to incorporate dynamic changes to window insets.
+                returnTransition = CircularRevealTransition(
+                    binding.fadeView,
+                    binding.revealedLayout,
+                    args.originParams!!.withInsetsOn(binding.fab),
+                    resources.getInteger(R.integer.frag_transition_duration).toLong(),
+                    false)
+
+                // Close fragment using default onBackPressed behavior
+                requireActivity().onBackPressed()
+            }
         } else {
-            // TODO
-        }
+            // Working with existing item
+            if (addItemToBill) {
+                itemEntryViewModel.saveItemEdits()
+            }
 
-        // Close fragment using default onBackPressed behavior
-        requireActivity().onBackPressed()
+            setupExitTransition()
+
+            // Close fragment using default onBackPressed behavior
+            requireActivity().onBackPressed()
+        }
     }
 
     @SuppressLint("ClickableViewAccessibility")
@@ -427,7 +457,7 @@ class ItemEntryFragment: Fragment() {
         itemEntryViewModel.stopNameEdit()
     }
 
-    private fun setupReEditTransitions(view: View) {
+    private fun setupEnterTransition() {
         binding.itemEntryContainer.transitionName = "container" + args.editedItem!!.id
 
         val PROP_PRICE_HEIGHT = "com.grouptuity.grouptuity:CardViewExpandTransition:price_height"
@@ -449,6 +479,20 @@ class ItemEntryFragment: Fragment() {
                 override fun onTransitionResume(transition: Transition) {}
             })
 
+        binding.coveredFragment.setImageBitmap(MainActivity.storedViewBitmap)
+
+        postponeEnterTransition()
+    }
+
+    private fun setupExitTransition() {
+        binding.coveredFragment.setImageBitmap(MainActivity.storedViewBitmap)
+
+        binding.itemEntryContainer.transitionName = "container" + args.editedItem!!.id
+
+        val PROP_PRICE_HEIGHT = "com.grouptuity.grouptuity:CardViewExpandTransition:price_height"
+        val PROP_PRICE_WIDTH = "com.grouptuity.grouptuity:CardViewExpandTransition:price_width"
+        val PROP_IMAGE_MARGIN = "com.grouptuity.grouptuity:CardViewExpandTransition:price_margin"
+
         sharedElementReturnTransition = CardViewExpandTransition(binding.itemEntryContainer.transitionName, binding.revealedLayout.id, false)
             .setOnTransitionProgressCallback { _: Transition, _: ViewGroup, _: View, animator: ValueAnimator ->
                 binding.revealedLayout.apply {
@@ -460,12 +504,8 @@ class ItemEntryFragment: Fragment() {
         // Return transition is needed to prevent next fragment from appearing immediately
         returnTransition = Hold().apply {
             duration = 0L
-            addTarget(view)
+            addTarget(requireView())
         }
-
-        binding.coveredFragment.setImageBitmap(MainActivity.storedViewBitmap)
-
-        postponeEnterTransition()
     }
 }
 

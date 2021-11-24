@@ -402,7 +402,7 @@ class ContactEntryFragment: Fragment() {
 
             // Close fragment by popping up to the BillSplitFragment
             findNavController().navigate(
-                ContactEntryFragmentDirections.popUpToBillSplit(newDiner),
+                ContactEntryFragmentDirections.contactEntryToBillSplit(newDiner = newDiner),
                 FragmentNavigatorExtras(
                     binding.container to binding.container.transitionName
                 )

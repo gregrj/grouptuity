@@ -6,6 +6,7 @@ import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
+import android.view.ViewTreeObserver
 import android.widget.LinearLayout
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
@@ -42,6 +43,7 @@ class ItemsFragment: Fragment() {
     private lateinit var itemsViewModel: ItemsViewModel
     private var suppressAutoScroll = false
     private var itemIdForNewItemTransition: String? = null
+
 
     // TODO align text in each list item based on max length of price to avoid offsets due to different numbers?
     // TODO Contact Chips text alignment
@@ -130,110 +132,141 @@ class ItemsFragment: Fragment() {
         itemsViewModel.numberOfDiners.observe(viewLifecycleOwner) { count ->
             lifecycleScope.launch { recyclerAdapter.updateDataSet(numberOfDiners = count) }
         }
+
+        if (itemIdForNewItemTransition == null) {
+            requireParentFragment().postponeEnterTransition()
+            binding.list.viewTreeObserver.addOnPreDrawListener(object: ViewTreeObserver.OnPreDrawListener {
+                override fun onPreDraw(): Boolean {
+                    binding.list.viewTreeObserver.removeOnPreDrawListener(this)
+                    requireParentFragment().startPostponedEnterTransition()
+                    return true
+                }
+            })
+        }
     }
 
     fun setSharedElementItemId(itemId: String) {
         itemIdForNewItemTransition = itemId
     }
-}
 
-private class ItemRecyclerViewAdapter(private val context: Context,
-                                      private val itemViewModel: ItemsViewModel,
-                                      private val listener: RecyclerViewListener): RecyclerView.Adapter<ItemRecyclerViewAdapter.ViewHolder>() {
-    private var mItems = emptyList<Item>()
-    private var mNumberOfDiners = 0
+    private inner class ItemRecyclerViewAdapter(private val context: Context,
+                                          private val itemViewModel: ItemsViewModel,
+                                          private val listener: RecyclerViewListener): RecyclerView.Adapter<ItemRecyclerViewAdapter.ViewHolder>() {
+        private var mItems = emptyList<Item>()
+        private var mNumberOfDiners = 0
 
-    private val errorTextColor = TypedValue().also { context.theme.resolveAttribute(R.attr.colorPrimary, it, true) }.data
-    private val normalTextColor = TypedValue().also { context.theme.resolveAttribute(R.attr.colorOnSurface, it, true) }.data
+        private val errorTextColor = TypedValue().also { context.theme.resolveAttribute(R.attr.colorPrimary, it, true) }.data
+        private val normalTextColor = TypedValue().also { context.theme.resolveAttribute(R.attr.colorOnSurface, it, true) }.data
 
-    inner class ViewHolder(val viewBinding: FragItemsListitemBinding): RecyclerView.ViewHolder(viewBinding.root) {
-        init {
-            itemView.setOnClickListener(listener)
-            itemView.setOnLongClickListener(listener)
+        inner class ViewHolder(val viewBinding: FragItemsListitemBinding): RecyclerView.ViewHolder(viewBinding.root) {
+            var preDrawListener: ViewTreeObserver.OnPreDrawListener? = null
+            init {
+                itemView.setOnClickListener(listener)
+                itemView.setOnLongClickListener(listener)
+            }
         }
-    }
 
-    override fun getItemCount() = mItems.size
+        override fun getItemCount() = mItems.size
 
-    override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
-        ViewHolder(FragItemsListitemBinding.inflate(LayoutInflater.from(context), parent, false))
+        override fun onCreateViewHolder(parent: ViewGroup, viewType: Int) =
+            ViewHolder(FragItemsListitemBinding.inflate(LayoutInflater.from(context), parent, false))
 
-    override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-        val newItem = mItems[position]
+        override fun onBindViewHolder(holder: ViewHolder, position: Int) {
+            val newItem = mItems[position]
 
-        holder.apply {
-            itemView.tag = newItem // store updated item
+            holder.apply {
+                itemView.tag = newItem // store updated item
 
-            viewBinding.name.text = newItem.name
+                viewBinding.name.text = newItem.name
 
-            viewBinding.itemPrice.text = NumberFormat.getCurrencyInstance().format(newItem.price)
+                viewBinding.itemPrice.text = NumberFormat.getCurrencyInstance().format(newItem.price)
 
-            viewBinding.dinerIcons.removeAllViews()
+                viewBinding.dinerIcons.removeAllViews()
 
-            when(newItem.diners.size) {
-                0 -> {
-                    viewBinding.dinerSummary.setText(R.string.items_no_diners_warning)
-                    viewBinding.dinerSummary.setTextColor(errorTextColor)
-                }
-                mNumberOfDiners -> {
-                    viewBinding.dinerSummary.setText(R.string.items_shared_by_everyone)
-                    viewBinding.dinerSummary.setTextColor(normalTextColor)
-                }
-                else -> {
-                    viewBinding.dinerSummary.text = ""
-                    newItem.diners.forEach { diner ->
-                        val icon = ContactIcon(context)
-                        icon.setSelectable(false)
+                when(newItem.diners.size) {
+                    0 -> {
+                        viewBinding.dinerSummary.setText(R.string.items_no_diners_warning)
+                        viewBinding.dinerSummary.setTextColor(errorTextColor)
+                    }
+                    mNumberOfDiners -> {
+                        viewBinding.dinerSummary.setText(R.string.items_shared_by_everyone)
+                        viewBinding.dinerSummary.setTextColor(normalTextColor)
+                    }
+                    else -> {
+                        viewBinding.dinerSummary.text = ""
+                        newItem.diners.forEach { diner ->
+                            val icon = ContactIcon(context)
+                            icon.setSelectable(false)
 
-                        val dim = (24 * context.resources.displayMetrics.density).toInt()
-                        val params = LinearLayout.LayoutParams(dim, dim)
-                        params.marginEnd = (2 * context.resources.displayMetrics.density).toInt()
-                        icon.layoutParams = params
+                            val dim = (24 * context.resources.displayMetrics.density).toInt()
+                            val params = LinearLayout.LayoutParams(dim, dim)
+                            params.marginEnd = (2 * context.resources.displayMetrics.density).toInt()
+                            icon.layoutParams = params
 
-                        icon.setContact(diner.asContact(), false)
-                        viewBinding.dinerIcons.addView(icon)
+                            icon.setContact(diner.asContact(), false)
+                            viewBinding.dinerIcons.addView(icon)
+                        }
                     }
                 }
-            }
 
-            viewBinding.remove.setOnClickListener {
-                itemViewModel.removeItem(newItem)
-                //TODO handle orphan items / discounts from removed item
-            }
+                viewBinding.remove.setOnClickListener {
+                    itemViewModel.removeItem(newItem)
+                    //TODO handle orphan items / discounts from removed item
+                }
 
-            viewBinding.cardBackground.transitionName = "container" + newItem.id
+                viewBinding.cardBackground.transitionName = "container" + newItem.id
+
+                if (newItem.id == itemIdForNewItemTransition) {
+                    // Remove existing OnPreDrawListener
+                    preDrawListener?.also {
+                        viewBinding.cardBackground.viewTreeObserver.removeOnPreDrawListener(it)
+                    }
+
+                    // Create, store, and add new OnPreDrawListener
+                    preDrawListener = object: ViewTreeObserver.OnPreDrawListener {
+                        override fun onPreDraw(): Boolean {
+                            viewBinding.cardBackground.viewTreeObserver.removeOnPreDrawListener(this)
+                            itemIdForNewItemTransition = null
+
+                            (requireParentFragment() as? BillSplitFragment)?.startNewItemReturnTransition(viewBinding, newItem)
+                            return true
+                        }
+                    }
+                    viewBinding.cardBackground.viewTreeObserver.addOnPreDrawListener(preDrawListener)
+                }
+            }
         }
-    }
 
-    suspend fun updateDataSet(items: List<Item>?=null, numberOfDiners: Int?=null) {
-        val newItems = items ?: mItems
+        suspend fun updateDataSet(items: List<Item>?=null, numberOfDiners: Int?=null) {
+            val newItems = items ?: mItems
 
-        val diffResult = DiffUtil.calculateDiff(object: DiffUtil.Callback() {
-            override fun getOldListSize() = mItems.size
+            val diffResult = DiffUtil.calculateDiff(object: DiffUtil.Callback() {
+                override fun getOldListSize() = mItems.size
 
-            override fun getNewListSize() = newItems.size
+                override fun getNewListSize() = newItems.size
 
-            override fun areItemsTheSame(oldPosition: Int, newPosition: Int) = newItems[newPosition].id == mItems[oldPosition].id
+                override fun areItemsTheSame(oldPosition: Int, newPosition: Int) = newItems[newPosition].id == mItems[oldPosition].id
 
-            override fun areContentsTheSame(oldPosition: Int, newPosition: Int): Boolean {
-                val newItem = newItems[newPosition]
-                val oldItem = mItems[oldPosition]
+                override fun areContentsTheSame(oldPosition: Int, newPosition: Int): Boolean {
+                    val newItem = newItems[newPosition]
+                    val oldItem = mItems[oldPosition]
 
-                return newItem.id == oldItem.id &&
-                        newItem.name == oldItem.name &&
-                        newItem.price == oldItem.price &&
-                        newItem.dinerIds == oldItem.dinerIds
+                    return newItem.id == oldItem.id &&
+                            newItem.name == oldItem.name &&
+                            newItem.price == oldItem.price &&
+                            newItem.dinerIds == oldItem.dinerIds
+                }
+            })
+
+            val adapter = this
+            withContext(Dispatchers.Main) {
+                adapter.notifyItemChanged(newItems.size - 1) // Clears BottomOffset from old last item
+                adapter.notifyItemChanged(newItems.size - 2) // Needed to add BottomOffset in case last item is removed
+
+                mItems = newItems
+                mNumberOfDiners = numberOfDiners ?: mNumberOfDiners
+                diffResult.dispatchUpdatesTo(adapter)
             }
-        })
-
-        val adapter = this
-        withContext(Dispatchers.Main) {
-            adapter.notifyItemChanged(newItems.size - 1) // Clears BottomOffset from old last item
-            adapter.notifyItemChanged(newItems.size - 2) // Needed to add BottomOffset in case last item is removed
-
-            mItems = newItems
-            mNumberOfDiners = numberOfDiners ?: mNumberOfDiners
-            diffResult.dispatchUpdatesTo(adapter)
         }
     }
 }

@@ -487,18 +487,20 @@ class Repository(context: Context) {
     }
 
     // Item Functions
-    fun addItem(price: Double, name: String, diners: Collection<Diner>) {
-        val item = Item(newUUID(), mBill.id, ++maxItemListIndex, price, name)
+    fun createNewItem(price: Double, name: String, diners: Collection<Diner>): Item {
+        val newItem = Item(newUUID(), mBill.id, ++maxItemListIndex, price, name)
 
         diners.forEach { diner ->
-            item.addDiner(diner)
-            diner.addItem(item)
+            newItem.addDiner(diner)
+            diner.addItem(newItem)
         }
 
-        mItems.add(item)
+        mItems.add(newItem)
         commitBill()
 
-        database.saveItem(item)
+        database.saveItem(newItem)
+
+        return newItem
     }
     fun editItem(editedItem: Item, price: Double, name: String, diners: Collection<Diner>) {
         // Remove edited item from its associated diners and discounts

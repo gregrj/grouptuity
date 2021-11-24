@@ -18,6 +18,12 @@
             android:defaultValue="@null"
             app:argType="com.grouptuity.grouptuity.data.Diner"/>
 
+        <argument
+            android:name="new_item"
+            app:nullable="true"
+            android:defaultValue="@null"
+            app:argType="com.grouptuity.grouptuity.data.Item"/>
+
         <action android:id="@+id/switch_to_basic_tip_calc" app:destination="@id/basicTipCalcFragment" />
         <action android:id="@+id/open_addressbook" app:destination="@id/addressBookFragment" />
         <action android:id="@+id/view_diner_details" app:destination="@id/dinerDetailsFragment"/>
@@ -53,9 +59,9 @@
         android:label="ContactEntryFragment"
         tools:layout="@layout/frag_contact_entry">
         <action
-            android:id="@+id/popUpToBillSplit"
+            android:id="@+id/contact_entry_to_bill_split"
             app:destination="@id/billSplitFragment"
-            app:popUpTo="@+id/billSplitFragment"
+            app:popUpTo="@id/billSplitFragment"
             app:popUpToInclusive="true"/>
     </nav_fragment>
 
@@ -90,6 +96,12 @@
             android:name="origin_params"
             app:nullable="true"
             app:argType="com.grouptuity.grouptuity.ui.custom.transitions.CircularRevealTransition$OriginParams"/>
+
+        <action
+            android:id="@+id/item_entry_to_bill_split"
+            app:destination="@id/billSplitFragment"
+            app:popUpTo="@id/billSplitFragment"
+            app:popUpToInclusive="true"/>
     </nav_fragment>
 
     <nav_fragment
