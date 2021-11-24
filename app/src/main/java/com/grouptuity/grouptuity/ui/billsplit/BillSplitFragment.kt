@@ -1,6 +1,8 @@
 package com.grouptuity.grouptuity.ui.billsplit
 
 import android.os.Bundle
+import android.os.Handler
+import android.os.Looper
 import android.util.Log
 import android.util.TypedValue
 import android.view.LayoutInflater
@@ -10,6 +12,7 @@ import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.ImageView
 import android.widget.LinearLayout
 import androidx.coordinatorlayout.widget.CoordinatorLayout
+import androidx.core.view.doOnPreDraw
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
@@ -20,8 +23,7 @@ import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.tabs.TabLayoutMediator
 import com.grouptuity.grouptuity.MainActivity
 import com.grouptuity.grouptuity.R
-import com.grouptuity.grouptuity.data.Diner
-import com.grouptuity.grouptuity.data.Item
+import com.grouptuity.grouptuity.data.*
 import com.grouptuity.grouptuity.databinding.FragBillSplitBinding
 import com.grouptuity.grouptuity.databinding.FragDinersListitemBinding
 import com.grouptuity.grouptuity.databinding.FragItemsListitemBinding
@@ -69,28 +71,30 @@ class BillSplitFragment: Fragment() {
         binding.toolbar.setNavigationIcon(R.drawable.ic_menu)
         binding.toolbar.setNavigationOnClickListener { (activity as MainActivity).openNavViewDrawer() }
 
-        binding.viewPager.adapter = object: FragmentStateAdapter(this) {
+        binding.viewPager.also {
+            it.adapter = object: FragmentStateAdapter(this) {
 
-            override fun getItemCount() = 4
+                override fun getItemCount() = 4
 
-            override fun createFragment(position: Int) = when (position) {
-                BillSplitViewModel.FRAG_DINERS -> DinersFragment.newInstance().also { frag ->
-                    newDinerIdForTransition?.also { frag.setSharedElementDinerId(it) }
+                override fun createFragment(position: Int) = when (position) {
+                    FRAG_DINERS -> DinersFragment.newInstance().also { frag ->
+                        newDinerIdForTransition?.also { frag.setSharedElementDinerId(it) }
+                    }
+                    FRAG_ITEMS -> ItemsFragment.newInstance().also { frag ->
+                        newItemIdForTransition?.also { frag.setSharedElementItemId(it) }
+                    }
+                    FRAG_TAX_TIP -> TaxTipFragment()
+                    FRAG_PAYMENTS -> PaymentsFragment.newInstance()
+                    else -> { Fragment() /* Not reachable */ }
                 }
-                BillSplitViewModel.FRAG_ITEMS -> ItemsFragment.newInstance().also { frag ->
-                    newItemIdForTransition?.also { frag.setSharedElementItemId(it) }
-                }
-                BillSplitViewModel.FRAG_TAX_TIP -> TaxTipFragment()
-                BillSplitViewModel.FRAG_PAYMENTS -> PaymentsFragment.newInstance()
-                else -> { Fragment() /* Not reachable */ }
             }
+
+            it.registerOnPageChangeCallback(object: ViewPager2.OnPageChangeCallback() {
+                override fun onPageSelected(position: Int) {
+                    billSplitViewModel.activeFragmentIndex.value = position
+                }
+            })
         }
-
-        binding.viewPager.registerOnPageChangeCallback(object: ViewPager2.OnPageChangeCallback() {
-            override fun onPageSelected(position: Int) {
-                billSplitViewModel.activeFragmentIndex.value = position
-            }
-        })
 
         // Retain all pages for smoother transitions. This also corrects an undesired behavior where
         // the appbar collapses when selecting tabs that were not created at start.
@@ -98,17 +102,17 @@ class BillSplitFragment: Fragment() {
 
         TabLayoutMediator(binding.tabLayout, binding.viewPager) { tab, position ->
             tab.text = when (position) {
-                BillSplitViewModel.FRAG_DINERS -> getString(R.string.billsplit_tab_diners)
-                BillSplitViewModel.FRAG_ITEMS -> getString(R.string.billsplit_tab_items)
-                BillSplitViewModel.FRAG_TAX_TIP -> getString(R.string.billsplit_tab_taxtip)
-                BillSplitViewModel.FRAG_PAYMENTS -> getString(R.string.billsplit_tab_payment)
+                FRAG_DINERS -> getString(R.string.billsplit_tab_diners)
+                FRAG_ITEMS -> getString(R.string.billsplit_tab_items)
+                FRAG_TAX_TIP -> getString(R.string.billsplit_tab_taxtip)
+                FRAG_PAYMENTS -> getString(R.string.billsplit_tab_payment)
                 else -> ""
             }
         }.attach()
 
         // Overlay badge on diners tab showing how many diners are on the bill
         billSplitViewModel.dinerCount.observe(viewLifecycleOwner) {
-            binding.tabLayout.getTabAt(BillSplitViewModel.FRAG_DINERS)?.apply {
+            binding.tabLayout.getTabAt(FRAG_DINERS)?.apply {
                 if(it > 0) {
                     orCreateBadge.number = it
                 } else {
@@ -119,7 +123,7 @@ class BillSplitFragment: Fragment() {
 
         // Overlay badge on items tab showing how many items are on the bill
         billSplitViewModel.itemCount.observe(viewLifecycleOwner) {
-            binding.tabLayout.getTabAt(BillSplitViewModel.FRAG_ITEMS)?.apply {
+            binding.tabLayout.getTabAt(FRAG_ITEMS)?.apply {
                 if(it > 0) {
                     orCreateBadge.number = it
                 } else {
@@ -129,22 +133,33 @@ class BillSplitFragment: Fragment() {
         }
 
         billSplitViewModel.fabDrawableId.observe(viewLifecycleOwner) { drawableId ->
-            if (drawableId != fabActiveDrawableId) {
-                if (binding.fab.isOrWillBeShown) {
-                    binding.fab.hide(object: FloatingActionButton.OnVisibilityChangedListener() {
-                        override fun onHidden(fab: FloatingActionButton) {
-                            super.onHidden(fab)
-                            fabActiveDrawableId = billSplitViewModel.fabDrawableId.value?.also {
-                                binding.fab.setImageResource(it)
-                                binding.fab.show()
+            when {
+                (drawableId != fabActiveDrawableId) -> {
+                    if (binding.fab.isOrWillBeShown) {
+                        binding.fab.hide(object: FloatingActionButton.OnVisibilityChangedListener() {
+                            override fun onHidden(fab: FloatingActionButton) {
+                                super.onHidden(fab)
+                                fabActiveDrawableId = billSplitViewModel.fabDrawableId.value?.also {
+                                    binding.fab.setImageResource(it)
+                                    binding.fab.show()
+                                }
                             }
+                        })
+                    } else {
+                        fabActiveDrawableId = billSplitViewModel.fabDrawableId.value?.also {
+                            binding.fab.setImageResource(it)
+                            binding.fab.show()
                         }
-                    })
-                } else {
-                    fabActiveDrawableId = billSplitViewModel.fabDrawableId.value?.also {
-                        binding.fab.setImageResource(it)
-                        binding.fab.show()
                     }
+                }
+                (drawableId != null) -> {
+                    // Set image resource without animation (this is used during return navigation)
+                    binding.fab.setImageResource(drawableId)
+                    binding.fab.visibility = View.VISIBLE
+                }
+                else -> {
+                    // Hide without animation (this is used during return navigation)
+                    binding.fab.visibility = View.INVISIBLE
                 }
             }
         }
@@ -159,12 +174,12 @@ class BillSplitFragment: Fragment() {
 
         binding.fab.setOnClickListener {
             when(binding.viewPager.currentItem) {
-                BillSplitViewModel.FRAG_DINERS -> {
+                FRAG_DINERS -> {
                     // Show address book for contact selection
                     (requireActivity() as MainActivity).storeViewAsBitmap(requireView())
                     findNavController().navigate(BillSplitFragmentDirections.openAddressbook(CircularRevealTransition.OriginParams(binding.fab)))
                 }
-                BillSplitViewModel.FRAG_ITEMS -> {
+                FRAG_ITEMS -> {
                     // Show fragment for item entry
                     (requireActivity() as MainActivity).storeViewAsBitmap(requireView())
                     findNavController().navigate(BillSplitFragmentDirections.createNewItem(editedItem = null, CircularRevealTransition.OriginParams(binding.fab)))
@@ -180,10 +195,8 @@ class BillSplitFragment: Fragment() {
     override fun onViewStateRestored(savedInstanceState: Bundle?) {
         super.onViewStateRestored(savedInstanceState)
 
-        fabActiveDrawableId = R.drawable.ic_add_person
-        binding.viewPager.currentItem = billSplitViewModel.activeFragmentIndex.value
-        Log.e("restoring to", ""+binding.viewPager.currentItem)
-        fix tihs
+        //Restore view pager state to the active fragment index
+        binding.viewPager.setCurrentItem(billSplitViewModel.activeFragmentIndex.value, false)
     }
 
     override fun onResume() {

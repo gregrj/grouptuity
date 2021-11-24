@@ -15,12 +15,19 @@ import androidx.room.*
 import com.grouptuity.grouptuity.BuildConfig
 import com.grouptuity.grouptuity.Event
 import com.grouptuity.grouptuity.R
+import com.grouptuity.grouptuity.ui.billsplit.BillSplitViewModel
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.*
 import kotlin.math.max
+
+
+const val FRAG_DINERS = 0
+const val FRAG_ITEMS = 1
+const val FRAG_TAX_TIP = 2
+const val FRAG_PAYMENTS = 3
 
 
 fun newUUID(): String = UUID.randomUUID().toString()
@@ -120,6 +127,15 @@ class Repository(context: Context) {
     val loadInProgress = MutableStateFlow(true)
     val requestProcessPaymentsEvent = MutableLiveData<Event<Boolean>>()
     val activePaymentAndMethod = MutableStateFlow<Pair<Payment?, PaymentMethod?>>(Pair(null, null))
+    val activeFragmentIndex = MutableStateFlow(FRAG_DINERS).also {
+        // Clear active payment if active fragment changes to something other than payments
+        it.onEach { index ->
+            android.util.Log.e("activeFragmentaIndex", ""+index)
+            if (index != FRAG_PAYMENTS) {
+                activePaymentAndMethod.value = kotlin.Pair(null, null)
+            }
+        }.launchIn(CoroutineScope(Dispatchers.Unconfined))
+    }
     val bills = database.getSavedBills()
     val selfContact = combine(userName.stateFlow, userPhotoUri.stateFlow) { userName, userPhotoUri ->
         Contact.updateSelfContactData(userName, userPhotoUri)
