@@ -13,6 +13,7 @@
         <item name="colorTertiary">@color/gray</item>
         <item name="colorTertiaryVariant">@color/gray_dark</item>
         <item name="colorOnTertiary">@color/white</item>
+        <item name="colorOnTertiaryDisabled">@color/gray_mild_dark</item>
         <item name="colorTertiaryHighlight">@color/gray_light</item>
 
         <item name="colorSurface">@color/white</item>

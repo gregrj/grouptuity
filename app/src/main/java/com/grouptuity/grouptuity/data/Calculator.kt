@@ -225,23 +225,31 @@ class CalculatorData(initialCalculationType: CalculationType, val autoHideNumber
     fun tryAcceptValue(): Boolean {
         val value = rawInputValue.value
 
-        return if(value == null) {
-            if(isZeroAcceptable.value) {
+        return when {
+            (value == null) -> {
+                if(isZeroAcceptable.value) {
+                    acceptValue("0")
+                    true
+                } else {
+                    false
+                }
+            }
+            value.contains(Regex("[1-9]")) -> {
+                acceptValue(value)
+                true
+            }
+            isZeroAcceptable.value -> {
+                // Value must be combination of zeros and/or decimal
                 acceptValue("0")
                 true
-            } else {
+            }
+            else -> {
                 false
             }
-        } else if(isZeroAcceptable.value || value.contains(Regex("[1-9]"))) {
-            acceptValue(value)
-            true
-        } else {
-            false
         }
     }
 
     private fun acceptValue(value: String) {
-        rawInputValue.value = value
         _lastCompletedRawValue.value = value
         editedValue = true
 

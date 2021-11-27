@@ -180,6 +180,7 @@
             android:text="@string/number_0"
             android:textSize="@dimen/calculator_button_text_size"
             style="?android:attr/borderlessButtonStyle"
+            android:textColor="@color/secondary_button_text_colors"
             android:backgroundTint="?attr/colorTertiary"
             android:background="?android:attr/selectableItemBackgroundBorderless"
             app:layout_constraintBottom_toBottomOf="parent"
@@ -194,25 +195,26 @@
             android:text="@string/decimal_symbol"
             android:textSize="@dimen/calculator_button_text_size"
             style="?android:attr/borderlessButtonStyle"
+            android:textColor="@color/secondary_button_text_colors"
             android:backgroundTint="?attr/colorTertiary"
             android:background="?android:attr/selectableItemBackgroundBorderless"
             app:layout_constraintLeft_toRightOf="@+id/button_0"
-            app:layout_constraintRight_toLeftOf="@+id/button_accept"
+            app:layout_constraintRight_toRightOf="@+id/button_2"
             app:layout_constraintTop_toTopOf="@id/button_0"
             app:layout_constraintBottom_toBottomOf="@id/button_0"/>
 
-        <Button
+        <com.google.android.material.button.MaterialButton
             android:id="@+id/button_accept"
-            android:layout_width="0dp"
-            android:layout_height="0dp"
-            android:text="@string/equals_symbol"
+            android:layout_width="96dp"
+            android:layout_height="96dp"
+            android:text="@string/checkmark_symbol"
             android:textSize="@dimen/calculator_button_text_size"
-            style="?android:attr/borderlessButtonStyle"
-            android:backgroundTint="?attr/colorTertiary"
-            android:background="?android:attr/selectableItemBackgroundBorderless"
-            app:layout_constraintTop_toTopOf="@id/button_0"
-            app:layout_constraintBottom_toBottomOf="@id/button_0"
-            app:layout_constraintLeft_toRightOf="@+id/button_decimal"
+            style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
+            android:textColor="@color/secondary_button_text_colors"
+            android:backgroundTint="@color/secondary_button_background_colors"
+            app:shapeAppearanceOverlay="@style/circleShape"
+            app:layout_constraintBaseline_toBaselineOf="@+id/button_decimal"
+            app:layout_constraintLeft_toRightOf="@id/button_decimal"
             app:layout_constraintRight_toRightOf="parent"/>
     </androidx.constraintlayout.widget.ConstraintLayout>
 </LinearLayout>

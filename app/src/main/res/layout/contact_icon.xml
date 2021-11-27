@@ -10,7 +10,7 @@
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:scaleType="centerCrop"
-        app:shapeAppearanceOverlay="@style/circleImageView" />
+        app:shapeAppearanceOverlay="@style/circleShape" />
 
     <com.google.android.material.imageview.ShapeableImageView
         android:id="@+id/checkmark"
@@ -19,7 +19,7 @@
         app:srcCompat="@drawable/check_circle"
         android:rotationY="180"
         android:alpha="0"
-        app:shapeAppearanceOverlay="@style/circleImageView" />
+        app:shapeAppearanceOverlay="@style/circleShape" />
 
     <TextView
         android:id="@+id/text"
