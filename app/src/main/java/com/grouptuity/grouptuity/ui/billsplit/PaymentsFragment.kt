@@ -41,6 +41,7 @@ import com.grouptuity.grouptuity.databinding.FragPaymentsListitemBinding
 import com.grouptuity.grouptuity.ui.billsplit.PaymentsViewModel.Companion.CANDIDATE_STATE
 import com.grouptuity.grouptuity.ui.billsplit.PaymentsViewModel.Companion.DEFAULT_STATE
 import com.grouptuity.grouptuity.ui.billsplit.PaymentsViewModel.Companion.INELIGIBLE_STATE
+import com.grouptuity.grouptuity.ui.billsplit.PaymentsViewModel.Companion.PROCESSING_STATE
 import com.grouptuity.grouptuity.ui.billsplit.PaymentsViewModel.Companion.SELECTING_METHOD_STATE
 import com.grouptuity.grouptuity.ui.billsplit.PaymentsViewModel.Companion.SHOWING_INSTRUCTIONS_STATE
 import com.grouptuity.grouptuity.ui.billsplit.qrcodescanner.QRCodeScannerActivity
@@ -133,14 +134,10 @@ class PaymentsFragment: Fragment() {
         paymentsViewModel.paymentsData.observe(viewLifecycleOwner) { paymentsData ->
             lifecycleScope.launch { recyclerAdapter.updateDataSet(paymentsData) }
 
-            // TODO FAb toggle based on state and payments
-
             binding.noPaymentsHint.visibility = if (paymentsData.first.isEmpty()) View.VISIBLE else View.GONE
         }
 
         paymentsViewModel.showSetAddressDialogEvent.observe(viewLifecycleOwner) { it.consume()?.apply { showSetAddressDialog(this.first, this.second, this.third) } }
-
-        paymentsViewModel.processPaymentsEvent.observe(viewLifecycleOwner) { it.consume()?.apply { processPayments() } }
 
         qrCodeScannerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
             if (result.resultCode == Activity.RESULT_OK) {
@@ -427,6 +424,20 @@ private class PaymentRecyclerViewAdapter(val context: Context,
 
                     setEnlargedPlaceholders()
                 }
+                PROCESSING_STATE -> {
+                    viewBinding.surrogateSelection.visibility = View.GONE
+                    viewBinding.backgroundView.setBackgroundColor(surfaceBackground)
+                    viewBinding.paymentMethodsExpandingLayout.setCollapsed()
+                    viewBinding.paymentMethodFlipButton.setDeselected()
+                    viewBinding.paymentMethodFlipButton.alpha = 1f
+                    viewBinding.payInstructions.alpha = 1f
+                    viewBinding.amount.alpha = 1f
+                    viewBinding.selectionInstruction.alpha = 0f
+                    viewBinding.payerContactIcon.alpha = 1f
+                    viewBinding.payer.alpha = 1f
+
+                    setShrunkenPlaceholders()
+                }
             }
         }
 
@@ -523,6 +534,9 @@ private class PaymentRecyclerViewAdapter(val context: Context,
 
                             viewBinding.selectionInstruction.alpha = 0f
                         }
+                        PROCESSING_STATE -> {
+                            applyState(DEFAULT_STATE)
+                        }
                     }
                 }
                 SELECTING_METHOD_STATE -> {
@@ -609,6 +623,9 @@ private class PaymentRecyclerViewAdapter(val context: Context,
                     enlargeContactAnimator.start()
 
                     viewBinding.selectionInstruction.alpha = 0f
+                }
+                PROCESSING_STATE -> {
+                    applyState(PROCESSING_STATE)
                 }
             }
         }
@@ -892,6 +909,9 @@ private class PaymentRecyclerViewAdapter(val context: Context,
                             }
                             INELIGIBLE_STATE -> {
                                 animateStateChange(DEFAULT_STATE, INELIGIBLE_STATE, animationProgress)
+                            }
+                            PROCESSING_STATE -> {
+                                animateStateChange(DEFAULT_STATE, PROCESSING_STATE, animationProgress)
                             }
                         }
                     }

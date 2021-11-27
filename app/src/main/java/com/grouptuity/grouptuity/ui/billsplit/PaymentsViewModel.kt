@@ -29,6 +29,7 @@ class PaymentsViewModel(app: Application): UIViewModel(app) {
         const val SHOWING_INSTRUCTIONS_STATE = 2
         const val CANDIDATE_STATE = 3
         const val INELIGIBLE_STATE = 4
+        const val PROCESSING_STATE = 5
 
         const val SELECTING_PAYER_ALIAS = 0
         const val SELECTING_PAYEE_ALIAS = 1
@@ -39,8 +40,6 @@ class PaymentsViewModel(app: Application): UIViewModel(app) {
 
     private val showSetAddressDialogEventMutable = MutableLiveData<Event<Triple<Int, Diner, PaymentMethod>>>()
     val showSetAddressDialogEvent: LiveData<Event<Triple<Int, Diner, PaymentMethod>>> = showSetAddressDialogEventMutable
-
-    val processPaymentsEvent: LiveData<Event<Boolean>> = repository.requestProcessPaymentsEvent
 
     private val activePaymentAndMethod = repository.activePaymentAndMethod
     private var cachedMethod: PaymentMethod? = null
@@ -54,7 +53,7 @@ class PaymentsViewModel(app: Application): UIViewModel(app) {
 
     val diners = repository.diners.asLiveData()
     val paymentsData: LiveData<Pair<List<PaymentData>, Pair<Long?, Int>>> =
-        combine(paymentsWithStableIds, activePaymentAndMethod) { paymentsAndStableIds, active ->
+        combine(paymentsWithStableIds, activePaymentAndMethod, repository.processingPayments) { paymentsAndStableIds, active, processing ->
             val surrogates = paymentsAndStableIds.mapNotNull { (payment, _) ->
                 if (payment.payee.isRestaurant() && payment.surrogate?.isCashPool() == false) {
                     payment.surrogate
@@ -64,22 +63,41 @@ class PaymentsViewModel(app: Application): UIViewModel(app) {
             }.toSet()
 
             if (active.first == null) {
-                // All items in default state
-                Pair(
-                    paymentsAndStableIds.mapNotNull {
-                        if (it.first.amount > PRECISION) {
-                            createPaymentData(
-                                it.first,
-                                it.second,
-                                surrogates.contains(it.first.payer),
-                                DEFAULT_STATE
-                            )
-                        } else {
-                            null
-                        }
-                    },
-                    INITIAL_STABLE_ID_AND_STATE
-                )
+                if (processing) {
+                    // Only display unprocessed payments that are handled through the app
+                    Pair(
+                        paymentsAndStableIds.mapNotNull {
+                            if (it.first.amount > PRECISION && it.first.unprocessed()) {
+                                createPaymentData(
+                                    it.first,
+                                    it.second,
+                                    surrogates.contains(it.first.payer),
+                                    PROCESSING_STATE
+                                )
+                            } else {
+                                null
+                            }
+                        },
+                        Pair(null, PROCESSING_STATE)
+                    )
+                } else {
+                    // All items in default state
+                    Pair(
+                        paymentsAndStableIds.mapNotNull {
+                            if (it.first.amount > PRECISION) {
+                                createPaymentData(
+                                    it.first,
+                                    it.second,
+                                    surrogates.contains(it.first.payer),
+                                    DEFAULT_STATE
+                                )
+                            } else {
+                                null
+                            }
+                        },
+                        INITIAL_STABLE_ID_AND_STATE
+                    )
+                }
             } else {
                 val activePaymentStableId = repository.getPaymentStableId(active.first)
                 if (active.second == null) {
@@ -191,7 +209,7 @@ class PaymentsViewModel(app: Application): UIViewModel(app) {
                     },
                     NumberFormat.getCurrencyInstance().format(payment.amount),
                     payment.payer.asContact(),
-                    isPaymentIconClickable = true,
+                    isPaymentIconClickable = displayState != PROCESSING_STATE,
                     allowSurrogatePaymentMethods = !actingAsSurrogate,
                     displayState
                 )
@@ -204,7 +222,7 @@ class PaymentsViewModel(app: Application): UIViewModel(app) {
                     getApplication<Application>().resources.getString(payment.method.paymentInstructionStringId, payment.payee.name),
                     NumberFormat.getCurrencyInstance().format(payment.amount),
                     payment.payer.asContact(),
-                    isPaymentIconClickable = true,
+                    isPaymentIconClickable = displayState != PROCESSING_STATE,
                     allowSurrogatePaymentMethods = true,
                     displayState
                 )
@@ -388,6 +406,10 @@ class PaymentsViewModel(app: Application): UIViewModel(app) {
 
     fun handleOnBackPressed(): Boolean {
         return when {
+            repository.processingPayments.value -> {
+                repository.processingPayments.value = false
+                false
+            }
             activePaymentAndMethod.value.first != null -> {
                 setActivePayment(null)
                 false

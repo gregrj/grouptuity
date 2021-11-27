@@ -1,9 +1,9 @@
 package com.grouptuity.grouptuity.ui.billsplit
 
+import android.animation.Animator
+import android.animation.ArgbEvaluator
+import android.animation.ValueAnimator
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
-import android.util.Log
 import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
@@ -12,7 +12,7 @@ import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.ImageView
 import android.widget.LinearLayout
 import androidx.coordinatorlayout.widget.CoordinatorLayout
-import androidx.core.view.doOnPreDraw
+import androidx.core.view.updateLayoutParams
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
@@ -40,6 +40,9 @@ class BillSplitFragment: Fragment() {
     private var binding by setNullOnDestroy<FragBillSplitBinding>()
     private lateinit var billSplitViewModel: BillSplitViewModel
     private var fabActiveDrawableId: Int? = R.drawable.ic_add_person
+    private var toolbarInSecondaryState = false
+    private var tabLayoutHeight: Int = 0
+        set(value) { if (value > 0) field = value }
     private var newDinerIdForTransition: String? = null
     private var newItemIdForTransition: String? = null
 
@@ -68,11 +71,8 @@ class BillSplitFragment: Fragment() {
             args.clear()
         }
 
-        binding.toolbar.setNavigationIcon(R.drawable.ic_menu)
-        binding.toolbar.setNavigationOnClickListener { (activity as MainActivity).openNavViewDrawer() }
-
-        binding.viewPager.also {
-            it.adapter = object: FragmentStateAdapter(this) {
+        binding.viewPager.also { viewPager ->
+            viewPager.adapter = object: FragmentStateAdapter(this) {
 
                 override fun getItemCount() = 4
 
@@ -89,16 +89,16 @@ class BillSplitFragment: Fragment() {
                 }
             }
 
-            it.registerOnPageChangeCallback(object: ViewPager2.OnPageChangeCallback() {
+            viewPager.registerOnPageChangeCallback(object: ViewPager2.OnPageChangeCallback() {
                 override fun onPageSelected(position: Int) {
                     billSplitViewModel.activeFragmentIndex.value = position
                 }
             })
-        }
 
-        // Retain all pages for smoother transitions. This also corrects an undesired behavior where
-        // the appbar collapses when selecting tabs that were not created at start.
-        binding.viewPager.offscreenPageLimit = 4
+            // Retain all pages for smoother transitions. This also corrects an undesired behavior where
+            // the appbar collapses when selecting tabs that were not created at start.
+            viewPager.offscreenPageLimit = 4
+        }
 
         TabLayoutMediator(binding.tabLayout, binding.viewPager) { tab, position ->
             tab.text = when (position) {
@@ -109,6 +109,113 @@ class BillSplitFragment: Fragment() {
                 else -> ""
             }
         }.attach()
+
+        val primaryColor = TypedValue().also { requireContext().theme.resolveAttribute(R.attr.colorPrimary, it, true) }.data
+        val primaryDarkColor = TypedValue().also { requireContext().theme.resolveAttribute(R.attr.colorPrimaryVariant, it, true) }.data
+        val secondaryColor = TypedValue().also { requireContext().theme.resolveAttribute(R.attr.colorSecondary, it, true) }.data
+        val secondaryDarkColor = TypedValue().also { requireContext().theme.resolveAttribute(R.attr.colorSecondaryVariant, it, true) }.data
+        val animationDuration = resources.getInteger(R.integer.viewprop_animation_duration).toLong()
+        billSplitViewModel.isProcessingPayments.observe(viewLifecycleOwner) {
+            if (it) {
+                binding.viewPager.isUserInputEnabled = false
+
+                binding.toolbar.setNavigationIcon(R.drawable.ic_close)
+                binding.toolbar.setNavigationOnClickListener { billSplitViewModel.stopProcessingPayments() }
+                binding.toolbar.setTitle(R.string.payments_toolbar_title)
+
+                if (it != toolbarInSecondaryState) {
+                    ValueAnimator.ofObject(ArgbEvaluator(), primaryColor, secondaryColor).apply {
+                        duration = animationDuration
+                        addUpdateListener { animator -> binding.toolbar.setBackgroundColor(animator.animatedValue as Int) }
+                    }.start()
+
+                    ValueAnimator.ofObject(ArgbEvaluator(), primaryDarkColor, secondaryDarkColor).apply {
+                        duration = animationDuration
+                        addUpdateListener { animator -> binding.statusBarBackgroundView.setBackgroundColor(animator.animatedValue as Int) }
+                    }.start()
+
+                    val startHeight = binding.appbarLayout.height
+                    tabLayoutHeight = binding.tabLayout.height
+                    ValueAnimator.ofFloat(0f, 1f).apply {
+                        duration = animationDuration
+                        addUpdateListener { animator ->
+                            binding.appbarLayout.updateLayoutParams<CoordinatorLayout.LayoutParams> {
+                                height = (startHeight - (animator.animatedValue as Float) * tabLayoutHeight).toInt()
+                            }
+                        }
+                        addListener(object: Animator.AnimatorListener {
+                            override fun onAnimationStart(animation: Animator?) { }
+                            override fun onAnimationEnd(animation: Animator?) {
+                                binding.tabLayout.visibility = View.GONE
+                                binding.appbarLayout.updateLayoutParams<CoordinatorLayout.LayoutParams> {
+                                    height = CoordinatorLayout.LayoutParams.WRAP_CONTENT
+                                }
+                            }
+                            override fun onAnimationCancel(animation: Animator?) { }
+                            override fun onAnimationRepeat(animation: Animator?) { }
+                        })
+                    }.start()
+
+                    toolbarInSecondaryState = it
+                } else {
+                    binding.toolbar.setBackgroundColor(secondaryColor)
+                    binding.statusBarBackgroundView.setBackgroundColor(secondaryDarkColor)
+                    binding.tabLayout.visibility = View.GONE
+                    binding.appbarLayout.updateLayoutParams<CoordinatorLayout.LayoutParams> {
+                        height = CoordinatorLayout.LayoutParams.WRAP_CONTENT
+                    }
+                }
+            } else {
+                binding.viewPager.isUserInputEnabled = true
+
+                binding.toolbar.setNavigationIcon(R.drawable.ic_menu)
+                binding.toolbar.setNavigationOnClickListener { (activity as MainActivity).openNavViewDrawer() }
+                binding.toolbar.setTitle(R.string.app_name)
+
+                if (it != toolbarInSecondaryState) {
+                    ValueAnimator.ofObject(ArgbEvaluator(), secondaryColor, primaryColor).apply {
+                        duration = animationDuration
+                        addUpdateListener { animator -> binding.toolbar.setBackgroundColor(animator.animatedValue as Int) }
+                    }.start()
+
+                    ValueAnimator.ofObject(ArgbEvaluator(), secondaryDarkColor, primaryDarkColor).apply {
+                        duration = animationDuration
+                        addUpdateListener { animator -> binding.statusBarBackgroundView.setBackgroundColor(animator.animatedValue as Int) }
+                    }.start()
+
+                    val startHeight = binding.appbarLayout.height
+                    ValueAnimator.ofFloat(0f, 1f).apply {
+                        duration = animationDuration
+                        addUpdateListener { animator ->
+                            binding.appbarLayout.updateLayoutParams<CoordinatorLayout.LayoutParams> {
+                                height = (startHeight + (animator.animatedValue as Float) * tabLayoutHeight).toInt()
+                            }
+                        }
+                        addListener(object: Animator.AnimatorListener {
+                            override fun onAnimationStart(animation: Animator?) {
+                                binding.tabLayout.visibility = View.VISIBLE
+                            }
+                            override fun onAnimationEnd(animation: Animator?) {
+                                binding.appbarLayout.updateLayoutParams<CoordinatorLayout.LayoutParams> {
+                                    height = CoordinatorLayout.LayoutParams.WRAP_CONTENT
+                                }
+                            }
+                            override fun onAnimationCancel(animation: Animator?) { }
+                            override fun onAnimationRepeat(animation: Animator?) { }
+                        })
+                    }.start()
+
+                    toolbarInSecondaryState = it
+                } else {
+                    binding.toolbar.setBackgroundColor(primaryColor)
+                    binding.statusBarBackgroundView.setBackgroundColor(primaryDarkColor)
+                    binding.tabLayout.visibility = View.VISIBLE
+                    binding.appbarLayout.updateLayoutParams<CoordinatorLayout.LayoutParams> {
+                        height = CoordinatorLayout.LayoutParams.WRAP_CONTENT
+                    }
+                }
+            }
+        }
 
         // Overlay badge on diners tab showing how many diners are on the bill
         billSplitViewModel.dinerCount.observe(viewLifecycleOwner) {
@@ -177,19 +284,24 @@ class BillSplitFragment: Fragment() {
                 FRAG_DINERS -> {
                     // Show address book for contact selection
                     (requireActivity() as MainActivity).storeViewAsBitmap(requireView())
-                    findNavController().navigate(BillSplitFragmentDirections.openAddressbook(CircularRevealTransition.OriginParams(binding.fab)))
+                    findNavController().navigate(BillSplitFragmentDirections.openAddressbook(
+                        CircularRevealTransition.OriginParams(binding.fab)))
                 }
                 FRAG_ITEMS -> {
                     // Show fragment for item entry
                     (requireActivity() as MainActivity).storeViewAsBitmap(requireView())
-                    findNavController().navigate(BillSplitFragmentDirections.createNewItem(editedItem = null, CircularRevealTransition.OriginParams(binding.fab)))
+                    findNavController().navigate(BillSplitFragmentDirections.createNewItem(
+                        editedItem = null,
+                        CircularRevealTransition.OriginParams(binding.fab)))
+                }
+                FRAG_PAYMENTS -> {
+                    // Send email receipt to diners
+                    billSplitViewModel.requestSendEmailReceipt()
                 }
             }
         }
 
-        binding.paymentFab.setOnClickListener {
-            // TODO
-        }
+        binding.paymentFab.setOnClickListener { billSplitViewModel.requestProcessPayments() }
     }
 
     override fun onViewStateRestored(savedInstanceState: Bundle?) {

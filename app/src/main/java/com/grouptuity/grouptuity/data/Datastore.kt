@@ -13,9 +13,7 @@ import androidx.datastore.preferences.preferencesDataStore
 import androidx.lifecycle.*
 import androidx.room.*
 import com.grouptuity.grouptuity.BuildConfig
-import com.grouptuity.grouptuity.Event
 import com.grouptuity.grouptuity.R
-import com.grouptuity.grouptuity.ui.billsplit.BillSplitViewModel
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import java.text.DateFormat
@@ -125,14 +123,13 @@ class Repository(context: Context) {
 
     // App-level data
     val loadInProgress = MutableStateFlow(true)
-    val requestProcessPaymentsEvent = MutableLiveData<Event<Boolean>>()
+    val processingPayments = MutableStateFlow(false)
     val activePaymentAndMethod = MutableStateFlow<Pair<Payment?, PaymentMethod?>>(Pair(null, null))
     val activeFragmentIndex = MutableStateFlow(FRAG_DINERS).also {
         // Clear active payment if active fragment changes to something other than payments
         it.onEach { index ->
-            android.util.Log.e("activeFragmentaIndex", ""+index)
             if (index != FRAG_PAYMENTS) {
-                activePaymentAndMethod.value = kotlin.Pair(null, null)
+                activePaymentAndMethod.value = Pair(null, null)
             }
         }.launchIn(CoroutineScope(Dispatchers.Unconfined))
     }
@@ -230,6 +227,7 @@ class Repository(context: Context) {
     // Other calculation results
     private val _discountValues = MutableStateFlow(emptyMap<Discount, Double>())
     val discountValues: StateFlow<Map<Discount, Double>> = _discountValues
+    val hasUnprocessedPayments = payments.mapLatest { paymentsList -> paymentsList.any { it.unprocessed()} }
 
     private fun commitBill() = CoroutineScope(Dispatchers.Default).launch {
 
@@ -660,7 +658,6 @@ class Repository(context: Context) {
             else -> { paymentStableIdMap[payment.payerId + payment.payeeId] }
         }
     }
-
     fun setPaymentTemplate(
         method: PaymentMethod,
         payer: Diner,

@@ -1,16 +1,13 @@
 package com.grouptuity.grouptuity.ui.billsplit
 
 import android.app.Application
-import android.util.Log
 import androidx.lifecycle.LiveData
+import androidx.lifecycle.asFlow
 import androidx.lifecycle.asLiveData
-import androidx.lifecycle.viewModelScope
 import com.grouptuity.grouptuity.R
-import com.grouptuity.grouptuity.data.FRAG_DINERS
-import com.grouptuity.grouptuity.data.FRAG_ITEMS
-import com.grouptuity.grouptuity.data.FRAG_PAYMENTS
-import com.grouptuity.grouptuity.data.UIViewModel
-import kotlinx.coroutines.flow.*
+import com.grouptuity.grouptuity.data.*
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.mapLatest
 
 
 class BillSplitViewModel(application: Application): UIViewModel(application) {
@@ -18,24 +15,41 @@ class BillSplitViewModel(application: Application): UIViewModel(application) {
     val itemCount = repository.items.mapLatest { it.size }.asLiveData()
 
     val activeFragmentIndex = repository.activeFragmentIndex
+    val isProcessingPayments = repository.processingPayments.withOutputSwitch(isOutputFlowing).asLiveData()
 
-    val fabDrawableId: LiveData<Int?> = activeFragmentIndex.mapLatest {
-        when (it) {
+    val showProcessPaymentsButton: LiveData<Boolean> = combine(
+        activeFragmentIndex,
+        repository.processingPayments,
+        repository.hasUnprocessedPayments,
+        repository.activePaymentAndMethod) { activeIndex, processing, hasUnprocessed, (activePayment, _) ->
+
+        activeIndex == FRAG_PAYMENTS && !processing && activePayment == null && hasUnprocessed
+    }.asLiveData()
+
+    val fabDrawableId: LiveData<Int?> = combine(
+        activeFragmentIndex,
+        repository.processingPayments,
+        showProcessPaymentsButton.asFlow()) { index, isProcessing, showingButton ->
+
+        when (index) {
             FRAG_DINERS -> R.drawable.ic_add_person
             FRAG_ITEMS -> R.drawable.ic_add_item
+            FRAG_PAYMENTS -> {
+                if (!isProcessing && !showingButton) {
+                    R.drawable.ic_email
+                } else {
+                    null
+                }
+            }
             else -> null
         }
     }.asLiveData()
 
-    val showProcessPaymentsButton: LiveData<Boolean> = combine(
-        activeFragmentIndex,
-        repository.payments,
-        repository.activePaymentAndMethod) { activeIndex, payments, (activePayment, _) ->
-
-        activeIndex == FRAG_PAYMENTS
-                && activePayment == null
-                && payments.any { it.unprocessed() }
-    }.asLiveData()
+    fun requestProcessPayments() {
+        if (repository.payments.value.any { it.unprocessed() })
+            repository.processingPayments.value = true
+    }
+    fun stopProcessingPayments() { repository.processingPayments.value = false }
 
     fun requestSendEmailReceipt() {
 

@@ -321,6 +321,7 @@
     <string name="discountentry_alert_invalid_cost">Please specify a reimbursement cost greater than zero</string>
     <string name="discountentry_alert_missing_purchasers">Please specify at least one diner to be reimbursed</string>
 
+    <string name="payments_toolbar_title">Swipe payments to process</string>
     <string name="payments_fab_process_payments">Process Payments</string>
     <string name="payments_instruction_from_cash_pool">Receive cash from group pool</string>
     <string name="payments_instruction_into_cash_pool">Pay cash into group pool</string>
@@ -429,6 +430,7 @@
     <string name="divide_symbol">\u00F7</string>
     <string name="plus_minus">\u00B1</string>
     <string name="equals_symbol">\u003D</string>
+    <string name="checkmark_symbol">\u2713</string>
     <string name="open_parenthesis">(</string>
     <string name="close_parenthesis">)</string>
     <string name="placeholder_text">.</string>
