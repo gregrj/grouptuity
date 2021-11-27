@@ -1,7 +1,6 @@
 package com.grouptuity.grouptuity.ui.billsplit.contactentry
 
 import android.app.Application
-import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.asLiveData
 import com.grouptuity.grouptuity.data.Diner
@@ -100,7 +99,7 @@ class ContactEntryViewModel(app: Application): UIViewModel(app) {
 
         val paymentAddresses = mutableMapOf<PaymentMethod, String>()
         if (emailAddress?.isNotBlank() == true) {
-            paymentAddresses[PaymentMethod.IOU_EMAIL] = emailAddress
+            paymentAddresses[PaymentMethod.PAYBACK_LATER] = emailAddress
         }
         if (venmoAddress?.isNotBlank() == true) {
             paymentAddresses[PaymentMethod.VENMO] = venmoAddress

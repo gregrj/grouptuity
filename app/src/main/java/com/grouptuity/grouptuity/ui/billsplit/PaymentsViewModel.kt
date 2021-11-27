@@ -62,6 +62,8 @@ class PaymentsViewModel(app: Application): UIViewModel(app) {
                 }
             }.toSet()
 
+            val eligibleSurrogates = getEligibleSurrogates(paymentsAndStableIds)
+
             if (active.first == null) {
                 if (processing) {
                     // Only display unprocessed payments that are handled through the app
@@ -72,7 +74,8 @@ class PaymentsViewModel(app: Application): UIViewModel(app) {
                                     it.first,
                                     it.second,
                                     surrogates.contains(it.first.payer),
-                                    PROCESSING_STATE
+                                    PROCESSING_STATE,
+                                    eligibleSurrogates
                                 )
                             } else {
                                 null
@@ -89,7 +92,8 @@ class PaymentsViewModel(app: Application): UIViewModel(app) {
                                     it.first,
                                     it.second,
                                     surrogates.contains(it.first.payer),
-                                    DEFAULT_STATE
+                                    DEFAULT_STATE,
+                                    eligibleSurrogates
                                 )
                             } else {
                                 null
@@ -113,7 +117,8 @@ class PaymentsViewModel(app: Application): UIViewModel(app) {
                                         SELECTING_METHOD_STATE
                                     } else {
                                         DEFAULT_STATE
-                                    }
+                                    },
+                                    eligibleSurrogates
                                 )
                             } else {
                                 null
@@ -122,13 +127,7 @@ class PaymentsViewModel(app: Application): UIViewModel(app) {
                         Pair(activePaymentStableId, SELECTING_METHOD_STATE)
                     )
                 } else {
-                    val ineligibleSurrogates = paymentsAndStableIds.mapNotNull { (payment, _) ->
-                        if (payment.payee.isRestaurant() && payment.surrogate?.isCashPool() == false) {
-                            payment.payer
-                        } else {
-                            null
-                        }
-                    }.toSet()
+                    val ineligibleSurrogates = getIneligibleSurrogates(paymentsAndStableIds)
 
                     Pair(
                         paymentsAndStableIds.map {
@@ -144,7 +143,8 @@ class PaymentsViewModel(app: Application): UIViewModel(app) {
                                         INELIGIBLE_STATE
                                     }
                                     else -> { CANDIDATE_STATE }
-                                }
+                                },
+                                eligibleSurrogates
                             )
                         }.filter { it.payment.payee.isRestaurant() },
                         Pair(activePaymentStableId, SHOWING_INSTRUCTIONS_STATE)
@@ -153,7 +153,7 @@ class PaymentsViewModel(app: Application): UIViewModel(app) {
             }
         }.asLiveData()
 
-    private fun createPaymentData(payment: Payment, stableId: Long?, actingAsSurrogate: Boolean, displayState: Int) =
+    private fun createPaymentData(payment: Payment, stableId: Long?, actingAsSurrogate: Boolean, displayState: Int, eligibleSurrogates: Set<Diner>) =
         when {
             payment.payer.isCashPool() -> {
                 PaymentData(
@@ -176,8 +176,8 @@ class PaymentsViewModel(app: Application): UIViewModel(app) {
                     getApplication<Application>().resources.getString(R.string.payments_instruction_into_cash_pool),
                     NumberFormat.getCurrencyInstance().format(payment.amount),
                     payment.payer.asContact(),
-                    isPaymentIconClickable=false,
-                    allowSurrogatePaymentMethods=false,
+                    isPaymentIconClickable = false,
+                    allowSurrogatePaymentMethods = false,
                     displayState
                 )
             }
@@ -210,7 +210,7 @@ class PaymentsViewModel(app: Application): UIViewModel(app) {
                     NumberFormat.getCurrencyInstance().format(payment.amount),
                     payment.payer.asContact(),
                     isPaymentIconClickable = displayState != PROCESSING_STATE,
-                    allowSurrogatePaymentMethods = !actingAsSurrogate,
+                    allowSurrogatePaymentMethods = !actingAsSurrogate && (eligibleSurrogates - payment.payer).isNotEmpty(),
                     displayState
                 )
             }
@@ -219,7 +219,10 @@ class PaymentsViewModel(app: Application): UIViewModel(app) {
                     payment,
                     stableId,
                     payment.payer.name,
-                    getApplication<Application>().resources.getString(payment.method.paymentInstructionStringId, payment.payee.name),
+                    getApplication<Application>().resources.getString(
+                        payment.method.paymentInstructionStringId,
+                        payment.payee.name
+                    ),
                     NumberFormat.getCurrencyInstance().format(payment.amount),
                     payment.payer.asContact(),
                     isPaymentIconClickable = displayState != PROCESSING_STATE,
@@ -228,6 +231,18 @@ class PaymentsViewModel(app: Application): UIViewModel(app) {
                 )
             }
         }
+
+    private fun getEligibleSurrogates(paymentsAndStableIds: List<Pair<Payment, Long?>>): Set<Diner> =
+        repository.diners.value.toSet() - getIneligibleSurrogates(paymentsAndStableIds)
+
+    private fun getIneligibleSurrogates(paymentsAndStableIds: List<Pair<Payment, Long?>>): Set<Diner> =
+        paymentsAndStableIds.mapNotNull { (payment, _) ->
+            if (payment.payee.isRestaurant() && payment.surrogate?.isCashPool() == false) {
+                payment.payer
+            } else {
+                null
+            }
+        }.toSet()
 
     fun setActivePayment(payment: Payment?) {
         cachedMethod = null

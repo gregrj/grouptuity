@@ -50,10 +50,11 @@ class Converters {
 
 
 enum class PaymentMethod(val acceptedByRestaurant: Boolean,
-                         val acceptedByPeer: Boolean,
                          val processedWithinApp: Boolean,
                          val addressCodeScannable: Boolean,
                          val addressCanBeEmail: Boolean,
+                         val addressCanBePhone: Boolean,
+                         val displayNameStringId: Int,
                          val addressNameStringId: Int,
                          val paymentInstructionStringId: Int,
                          val addressSelectionStringId: Int,
@@ -61,10 +62,11 @@ enum class PaymentMethod(val acceptedByRestaurant: Boolean,
                          val isIconColorless: Boolean) {
     CASH(
         true,
-        true,
         false,
         false,
         false,
+        false,
+        R.string.payment_method_cash_display_name,
         R.string.payment_method_cash_address_name,
         R.string.payments_instruction_cash,
         R.string.placeholder_text,
@@ -76,6 +78,7 @@ enum class PaymentMethod(val acceptedByRestaurant: Boolean,
         false,
         false,
         false,
+        R.string.payment_method_credit_card_split_display_name,
         R.string.payment_method_credit_card_split_address_name,
         R.string.payments_instruction_credit_card_split,
         R.string.placeholder_text,
@@ -87,21 +90,23 @@ enum class PaymentMethod(val acceptedByRestaurant: Boolean,
         false,
         false,
         false,
+        R.string.payment_method_credit_card_individual_display_name,
         R.string.payment_method_credit_card_individual_address_name,
         R.string.payments_instruction_credit_card_individual,
         R.string.placeholder_text,
         R.drawable.ic_payment_credit_card,
         true),
-    IOU_EMAIL(
+    PAYBACK_LATER(
+        false,
+        true,
         false,
         true,
         true,
-        false,
-        true,
+        R.string.payment_method_paybacklater_display_name,
         R.string.payment_method_iou_email_address_name,
-        R.string.payments_instruction_iou_email,
+        R.string.payments_instruction_payback_later,
         R.string.payments_address_entry_iou_email,
-        R.drawable.ic_payment_iou_email,
+        R.drawable.ic_payment_payback_later,
         true),
     VENMO(
         false,
@@ -109,6 +114,7 @@ enum class PaymentMethod(val acceptedByRestaurant: Boolean,
         true,
         true,
         true,
+        R.string.payment_method_venmo_display_name,
         R.string.payment_method_venmo_address_name,
         R.string.payments_instruction_venmo,
         R.string.payments_address_entry_venmo,
@@ -120,6 +126,7 @@ enum class PaymentMethod(val acceptedByRestaurant: Boolean,
         true,
         true,
         true,
+        R.string.payment_method_cash_app_display_name,
         R.string.payment_method_cash_app_address_name,
         R.string.payments_instruction_cash_app,
         R.string.payments_address_entry_cash_app,
@@ -129,8 +136,9 @@ enum class PaymentMethod(val acceptedByRestaurant: Boolean,
         false,
         true,
         true,
-        true,
         false,
+        false,
+        R.string.payment_method_algorand_display_name,
         R.string.payment_method_algorand_address_name,
         R.string.payments_instruction_algorand,
         R.string.payments_address_entry_algorand,
@@ -301,13 +309,9 @@ class Diner(@PrimaryKey val id: String,
     @Ignore val paymentsSent: List<Payment> = paymentsSentMutable
     @Ignore val paymentsReceived: List<Payment> = paymentsReceivedMutable
 
-    fun isRestaurant(): Boolean {
-        return lookupKey == Contact.restaurant.lookupKey
-    }
-
-    fun isCashPool(): Boolean {
-        return lookupKey == Contact.cashPool.lookupKey
-    }
+    fun isCashPool() = lookupKey == Contact.cashPool.lookupKey
+    fun isRestaurant() = lookupKey == Contact.restaurant.lookupKey
+    fun isSelf() = lookupKey == Contact.self.lookupKey
 
     fun getDefaultAddressForMethod(method: PaymentMethod) = paymentAddressDefaults[method]
 

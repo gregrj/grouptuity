@@ -24,8 +24,8 @@
 
         <menu>
             <item
-                android:id="@+id/placholder"
-                android:title="placholder"/>
+                android:id="@+id/placeholder"
+                android:title="placeholder"/>
         </menu>
     </item>
 

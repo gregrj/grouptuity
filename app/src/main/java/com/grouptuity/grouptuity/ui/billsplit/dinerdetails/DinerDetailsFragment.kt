@@ -164,7 +164,7 @@ class DinerDetailsFragment: Fragment() {
                 val address = result.data?.extras?.get(requireContext().getString(R.string.intent_key_qrcode_payment_method_address)) as String
 
                 when (paymentMethod) {
-                    PaymentMethod.IOU_EMAIL -> { binding.emailBiographics.input.setText(address) }
+                    PaymentMethod.PAYBACK_LATER -> { binding.emailBiographics.input.setText(address) }
                     PaymentMethod.VENMO -> { binding.venmoBiographics.input.setText(address) }
                     PaymentMethod.CASH_APP -> { binding.cashAppBiographics.input.setText(address) }
                     PaymentMethod.ALGO -> { binding.algorandBiographics.input.setText(address) }
@@ -327,7 +327,7 @@ class DinerDetailsFragment: Fragment() {
             }
         }
 
-        setupBiographicsItem(PaymentMethod.IOU_EMAIL, binding.emailBiographics, viewModel.email)
+        setupBiographicsItem(PaymentMethod.PAYBACK_LATER, binding.emailBiographics, viewModel.email)
 
         setupBiographicsItem(PaymentMethod.VENMO, binding.venmoBiographics, viewModel.venmoAddress)
 

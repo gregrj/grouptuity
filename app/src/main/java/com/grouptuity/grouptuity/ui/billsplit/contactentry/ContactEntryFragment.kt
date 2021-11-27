@@ -85,7 +85,7 @@ class ContactEntryFragment: Fragment() {
                 val address = result.data?.extras?.get(requireContext().getString(R.string.intent_key_qrcode_payment_method_address)) as String
 
                 when (paymentMethod) {
-                    PaymentMethod.IOU_EMAIL -> { binding.emailInput.setText(address) }
+                    PaymentMethod.PAYBACK_LATER -> { binding.emailInput.setText(address) }
                     PaymentMethod.VENMO -> { binding.venmoInput.setText(address) }
                     PaymentMethod.CASH_APP -> { binding.cashAppInput.setText(address) }
                     PaymentMethod.ALGO -> { binding.algorandInput.setText(address) }

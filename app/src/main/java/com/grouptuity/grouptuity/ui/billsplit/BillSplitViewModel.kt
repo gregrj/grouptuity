@@ -11,25 +11,27 @@ import kotlinx.coroutines.flow.mapLatest
 
 
 class BillSplitViewModel(application: Application): UIViewModel(application) {
-    val dinerCount = repository.diners.mapLatest { it.size }.asLiveData()
-    val itemCount = repository.items.mapLatest { it.size }.asLiveData()
+    val dinerCount = repository.numberOfDiners.asLiveData()
+    val itemCount = repository.numberOfItems.asLiveData()
 
     val activeFragmentIndex = repository.activeFragmentIndex
     val isProcessingPayments = repository.processingPayments.withOutputSwitch(isOutputFlowing).asLiveData()
 
-    val showProcessPaymentsButton: LiveData<Boolean> = combine(
+    private val showProcessPaymentsButtonFlow = combine(
         activeFragmentIndex,
         repository.processingPayments,
         repository.hasUnprocessedPayments,
         repository.activePaymentAndMethod) { activeIndex, processing, hasUnprocessed, (activePayment, _) ->
 
         activeIndex == FRAG_PAYMENTS && !processing && activePayment == null && hasUnprocessed
-    }.asLiveData()
+    }
+
+    val showProcessPaymentsButton: LiveData<Boolean> = showProcessPaymentsButtonFlow.asLiveData()
 
     val fabDrawableId: LiveData<Int?> = combine(
         activeFragmentIndex,
         repository.processingPayments,
-        showProcessPaymentsButton.asFlow()) { index, isProcessing, showingButton ->
+        showProcessPaymentsButtonFlow) { index, isProcessing, showingButton ->
 
         when (index) {
             FRAG_DINERS -> R.drawable.ic_add_person
@@ -44,6 +46,10 @@ class BillSplitViewModel(application: Application): UIViewModel(application) {
             else -> null
         }
     }.asLiveData()
+
+    fun createNewBill() {
+        repository.createAndLoadNewBill()
+    }
 
     fun requestProcessPayments() {
         if (repository.payments.value.any { it.unprocessed() })

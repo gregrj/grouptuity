@@ -1,6 +1,5 @@
 package com.grouptuity.grouptuity.data
 
-import android.util.Log
 import kotlin.math.max
 
 const val PRECISION = 1e-6
@@ -151,8 +150,6 @@ class BillCalculation(private val bill: Bill,
         }
 
         newPaymentsMap = generateNewPayments(netTransactionMap)
-
-
 
         sortedPayments = (committedPayments + newPaymentsMap.flatMap { it.value }).sortedWith { a, b ->
             val firstDiner = if (a.payer == cashPool) a.payee else a.payer
@@ -344,7 +341,11 @@ class BillCalculation(private val bill: Bill,
     private fun processIndividualTaxAndTip(transactionMap: TransactionMap): TransactionMap {
         individualTax = individualSubtotalsWithDiscounts.mapValues { (diner, discountedSubtotal) ->
             val tax = discountedSubtotal * groupTaxPercent / 100.0
-            transactionMap.addTransaction(diner, restaurant, tax)
+
+            if (!diner.isCashPool() && !diner.isRestaurant()) {
+                transactionMap.addTransaction(diner, restaurant, tax)
+            }
+
             tax
         }
 
@@ -352,7 +353,11 @@ class BillCalculation(private val bill: Bill,
 
         individualTip = (if(bill.discountsReduceTip) individualSubtotalsWithDiscounts else individualSubtotals).mapValues { (diner, baseValueToTip) ->
             val tip = (baseValueToTip + (if(bill.isTaxTipped) individualTax[diner]!! else 0.0)) * groupTipPercent / 100.0
-            transactionMap.addTransaction(diner, restaurant, tip)
+
+            if (!diner.isCashPool() && !diner.isRestaurant()) {
+                transactionMap.addTransaction(diner, restaurant, tip)
+            }
+
             tip
         }
 

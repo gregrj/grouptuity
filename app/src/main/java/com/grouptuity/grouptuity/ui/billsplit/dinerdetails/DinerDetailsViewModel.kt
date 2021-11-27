@@ -1,16 +1,10 @@
 package com.grouptuity.grouptuity.ui.billsplit.dinerdetails
 
 import android.app.Application
-import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.asLiveData
 import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.*
-import com.grouptuity.grouptuity.ui.billsplit.payments.algorandAddressToString
-import com.grouptuity.grouptuity.ui.billsplit.payments.cashAppAddressToCashtag
-import com.grouptuity.grouptuity.ui.billsplit.payments.venmoAddressToString
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import java.text.NumberFormat
 import kotlin.math.abs
@@ -41,13 +35,13 @@ class DinerDetailsViewModel(app: Application): UIViewModel(app) {
     private val editingBiographicsMutable = MutableStateFlow(false)
     val editingBiographics: LiveData<Boolean> = editingBiographicsMutable.asLiveData()
 
-    private val emailAddressNotSet = context.getString(R.string.dinerdetails_biographics_address_not_set, context.getString(PaymentMethod.IOU_EMAIL.addressNameStringId))
+    private val emailAddressNotSet = context.getString(R.string.dinerdetails_biographics_address_not_set, context.getString(PaymentMethod.PAYBACK_LATER.addressNameStringId))
     private val venmoAddressNotSet = context.getString(R.string.dinerdetails_biographics_address_not_set, context.getString(PaymentMethod.VENMO.addressNameStringId))
     private val cashtagNotSet = context.getString(R.string.dinerdetails_biographics_address_not_set, context.getString(PaymentMethod.CASH_APP.addressNameStringId))
     private val algoAddressNotSet = context.getString(R.string.dinerdetails_biographics_address_not_set, context.getString(PaymentMethod.ALGO.addressNameStringId))
 
     val email: LiveData<Triple<Boolean, String, Boolean>> = combine(loadedDiner, editingBiographicsMutable) { diner, editing ->
-        val address = diner?.paymentAddressDefaults?.get(PaymentMethod.IOU_EMAIL)
+        val address = diner?.paymentAddressDefaults?.get(PaymentMethod.PAYBACK_LATER)
         if(address == null){
             Triple(false, emailAddressNotSet, editing)
         } else {

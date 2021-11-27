@@ -144,6 +144,7 @@ class Repository(context: Context) {
     private var mBill = Bill("", "", 0L, 0.0, true, 0.0, tipAsPercent = true, isTaxTipped = false, discountsReduceTip = false)
     private var mCashPool = Diner("", "", -1, Contact.cashPool)
     private var mRestaurant = Diner("", "", -0, Contact.restaurant)
+    private var mSelfDiner: Diner? = null
     private var mDiners = mutableListOf<Diner>()
     private var mItems = mutableListOf<Item>()
     private var mDebts = mutableListOf<Debt>()
@@ -152,6 +153,7 @@ class Repository(context: Context) {
     private val _bill = MutableStateFlow(mBill)
     private val _cashPool = MutableStateFlow(mCashPool)
     private val _restaurant = MutableStateFlow(mRestaurant)
+    private val _selfDiner = MutableStateFlow(mSelfDiner)
     private val _diners: MutableStateFlow<List<Diner>> = MutableStateFlow(mDiners)
     private val _items: MutableStateFlow<List<Item>> = MutableStateFlow(mItems)
     private val _debts: MutableStateFlow<List<Debt>> = MutableStateFlow(mDebts)
@@ -168,6 +170,7 @@ class Repository(context: Context) {
     val bill: StateFlow<Bill> = _bill
     val cashPool: StateFlow<Diner> = _cashPool
     val restaurant: StateFlow<Diner> = _restaurant
+    val selfDiner: StateFlow<Diner?> = _selfDiner
     val diners: StateFlow<List<Diner>> = _diners
     val items: StateFlow<List<Item>> = _items
     val debts: StateFlow<List<Debt>> = _debts
@@ -227,6 +230,8 @@ class Repository(context: Context) {
     // Other calculation results
     private val _discountValues = MutableStateFlow(emptyMap<Discount, Double>())
     val discountValues: StateFlow<Map<Discount, Double>> = _discountValues
+    val numberOfDiners = diners.mapLatest { it.size }.stateIn(CoroutineScope(Dispatchers.Unconfined), SharingStarted.Eagerly, 0)
+    val numberOfItems = items.mapLatest { it.size }.stateIn(CoroutineScope(Dispatchers.Unconfined), SharingStarted.Eagerly, 0)
     val hasUnprocessedPayments = payments.mapLatest { paymentsList -> paymentsList.any { it.unprocessed()} }
 
     private fun commitBill() = CoroutineScope(Dispatchers.Default).launch {
@@ -251,6 +256,9 @@ class Repository(context: Context) {
         }
 
         _bill.value = mBill
+        _cashPool.value = mCashPool
+        _restaurant.value = mRestaurant
+        _selfDiner.value = mSelfDiner
         _diners.value = mDiners.toList()
         _items.value = mItems.toList()
         _debts.value = mDebts.toList()
@@ -308,13 +316,15 @@ class Repository(context: Context) {
         maxDebtListIndex = 0
         maxDiscountListIndex = 0
 
-        val cashPool = Diner(newUUID(), newBill.id, -1, Contact.cashPool)
-        val restaurant = Diner(newUUID(), newBill.id, -1, Contact.restaurant)
-
         // Commit updated objects to UI
         mBill = newBill
-        mCashPool = cashPool
-        mRestaurant = restaurant
+        mCashPool = Diner(newUUID(), newBill.id, -1, Contact.cashPool)
+        mRestaurant = Diner(newUUID(), newBill.id, -1, Contact.restaurant)
+        mSelfDiner = if (autoAddSelf.value) {
+            Diner(newUUID(), newBill.id, ++maxDinerListIndex, Contact.self)
+        } else {
+            null
+        }
         mDiners = mutableListOf()
         mItems = mutableListOf()
         mDebts = mutableListOf()
@@ -330,8 +340,9 @@ class Repository(context: Context) {
         database.saveBill(newBill).invokeOnCompletion {
             loadedBillId.value = newBill.id
 
-            database.saveDiner(cashPool)
-            database.saveDiner(restaurant)
+            database.saveDiner(mCashPool)
+            database.saveDiner(mRestaurant)
+            mSelfDiner?.also { database.saveDiner(it) }
         }
     }
     fun loadSavedBill(context: Context, billId: String) = CoroutineScope(Dispatchers.IO).launch {
@@ -345,6 +356,7 @@ class Repository(context: Context) {
                 mBill = payload.bill
                 mCashPool = payload.cashPool
                 mRestaurant = payload.restaurant
+                mSelfDiner = payload.selfDiner
                 mDiners = payload.diners.sortedBy { it.listIndex }.toMutableList()
                 mItems = payload.items.sortedBy { it.listIndex }.toMutableList()
                 mDebts = payload.debts.sortedBy { it.listIndex }.toMutableList()
@@ -425,6 +437,7 @@ class Repository(context: Context) {
         }
 
         mDiners.add(selfDiner)
+        mSelfDiner = selfDiner
         commitBill()
 
         // TODO save contact to database?
@@ -493,6 +506,10 @@ class Repository(context: Context) {
         diner.discountsPurchased.forEach { it.removePurchaser(diner) }
         diner.paymentsSent.forEach { mPayments.remove(it) }
         diner.paymentsReceived.forEach { mPayments.remove(it) }
+
+        if (diner.isSelf()) {
+            mSelfDiner = null
+        }
 
         commitBill()
 
@@ -984,6 +1001,7 @@ abstract class AppDatabase: RoomDatabase() {
         val bill = billDao().getBill(billId) ?: return null
         val cashPool = dinerDao().getCashPoolOnBill(billId) ?: return null
         val restaurant = dinerDao().getRestaurantOnBill(billId) ?: return null
+        var selfDiner: Diner? = null
         val dinerMap = dinerDao().getDinersOnBill(billId).associateBy { it.id }
         val itemMap = itemDao().getItemsOnBill(billId).associateBy { it.id }
         val debtMap = debtDao().getDebtsOnBill(billId).associateBy { it.id }
@@ -998,6 +1016,10 @@ abstract class AppDatabase: RoomDatabase() {
                 diner.emailAddresses = emailAddresses
             }
             diner.populateEntityLists(itemMap, debtMap, discountMap, paymentMap)
+
+            if (diner.isSelf()) {
+                selfDiner = diner
+            }
         }
         itemMap.forEach { (_, item) -> item.populateEntityLists(dinerMap, discountMap) }
         debtMap.forEach { (_, debt) -> debt.populateEntityLists(dinerMap) }
@@ -1008,6 +1030,7 @@ abstract class AppDatabase: RoomDatabase() {
             bill,
             cashPool,
             restaurant,
+            selfDiner,
             dinerMap.values.toMutableList(),
             itemMap.values.toMutableList(),
             debtMap.values.toMutableList(),
@@ -1022,6 +1045,7 @@ abstract class AppDatabase: RoomDatabase() {
 data class LoadBillPayload(val bill: Bill,
                            val cashPool: Diner,
                            val restaurant: Diner,
+                           val selfDiner: Diner?,
                            val diners: MutableList<Diner>,
                            val items: MutableList<Item>,
                            val debts: MutableList<Debt>,

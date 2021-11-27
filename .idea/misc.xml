@@ -3,6 +3,8 @@
   <component name="DesignSurface">
     <option name="filePathToZoomLevelMap">
       <map>
+        <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/drawable/ic_payment_more_ptp.xml" value="0.39692307692307693" />
+        <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/drawable/ic_payment_payback_later.xml" value="0.403125" />
         <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/layout/calculator_collapsible.xml" value="0.38697916666666665" />
         <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/layout/calculator_fixed.xml" value="0.38697916666666665" />
         <entry key="..\:/Users/Greg/Repositories/grouptuity/app/src/main/res/layout/contact_icon.xml" value="0.21875" />
