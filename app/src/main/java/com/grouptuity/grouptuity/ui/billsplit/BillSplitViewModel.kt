@@ -31,14 +31,15 @@ class BillSplitViewModel(application: Application): UIViewModel(application) {
     val fabDrawableId: LiveData<Int?> = combine(
         activeFragmentIndex,
         repository.processingPayments,
-        showProcessPaymentsButtonFlow) { index, isProcessing, showingButton ->
+        repository.activePaymentAndMethod,
+        showProcessPaymentsButtonFlow) { index, isProcessing, (payment, _), showingProcessButton ->
 
         when (index) {
             FRAG_DINERS -> R.drawable.ic_add_person
             FRAG_ITEMS -> R.drawable.ic_add_item
             FRAG_PAYMENTS -> {
-                if (!isProcessing && !showingButton) {
-                    R.drawable.ic_email
+                if (payment == null && !isProcessing && !showingProcessButton) {
+                    R.drawable.ic_send_receipt
                 } else {
                     null
                 }

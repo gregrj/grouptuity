@@ -1,41 +1,49 @@
 package com.grouptuity.grouptuity.ui.billsplit.payments
 
-//import android.content.Intent
-//import android.net.Uri
-//import androidx.core.content.ContextCompat
-//import java.text.SimpleDateFormat
-//import java.util.*
-//
-//
-//fun getIOUEmailIntent(payer: String?=null, payee: String?=null): Intent {
-//
-//    var toAddresses: String
-//    var ccAddresses: String
-//    val subject: String
-//    val body: String
-//
-//    when {
-//        payer == null -> {
-//            // User owes another diner
-//        }
-//        payee == null -> {
-//            // Another diner owes the user
-//        }
-//        else -> {
-//            // Mediating between two other diners
-//        }
-//    }
-//
-//    return Intent(Intent.ACTION_SENDTO).apply {
-//        type = "*/*"
-//        putExtra(Intent.EXTRA_EMAIL, toAddresses)
-//        putExtra(Intent.EXTRA_CC, ccAddresses)
-//        putExtra(Intent.EXTRA_SUBJECT, subject)
-//        putExtra(Intent.EXTRA_HTML_TEXT, body)
-//    }
-//}
-//
-//
+import android.app.Activity
+import android.content.Intent
+import android.net.Uri
+import androidx.activity.result.ActivityResultLauncher
+import com.grouptuity.grouptuity.data.Payment
+import java.text.NumberFormat
+
+
+private fun createPaybackLaterEmailIntent(payment: Payment) = extractPeerToPeerData(payment)?.let {
+    val toAddresses: Array<String>
+    val subject: String
+
+    val amountString = NumberFormat.getCurrencyInstance().format(payment.amount)
+
+    when (it.appUserRole) {
+        PeerToPeerAppUserRole.SENDING -> {
+            // User owes another diner
+            toAddresses = arrayOf(it.receiverAddress)
+            subject = it.sender.name + " will pay you back " + amountString
+        }
+        PeerToPeerAppUserRole.RECEIVING -> {
+            // Another diner owes the user directly
+            toAddresses = arrayOf(it.senderAddress)
+            subject = "Please pay back " + it.receiver.name + " " + amountString
+        }
+        PeerToPeerAppUserRole.MEDIATING -> {
+            // Mediating between two other diners
+            toAddresses = arrayOf(it.senderAddress, it.receiverAddress)
+            subject = it.sender.name + " owes " + it.receiver.name + " " + amountString
+        }
+    }
+
+    val body = "example body"
+
+    Intent(Intent.ACTION_SENDTO).apply {
+        type = "*/*"
+        data = Uri.parse("mailto:")
+        putExtra(Intent.EXTRA_EMAIL, toAddresses)
+        putExtra(Intent.EXTRA_SUBJECT, subject)
+        putExtra(Intent.EXTRA_TEXT, body)
+    }
+}
+
+
 //fun generateRecieptEmailBody(): String {
 //    var underline = ""
 //    for (n in 0..24) underline += "\u00AF"
@@ -74,3 +82,19 @@ package com.grouptuity.grouptuity.ui.billsplit.payments
 //    body += "OUTSTANDING PAYMENTS:\n$underline\n$venmoPayments\n$iouPayments\nFULL BILL:\n$underline\n$billString"
 //    return body
 //}
+
+
+fun sendPaybackLaterEmail(activity: Activity, launcher: ActivityResultLauncher<Intent>, payment: Payment) {
+    val paybackIntent = createPaybackLaterEmailIntent(payment)
+    when {
+        paybackIntent == null -> {
+            // TODO
+        }
+        paybackIntent.resolveActivity(activity.packageManager) == null -> {
+            // TODO
+        }
+        else -> {
+            launcher.launch(paybackIntent)
+        }
+    }
+}

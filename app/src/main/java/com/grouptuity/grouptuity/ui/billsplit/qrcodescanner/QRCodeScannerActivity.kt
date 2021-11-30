@@ -49,6 +49,7 @@ class QRCodeScannerActivity: AppCompatActivity() {
 
         viewModel = ViewModelProvider(this)[QRCodeScannerViewModel::class.java].also {
             it.initialize(
+                intent?.getIntExtra(getString(R.string.intent_key_qrcode_subject), -1) ?: -1,
                 intent?.getSerializableExtra(getString(R.string.intent_key_qrcode_payment_method)) as? PaymentMethod
                     ?: PaymentMethod.CASH,
                 intent?.getSerializableExtra(getString(R.string.intent_key_qrcode_diner_name)) as? String
@@ -148,6 +149,7 @@ class QRCodeScannerActivity: AppCompatActivity() {
 
     private fun finishActivityWithResult(wasPermissionDenied: Boolean, hasCameraError: Boolean, wasCanceled: Boolean) {
         val data = Intent()
+        data.putExtra(getString(R.string.intent_key_qrcode_subject), viewModel.getSubject())
         data.putExtra(getString(R.string.intent_key_qrcode_payment_method), viewModel.getPaymentMethod())
         data.putExtra(getString(R.string.intent_key_qrcode_diner_name), viewModel.getDinerName())
         data.putExtra(getString(R.string.intent_key_qrcode_payment_method_address), viewModel.getVerifiedAddress())

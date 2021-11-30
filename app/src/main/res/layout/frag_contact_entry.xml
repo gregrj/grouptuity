@@ -131,7 +131,7 @@
                         app:layout_constraintEnd_toStartOf="@+id/email_input_layout"
                         app:layout_constraintStart_toStartOf="parent"
                         app:layout_constraintTop_toBottomOf="@+id/name_email_barrier"
-                        android:src="@drawable/ic_payment_payback_later"
+                        android:src="@drawable/ic_email_surface"
                         app:tint="?attr/colorOnSurfaceMediumEmphasis"
                         tools:ignore="ContentDescription" />
 
@@ -144,7 +144,7 @@
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintStart_toEndOf="@+id/email_icon"
                         app:layout_constraintTop_toBottomOf="@+id/name_email_barrier"
-                        android:hint="@string/payment_method_iou_email_address_name"
+                        android:hint="@string/payment_method_address_name_payback_later"
                         app:endIconMode="custom"
                         app:endIconContentDescription="@string/dinerdetails_biographics_scan_qr_code">
 
@@ -187,7 +187,7 @@
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintStart_toEndOf="@+id/venmo_icon"
                         app:layout_constraintTop_toBottomOf="@+id/email_venmo_barrier"
-                        android:hint="@string/payment_method_venmo_address_name"
+                        android:hint="@string/payment_method_address_name_venmo"
                         app:endIconMode="custom"
                         app:endIconDrawable="@drawable/ic_qr_code_24dp"
                         app:endIconContentDescription="@string/dinerdetails_biographics_scan_qr_code">
@@ -231,7 +231,7 @@
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintStart_toEndOf="@+id/cash_app_icon"
                         app:layout_constraintTop_toBottomOf="@+id/venmo_cash_app_barrier"
-                        android:hint="@string/payment_method_cash_app_address_name"
+                        android:hint="@string/payment_method_address_name_cash_app"
                         app:endIconMode="custom"
                         app:endIconDrawable="@drawable/ic_qr_code_24dp"
                         app:endIconContentDescription="@string/dinerdetails_biographics_scan_qr_code">
@@ -276,7 +276,7 @@
                         app:layout_constraintEnd_toEndOf="parent"
                         app:layout_constraintStart_toEndOf="@+id/algorand_icon"
                         app:layout_constraintTop_toBottomOf="@+id/cash_app_algorand_barrier"
-                        android:hint="@string/payment_method_algorand_address_name"
+                        android:hint="@string/payment_method_address_name_algorand"
                         app:endIconMode="custom"
                         app:endIconDrawable="@drawable/ic_qr_code_24dp"
                         app:endIconContentDescription="@string/dinerdetails_biographics_scan_qr_code">

@@ -4,8 +4,6 @@ import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.app.Activity
-import android.content.ActivityNotFoundException
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.ColorStateList
@@ -44,19 +42,20 @@ import com.grouptuity.grouptuity.ui.billsplit.PaymentsViewModel.Companion.INELIG
 import com.grouptuity.grouptuity.ui.billsplit.PaymentsViewModel.Companion.PROCESSING_STATE
 import com.grouptuity.grouptuity.ui.billsplit.PaymentsViewModel.Companion.SELECTING_METHOD_STATE
 import com.grouptuity.grouptuity.ui.billsplit.PaymentsViewModel.Companion.SHOWING_INSTRUCTIONS_STATE
+import com.grouptuity.grouptuity.ui.billsplit.payments.sendCashAppRequest
 import com.grouptuity.grouptuity.ui.billsplit.qrcodescanner.QRCodeScannerActivity
-import com.grouptuity.grouptuity.ui.billsplit.payments.getVenmoAppIntent
+import com.grouptuity.grouptuity.ui.billsplit.payments.sendPaybackLaterEmail
+import com.grouptuity.grouptuity.ui.billsplit.payments.sendVenmoRequest
+import com.grouptuity.grouptuity.ui.billsplit.payments.startAlgorandTransaction
 import com.grouptuity.grouptuity.ui.custom.views.RecyclerViewBottomOffset
 import com.grouptuity.grouptuity.ui.custom.views.focusAndShowKeyboard
 import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.text.NumberFormat
 
 
 // TODO block input from buttons under select payer instructions
-// TODO prevent surrogate methods if only one diner
 // TODO styling for ineligible surrogate
 
 class PaymentsFragment: Fragment() {
@@ -68,7 +67,16 @@ class PaymentsFragment: Fragment() {
     private var binding by setNullOnDestroy<FragPaymentsBinding>()
     private lateinit var paymentsViewModel: PaymentsViewModel
     private lateinit var backPressedCallback: OnBackPressedCallback
+    private var paymentInProcessing: Payment? = null
+
+    // Activity result launchers for QR code scanning, processing payments, and installing PtP apps
     private lateinit var qrCodeScannerLauncher: ActivityResultLauncher<Intent>
+    private lateinit var emailLauncher: ActivityResultLauncher<Intent>
+    private lateinit var venmoLauncher: ActivityResultLauncher<Intent>
+    private lateinit var venmoInstallerLauncher: ActivityResultLauncher<Intent>
+    private lateinit var cashAppLauncher: ActivityResultLauncher<Intent>
+    private lateinit var cashAppInstallerLauncher: ActivityResultLauncher<Intent>
+    private lateinit var algorandLauncher: ActivityResultLauncher<Intent>
 
     override fun onCreateView(
         inflater: LayoutInflater,
@@ -140,14 +148,66 @@ class PaymentsFragment: Fragment() {
             it.consume()?.apply { showSetAddressDialog(this.first, this.second, this.third) }
         }
 
+        registerActivityLaunchers()
+    }
+
+    private fun registerActivityLaunchers() {
         qrCodeScannerLauncher =
             registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
                 if (result.resultCode == Activity.RESULT_OK) {
-                    Log.e("ok", result.toString())
+                    val subject = result.data?.getIntExtra(getString(R.string.intent_key_qrcode_subject), -1)
+                    val address = result.data?.getStringExtra(getString(R.string.intent_key_qrcode_payment_method_address))
+
+                    if (subject != null && address != null) {
+                        when (subject) {
+                            PaymentsViewModel.SELECTING_PAYER_ALIAS -> { paymentsViewModel.setPayerAddress(address) }
+                            PaymentsViewModel.SELECTING_PAYEE_ALIAS -> { paymentsViewModel.setPayeeAddress(address) }
+                            PaymentsViewModel.SELECTING_SURROGATE_ALIAS -> { paymentsViewModel.setSurrogateAddress(address) }
+                        }
+                        // TODO
+                    } else {
+                        // TODO
+                    }
                 } else {
-                    Log.e("false", result.toString())
+                    Log.e("false qr", result.toString())
+                    // TODO
                 }
             }
+
+        emailLauncher =
+            registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
+                if (result.resultCode == Activity.RESULT_OK) {
+                    Log.e("ok email", result.toString())
+                } else {
+                    Log.e("false email", result.toString())
+                }
+            }
+
+        venmoLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                Log.e("ok venmo", result.toString())
+            } else {
+                Log.e("false venmo", result.toString())
+            }
+            paymentInProcessing = null
+        }
+
+        venmoInstallerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            paymentInProcessing?.also { sendVenmoRequest(this, venmoLauncher, null, it) }
+        }
+
+        cashAppLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                Log.e("ok cash app", result.toString())
+            } else {
+                Log.e("false cash app", result.toString())
+            }
+            paymentInProcessing = null
+        }
+
+        cashAppInstallerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
+            paymentInProcessing?.also { sendVenmoRequest(this, cashAppLauncher, null, it) }
+        }
     }
 
     fun onClickViewPaymentDetails(payment: Payment) {
@@ -156,17 +216,18 @@ class PaymentsFragment: Fragment() {
 
     fun onClickProcessPayment(payment: Payment) {
         when (payment.method) {
-            PaymentMethod.PAYBACK_LATER -> {
-
-            }
+            PaymentMethod.PAYBACK_LATER -> { sendPaybackLaterEmail(requireActivity(), emailLauncher, payment) }
             PaymentMethod.VENMO -> {
-
+                paymentInProcessing = payment
+                sendVenmoRequest(this, venmoLauncher, venmoInstallerLauncher, payment)
             }
             PaymentMethod.CASH_APP -> {
-
+                paymentInProcessing = payment
+                sendCashAppRequest(this, cashAppLauncher, cashAppInstallerLauncher, payment)
             }
             PaymentMethod.ALGO -> {
-
+                paymentInProcessing = payment
+                startAlgorandTransaction(this, algorandLauncher, payment)
             }
             else -> {
 
@@ -230,6 +291,7 @@ class PaymentsFragment: Fragment() {
                     R.drawable.ic_qr_code_scanner_36dp
                 ) {
                     val intent = Intent(requireContext(), QRCodeScannerActivity::class.java)
+                    intent.putExtra(getString(R.string.intent_key_qrcode_subject), subject)
                     intent.putExtra(getString(R.string.intent_key_qrcode_payment_method), method)
                     intent.putExtra(getString(R.string.intent_key_qrcode_diner_name), diner.name)
                     qrCodeScannerLauncher.launch(intent)
@@ -324,40 +386,6 @@ class PaymentsFragment: Fragment() {
             .setTitle(requireContext().getString(method.addressSelectionStringId, diner.name))
             .setAdapter(adapter) { _, position -> items[position].third() }
             .show()
-    }
-
-    private fun processPayments() {
-        // TODO for testing
-
-        val counterparty: String = "example@example.com"
-
-        val numberFormat = NumberFormat.getNumberInstance()
-        numberFormat.minimumFractionDigits = 2
-        numberFormat.maximumFractionDigits = 2
-        numberFormat.isGroupingUsed = false
-        val amount: String = numberFormat.format(2.34)
-
-        try {
-            val venmoIntent = getVenmoAppIntent(
-                requireContext(),
-                counterparty,
-                amount,
-                false
-            )
-            startActivityForResult(venmoIntent, 12674)
-        } catch (e: ActivityNotFoundException) {
-//                val venmoIntent = Intent(this, VenmoWebViewActivity::class.java)
-//                val venmo_uri = VenmoSDK.openVenmoPaymentInWebView(
-//                    Grouptuity.VENMO_APP_ID,
-//                    "Grouptuity",
-//                    contact,
-//                    amount,
-//                    note,
-//                    action
-//                )
-//                venmoIntent.putExtra("url", venmo_uri)
-//                startActivityForResult(venmoIntent, VenmoActivityRequestCode)
-        }
     }
 
     private inner class PaymentRecyclerViewAdapter:

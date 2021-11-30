@@ -11,6 +11,7 @@ import com.google.mlkit.vision.barcode.Barcode
 import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.PaymentMethod
 import com.grouptuity.grouptuity.data.UIViewModel
+import com.grouptuity.grouptuity.ui.billsplit.payments.AlgorandAddressParser
 import com.grouptuity.grouptuity.ui.billsplit.payments.CashtagParser
 import com.grouptuity.grouptuity.ui.billsplit.payments.VenmoAddressParser
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -59,8 +60,11 @@ class QRCodeScannerViewModel(app: Application): UIViewModel(app) {
     }
 
     private val vibrator = context.getSystemService(Context.VIBRATOR_SERVICE) as Vibrator?
-    private val venmoAddressParser = VenmoAddressParser(context.applicationContext)
+    private val algorandAddressParser = AlgorandAddressParser(context.applicationContext)
     private val cashtagParser = CashtagParser()
+    private val venmoAddressParser = VenmoAddressParser(context.applicationContext)
+
+    private var qrCodeSubject = 0
 
     private val hasCameraPermission = MutableStateFlow(false)
     private val paymentMethod = MutableStateFlow(PaymentMethod.CASH)
@@ -114,9 +118,18 @@ class QRCodeScannerViewModel(app: Application): UIViewModel(app) {
                         address ?: "",
                         status)
                 }
-//                PaymentMethod.ALGORAND -> {
-//                  TODO
-//                }
+                PaymentMethod.ALGO -> {
+                    QRCodeDisplayResults(
+                        algorandDisplayTitle[status]?.let {
+                            if (status == QRCodeParser.Status.VALID_ADDRESS)
+                                context.getString(it, dinerName.value)
+                            else
+                                context.getString(it)
+                        } ?: "",
+                        algorandDisplayMessage[status]?.let { context.getString(it) } ?: "",
+                        address ?: "",
+                        status)
+                }
                 else -> {
                     null
                 }
@@ -126,6 +139,7 @@ class QRCodeScannerViewModel(app: Application): UIViewModel(app) {
 
     val hasBarcode get() = displayResults.value != null
 
+    fun getSubject() = qrCodeSubject
     fun getPaymentMethod() = paymentMethod.value
     fun getDinerName() = dinerName.value
     fun getVerifiedAddress() = verifiedAddress.value
@@ -134,8 +148,9 @@ class QRCodeScannerViewModel(app: Application): UIViewModel(app) {
         Log.e("url", url ?: "")
 
         when(paymentMethod.value) {
-            PaymentMethod.VENMO -> { venmoAddressParser }
+            PaymentMethod.ALGO -> { algorandAddressParser }
             PaymentMethod.CASH_APP -> { cashtagParser }
+            PaymentMethod.VENMO -> { venmoAddressParser }
             else -> { null }
         }?.apply {
             val (requestStatus, address) = parse(url) { status, address ->
@@ -152,8 +167,9 @@ class QRCodeScannerViewModel(app: Application): UIViewModel(app) {
         return QRCodeParser.Status.INVALID_URL
     }
 
-    fun initialize(method: PaymentMethod, name: String) {
+    fun initialize(subject: Int, method: PaymentMethod, name: String) {
         hasCameraPermission.value = false
+        qrCodeSubject = subject
         paymentMethod.value = method
         dinerName.value = name
         rawBarcode.value = null
@@ -169,7 +185,10 @@ class QRCodeScannerViewModel(app: Application): UIViewModel(app) {
     fun setBarcode(barcode: Barcode) {
         if (rawBarcode.value == null) {
             verifiedAddress.value = null
-            loadStatus.value = requestUrl(barcode.url?.url)
+
+            // Try to extract url first. If not possible (e.g., Algorand address), then use the
+            // display value.
+            loadStatus.value = requestUrl(barcode.url?.url ?: barcode.displayValue)
             rawBarcode.value = barcode
 
             vibrator?.apply { vibrate(25) }

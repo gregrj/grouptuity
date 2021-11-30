@@ -4,7 +4,6 @@ import android.animation.Animator
 import android.animation.ArgbEvaluator
 import android.animation.ValueAnimator
 import android.os.Bundle
-import android.util.Log
 import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
@@ -243,11 +242,8 @@ class BillSplitFragment: Fragment() {
         }
 
         billSplitViewModel.fabDrawableId.observe(viewLifecycleOwner) { drawableId ->
-            Log.e("drawableId", ""+drawableId)
-
             when {
                 (drawableId != fabActiveDrawableId) -> {
-                    Log.e("mismatch", "s")
                     if (binding.fab.isOrWillBeShown) {
                         binding.fab.hide(object: FloatingActionButton.OnVisibilityChangedListener() {
                             override fun onHidden(fab: FloatingActionButton) {
@@ -266,13 +262,11 @@ class BillSplitFragment: Fragment() {
                     }
                 }
                 (drawableId != null) -> {
-                    Log.e("match", "non null")
                     // Set image resource without animation (this is used during return navigation)
                     binding.fab.setImageResource(drawableId)
                     binding.fab.visibility = View.VISIBLE
                 }
                 else -> {
-                    Log.e("match", "null")
                     // Hide without animation (this is used during return navigation)
                     binding.fab.visibility = View.INVISIBLE
                 }

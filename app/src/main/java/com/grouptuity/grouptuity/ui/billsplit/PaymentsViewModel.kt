@@ -300,7 +300,6 @@ class PaymentsViewModel(app: Application): UIViewModel(app) {
                             }
                         } else {
                             // No aliases needed for payment method so proceed to surrogate selection
-                            cachedMethod = method
                             activePaymentAndMethod.value = Pair(this, method)
                         }
                     }
@@ -318,8 +317,8 @@ class PaymentsViewModel(app: Application): UIViewModel(app) {
                             // Existing template has same method so no further action required
                             setActivePayment(null)
                         } else {
-                            val payerAddress = payer.getDefaultAddressForMethod(method)
-                            if (payerAddress == null) {
+                            cachedPayerAddress = payer.getDefaultAddressForMethod(method)
+                            if (cachedPayerAddress == null) {
                                 // Need payer alias before setting payment method
                                 showSetAddressDialogEventMutable.value = Event(Triple(
                                     SELECTING_PAYER_ALIAS, payer, method))

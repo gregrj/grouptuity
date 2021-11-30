@@ -14,6 +14,7 @@
 
     <string name="rationale_key_camera">RATIONALE_KEY_CAMERA</string>
 
+    <string name="intent_key_qrcode_subject">INTENT_KEY_QRCODE_SUBJECT</string>
     <string name="intent_key_qrcode_payment_method">INTENT_KEY_QRCODE_PAYMENT_METHOD</string>
     <string name="intent_key_qrcode_diner_name">INTENT_KEY_QRCODE_DINER_NAME</string>
     <string name="intent_key_qrcode_payment_method_address">INTENT_KEY_QRCODE_PAYMENT_METHOD_ADDRESS</string>

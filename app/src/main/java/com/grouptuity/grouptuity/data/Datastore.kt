@@ -320,12 +320,15 @@ class Repository(context: Context) {
         mBill = newBill
         mCashPool = Diner(newUUID(), newBill.id, -1, Contact.cashPool)
         mRestaurant = Diner(newUUID(), newBill.id, -1, Contact.restaurant)
-        mSelfDiner = if (autoAddSelf.value) {
-            Diner(newUUID(), newBill.id, ++maxDinerListIndex, Contact.self)
+        if (autoAddSelf.value) {
+            Diner(newUUID(), newBill.id, ++maxDinerListIndex, Contact.self).also {
+                mSelfDiner = it
+                mDiners = mutableListOf(it)
+            }
         } else {
-            null
+            mSelfDiner = null
+            mDiners = mutableListOf()
         }
-        mDiners = mutableListOf()
         mItems = mutableListOf()
         mDebts = mutableListOf()
         mDiscounts = mutableListOf()

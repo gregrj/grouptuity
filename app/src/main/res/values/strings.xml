@@ -347,21 +347,24 @@
     <string name="payments_enter_manually">Enter manually</string>
     <string name="payments_ptp_username_hint">Enter username</string>
 
-    <string name="payment_method_cash_display_name">Cash</string>
-    <string name="payment_method_credit_card_individual_display_name">Credit card</string>
-    <string name="payment_method_credit_card_split_display_name">Credit card split</string>
-    <string name="payment_method_paybacklater_display_name">Payback later</string>
-    <string name="payment_method_venmo_display_name">Venmo</string>
-    <string name="payment_method_cash_app_display_name">Cash App</string>
-    <string name="payment_method_algorand_display_name">Algorand</string>
+    <string name="payment_method_display_name_cash">Cash</string>
+    <string name="payment_method_display_name_credit_card_individual">Credit card</string>
+    <string name="payment_method_display_name_credit_card_split">Credit card split</string>
+    <string name="payment_method_display_name_payback_later">Payback later</string>
+    <string name="payment_method_display_name_venmo">Venmo</string>
+    <string name="payment_method_display_name_cash_app">Cash App</string>
+    <string name="payment_method_display_name_algorand">Algorand</string>
 
-    <string name="payment_method_cash_address_name">Cash</string>
-    <string name="payment_method_credit_card_individual_address_name">Credit card number</string>
-    <string name="payment_method_credit_card_split_address_name">Credit card number</string>
-    <string name="payment_method_iou_email_address_name">Email address</string>
-    <string name="payment_method_venmo_address_name">Venmo address</string>
-    <string name="payment_method_cash_app_address_name">$Cashtag</string>
-    <string name="payment_method_algorand_address_name">Algorand address</string>
+    <string name="payment_method_address_name_cash_address">Cash</string>
+    <string name="payment_method_address_name_credit_card_individual">Credit card number</string>
+    <string name="payment_method_address_name_credit_card_split">Credit card number</string>
+    <string name="payment_method_address_name_payback_later">Email address</string>
+    <string name="payment_method_address_name_venmo">Venmo address</string>
+    <string name="payment_method_address_name_cash_app">$Cashtag</string>
+    <string name="payment_method_address_name_algorand">Algorand address</string>
+
+    <string name="payment_method_cash_app_toast_pay">Pay %1$s to %2$s</string>
+    <string name="payment_method_cash_app_toast_request">Request %1$s from %2$s</string>
 
     <string name="venmo_note">Settling the bill with Grouptuity</string>
 
