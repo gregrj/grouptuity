@@ -4,16 +4,58 @@
     xmlns:tools="http://schemas.android.com/tools"
     tools:context=".MainActivity">
 
+    <item
+        android:id="@+id/new_bill"
+        android:title="@string/billsplit_menu_diners_new_bill"
+        android:orderInCategory="1"
+        app:showAsAction="never" />
+
     <group android:id="@+id/group_diners">
         <item
-            android:id="@+id/new_bill"
-            android:title="@string/billsplit_menu_new_bill"
+            android:id="@+id/clear_diners"
+            android:title="@string/billsplit_menu_diners_remove_all_diners"
             android:orderInCategory="1"
             app:showAsAction="never" />
         <item
-            android:id="@+id/clear_diners"
-            android:title="@string/billsplit_menu_clear_diners"
+            android:id="@+id/add_self"
+            android:title="@string/billsplit_menu_diners_add_self"
             android:orderInCategory="2"
+            app:showAsAction="never" />
+    </group>
+
+    <group android:id="@+id/group_items">
+        <item
+            android:id="@+id/clear_items"
+            android:title="@string/billsplit_menu_items_remove_all_items"
+            android:orderInCategory="1"
+            app:showAsAction="never" />
+    </group>
+
+    <group android:id="@+id/group_taxtip">
+        <item
+            android:id="@+id/reset_tax_tip"
+            android:title="@string/billsplit_menu_taxtip_reset"
+            android:orderInCategory="1"
+            app:showAsAction="never" />
+        <item
+            android:id="@+id/tax_is_tipped"
+            android:title="@string/billsplit_menu_taxtip_tip_applied_to_tax"
+            android:orderInCategory="2"
+            android:checkable="true"
+            app:showAsAction="never" />
+        <item
+            android:id="@+id/discounts_reduce_tip"
+            android:title="@string/billsplit_menu_taxtip_discounts_reduce_tip"
+            android:orderInCategory="3"
+            android:checkable="true"
+            app:showAsAction="never" />
+    </group>
+
+    <group android:id="@+id/group_pay">
+        <item
+            android:id="@+id/reset_payments"
+            android:title="@string/billsplit_menu_pay_reset"
+            android:orderInCategory="1"
             app:showAsAction="never" />
     </group>
 

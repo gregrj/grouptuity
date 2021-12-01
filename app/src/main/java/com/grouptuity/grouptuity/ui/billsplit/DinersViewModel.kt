@@ -2,10 +2,8 @@ package com.grouptuity.grouptuity.ui.billsplit
 
 import android.accounts.AccountManager
 import android.app.Application
-import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.asLiveData
-import com.grouptuity.grouptuity.data.Contact
 import com.grouptuity.grouptuity.data.Diner
 import com.grouptuity.grouptuity.data.UIViewModel
 import kotlinx.coroutines.flow.combineTransform
@@ -26,7 +24,7 @@ class DinersViewModel(application: Application): UIViewModel(application) {
     fun removeDiner(diner: Diner) { repository.removeDiner(diner) }
 
     fun addSelfOrGetAccounts(): List<String>? {
-        return if (repository.userName.isSet == true) {
+        return if (repository.prefUserName.isSet == true) {
             repository.addSelfAsDiner()
             null
         } else {
@@ -36,7 +34,7 @@ class DinersViewModel(application: Application): UIViewModel(application) {
 
     fun addSelfToBill(userName: String?) {
         if (userName != null) {
-            repository.userName.value = userName
+            repository.prefUserName.value = userName
             repository.addSelfAsDiner(userName)
         } else {
             repository.addSelfAsDiner()

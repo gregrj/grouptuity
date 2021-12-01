@@ -46,11 +46,11 @@ class SettingsViewModel(app: Application): UIViewModel(app) {
         override fun putString(key: String?, value: String?) { (repository.keyStoredPreferenceMap[key] as? Repository.StoredPreference<String>)?.value = value!! }
     }
 
-    val defaultTaxPercent = repository.defaultTaxPercent.stateFlow.asLiveData()
-    val defaultTipPercent = repository.defaultTipPercent.stateFlow.asLiveData()
+    val defaultTaxPercent = repository.prefDefaultTaxPercent.stateFlow.asLiveData()
+    val defaultTipPercent = repository.prefDefaultTipPercent.stateFlow.asLiveData()
 
-    fun setDefaultTaxPercent(value: String) { repository.defaultTaxPercent.value = value }
-    fun setDefaultTipPercent(value: String) { repository.defaultTipPercent.value = value }
+    fun setDefaultTaxPercent(value: String) { repository.prefDefaultTaxPercent.value = value }
+    fun setDefaultTipPercent(value: String) { repository.prefDefaultTipPercent.value = value }
 }
 
 

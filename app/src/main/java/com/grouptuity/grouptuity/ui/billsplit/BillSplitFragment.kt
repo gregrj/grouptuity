@@ -19,7 +19,9 @@ import androidx.navigation.fragment.findNavController
 import androidx.transition.Transition
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
+import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.floatingactionbutton.FloatingActionButton
+import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.tabs.TabLayoutMediator
 import com.grouptuity.grouptuity.MainActivity
 import com.grouptuity.grouptuity.R
@@ -327,17 +329,112 @@ class BillSplitFragment: Fragment() {
         binding.toolbar.inflateMenu(R.menu.toolbar_billsplit)
         binding.toolbar.setOnMenuItemClickListener { item ->
             when(item.itemId) {
-                R.id.new_bill -> {
-                    billSplitViewModel.createNewBill()
-                    true
+                R.id.new_bill -> { billSplitViewModel.createNewBill() }
+                R.id.clear_diners -> { confirmRemoveAllDiners() }
+                R.id.clear_items -> { confirmRemoveAllItems() }
+                R.id.reset_tax_tip -> {
+                    val undo: () -> Unit = billSplitViewModel.resetTaxAndTip()
+                    Snackbar.make(
+                        binding.viewPager,
+                        R.string.billsplit_snackbar_pay_reset,
+                        Snackbar.LENGTH_LONG)
+                        .setAction(R.string.undo) { undo() }
+                        .show()
                 }
-                R.id.clear_diners -> {
-                    //TODO
-                    true
+                R.id.reset_payments -> { billSplitViewModel.resetAllPayments() }
+                R.id.add_self -> { billSplitViewModel.includeSelfAsDiner() }
+                R.id.tax_is_tipped -> { billSplitViewModel.toggleTaxIsTipped() }
+                R.id.discounts_reduce_tip -> { billSplitViewModel.toggleDiscountsReduceTip() }
+                else -> { return@setOnMenuItemClickListener false }
+            }
+            true
+        }
+
+        Off load logic into viewmodel
+        billSplitViewModel.billIncludesSelf.observe(viewLifecycleOwner) {
+            binding.toolbar.menu.findItem(R.id.add_self).isVisible = !it
+        }
+
+        billSplitViewModel.dinerCount.observe(viewLifecycleOwner) {
+            binding.toolbar.menu.findItem(R.id.clear_diners).isVisible = it > 0
+        }
+
+        billSplitViewModel.itemCount.observe(viewLifecycleOwner) {
+            binding.toolbar.menu.findItem(R.id.clear_items).isVisible = it > 0
+        }
+
+        billSplitViewModel.taxIsTipped.observe(viewLifecycleOwner) {
+            binding.toolbar.menu.findItem(R.id.tax_is_tipped).isChecked = it
+        }
+
+        billSplitViewModel.discountsReduceTip.observe(viewLifecycleOwner) {
+            binding.toolbar.menu.findItem(R.id.discounts_reduce_tip).isChecked = it
+        }
+
+        billSplitViewModel.activeFragmentIndexLiveData.observe(viewLifecycleOwner) {
+            when (it) {
+                FRAG_DINERS -> {
+                    binding.toolbar.menu.setGroupVisible(R.id.group_diners, true)
+                    binding.toolbar.menu.setGroupVisible(R.id.group_items, false)
+                    binding.toolbar.menu.setGroupVisible(R.id.group_taxtip, false)
+                    binding.toolbar.menu.setGroupVisible(R.id.group_pay, false)
                 }
-                else -> { false }
+                FRAG_ITEMS -> {
+                    binding.toolbar.menu.setGroupVisible(R.id.group_diners, false)
+                    binding.toolbar.menu.setGroupVisible(R.id.group_items, true)
+                    binding.toolbar.menu.setGroupVisible(R.id.group_taxtip, false)
+                    binding.toolbar.menu.setGroupVisible(R.id.group_pay, false)
+                }
+                FRAG_TAX_TIP -> {
+                    binding.toolbar.menu.setGroupVisible(R.id.group_diners, false)
+                    binding.toolbar.menu.setGroupVisible(R.id.group_items, false)
+                    binding.toolbar.menu.setGroupVisible(R.id.group_taxtip, true)
+                    binding.toolbar.menu.setGroupVisible(R.id.group_pay, false)
+                }
+                FRAG_PAYMENTS -> {
+                    binding.toolbar.menu.setGroupVisible(R.id.group_diners, false)
+                    binding.toolbar.menu.setGroupVisible(R.id.group_items, false)
+                    binding.toolbar.menu.setGroupVisible(R.id.group_taxtip, false)
+                    binding.toolbar.menu.setGroupVisible(R.id.group_pay, true)
+                }
             }
         }
+    }
+
+    private fun confirmRemoveAllDiners() {
+        MaterialAlertDialogBuilder(requireContext(), R.style.AlertDialogPosSuggestionSecondary)
+            .setTitle(resources.getString(R.string.billsplit_alert_remove_all_diners_title))
+            .setMessage(resources.getString(R.string.billsplit_alert_remove_all_diners_message))
+            .setCancelable(true)
+            .setNegativeButton(resources.getString(R.string.remove_all)) { _, _ ->
+                billSplitViewModel.removeAllDiners()
+
+                Snackbar.make(
+                    binding.viewPager,
+                    R.string.billsplit_alert_remove_all_diners_snackbar,
+                    Snackbar.LENGTH_SHORT)
+                    .show()
+            }
+            .setPositiveButton(resources.getString(R.string.cancel)) { _, _ -> }
+            .show()
+    }
+
+    private fun confirmRemoveAllItems() {
+        MaterialAlertDialogBuilder(requireContext(), R.style.AlertDialogPosSuggestionSecondary)
+            .setTitle(resources.getString(R.string.billsplit_alert_remove_all_items_title))
+            .setMessage(resources.getString(R.string.billsplit_alert_remove_all_items_message))
+            .setCancelable(true)
+            .setNegativeButton(resources.getString(R.string.remove_all)) { _, _ ->
+                billSplitViewModel.removeAllItems()
+
+                Snackbar.make(
+                    binding.viewPager,
+                    R.string.billsplit_alert_remove_all_diners_snackbar,
+                    Snackbar.LENGTH_SHORT)
+                    .show()
+            }
+            .setPositiveButton(resources.getString(R.string.cancel)) { _, _ -> }
+            .show()
     }
 
     fun startNewDinerReturnTransition(viewBinding: FragDinersListitemBinding, newDiner: Diner, dinerSubtotal: String) {

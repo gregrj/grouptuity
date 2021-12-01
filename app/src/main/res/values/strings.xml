@@ -19,9 +19,21 @@
     <string name="billsplit_tab_items">Items</string>
     <string name="billsplit_tab_taxtip">Tax&amp;Tip</string>
     <string name="billsplit_tab_payment">Pay</string>
-    <string name="billsplit_menu_new_bill">New bill</string>
-    <string name="billsplit_menu_clear_diners">Clear diners</string>
-    <string name="billsplit_menu_clear_items">Clear items</string>
+    <string name="billsplit_menu_diners_new_bill">Create new bill</string>
+    <string name="billsplit_menu_diners_remove_all_diners">Remove all diners</string>
+    <string name="billsplit_menu_diners_add_self">Include yourself</string>
+    <string name="billsplit_menu_items_remove_all_items">Remove all items</string>
+    <string name="billsplit_menu_taxtip_reset">Reset tax &amp; tip</string>
+    <string name="billsplit_menu_taxtip_tip_applied_to_tax">Tip applied to tax</string>
+    <string name="billsplit_menu_taxtip_discounts_reduce_tip">Discounts reduce tip</string>
+    <string name="billsplit_menu_pay_reset">Reset payments</string>
+    <string name="billsplit_snackbar_pay_reset">Tax and tip reset to default percentages</string>
+    <string name="billsplit_alert_remove_all_diners_title">Remove all diners?</string>
+    <string name="billsplit_alert_remove_all_diners_message">This action cannot be undone</string>
+    <string name="billsplit_alert_remove_all_diners_snackbar">All diners removed from bill</string>
+    <string name="billsplit_alert_remove_all_items_title">Remove all items?</string>
+    <string name="billsplit_alert_remove_all_items_message">This action cannot be undone</string>
+    <string name="billsplit_alert_remove_all_items_snackbar">All items removed from bill</string>
 
     <string name="diners_add_self">Include yourself</string>
     <string name="diners_add_self_name_entry_title">Your name</string>
@@ -246,6 +258,8 @@
         <item quantity="other">%1$d diners split %2$s reimbursement</item>
     </plurals>
     <string name="discounts_reimbursement_all">Everyone split %s reimbursement</string>
+    <string name="discounts_alert_remove_all_discounts_title">Remove all discounts?</string>
+    <string name="discounts_alert_remove_all_discounts_message">This action cannot be undone</string>
 
     <string name="discountentry_tabs_discount">Discount</string>
     <string name="discountentry_tabs_reimbursement">Reimbursement</string>
@@ -420,6 +434,7 @@
     <string name="skip">Skip</string>
     <string name="proceed">Continue</string>
     <string name="keep">Keep</string>
+    <string name="remove_all">Remove all</string>
     <string name="discard">Discard</string>
     <string name="edit">Edit</string>
     <string name="undo">UNDO</string>

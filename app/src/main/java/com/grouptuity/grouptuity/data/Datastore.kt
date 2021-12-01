@@ -109,17 +109,17 @@ class Repository(context: Context) {
     val keyStoredPreferenceMap = mutableMapOf<String, StoredPreference<*>>()
 
     // Preferences
-    val appVersion = StoredPreference(stringPreferencesKey(context.getString(R.string.preference_key_app_version)), BuildConfig.VERSION_NAME)
-    val loadedBillId = StoredPreference(stringPreferencesKey(context.getString(R.string.preference_key_loaded_bill_id)), "uninitialized")
-    val userName = StoredPreference(stringPreferencesKey(context.getString(R.string.preference_key_user_name)), context.getString(R.string.default_user_name))
-    val userEmail = StoredPreference(stringPreferencesKey(context.getString(R.string.preference_key_user_email)), "")
-    val userPhotoUri = StoredPreference(stringPreferencesKey(context.getString(R.string.preference_key_user_photo_uri)), "")
-    val defaultTaxPercent = StoredPreference(stringPreferencesKey(context.getString(R.string.preference_key_default_tax_percent)), context.getString(R.string.default_default_tax_percent))
-    val defaultTipPercent = StoredPreference(stringPreferencesKey(context.getString(R.string.preference_key_default_tip_percent)), context.getString(R.string.default_default_tip_percent))
-    val taxIsTipped = StoredPreference(booleanPreferencesKey(context.getString(R.string.preference_key_tax_is_tipped)), context.resources.getBoolean(R.bool.default_tax_is_tipped))
-    val discountsReduceTip = StoredPreference(booleanPreferencesKey(context.getString(R.string.preference_key_discounts_reduce_tip)), context.resources.getBoolean(R.bool.default_discounts_reduce_tip))
-    val autoAddSelf = StoredPreference(booleanPreferencesKey(context.getString(R.string.preference_key_auto_add_self)), context.resources.getBoolean(R.bool.default_auto_add_self))
-    val searchWithTypoAssist = StoredPreference(booleanPreferencesKey(context.getString(R.string.preference_key_contact_search_typo_assist)), context.resources.getBoolean(R.bool.default_contact_search_typo_assist))
+    val prefAppVersion = StoredPreference(stringPreferencesKey(context.getString(R.string.preference_key_app_version)), BuildConfig.VERSION_NAME)
+    val prefLoadedBillId = StoredPreference(stringPreferencesKey(context.getString(R.string.preference_key_loaded_bill_id)), "uninitialized")
+    val prefUserName = StoredPreference(stringPreferencesKey(context.getString(R.string.preference_key_user_name)), context.getString(R.string.default_user_name))
+    val prefUserEmail = StoredPreference(stringPreferencesKey(context.getString(R.string.preference_key_user_email)), "")
+    val prefUserPhotoUri = StoredPreference(stringPreferencesKey(context.getString(R.string.preference_key_user_photo_uri)), "")
+    val prefDefaultTaxPercent = StoredPreference(stringPreferencesKey(context.getString(R.string.preference_key_default_tax_percent)), context.getString(R.string.default_default_tax_percent))
+    val prefDefaultTipPercent = StoredPreference(stringPreferencesKey(context.getString(R.string.preference_key_default_tip_percent)), context.getString(R.string.default_default_tip_percent))
+    val prefTaxIsTipped = StoredPreference(booleanPreferencesKey(context.getString(R.string.preference_key_tax_is_tipped)), context.resources.getBoolean(R.bool.default_tax_is_tipped))
+    val prefDiscountsReduceTip = StoredPreference(booleanPreferencesKey(context.getString(R.string.preference_key_discounts_reduce_tip)), context.resources.getBoolean(R.bool.default_discounts_reduce_tip))
+    val prefAutoAddSelf = StoredPreference(booleanPreferencesKey(context.getString(R.string.preference_key_auto_add_self)), context.resources.getBoolean(R.bool.default_auto_add_self))
+    val prefSearchWithTypoAssist = StoredPreference(booleanPreferencesKey(context.getString(R.string.preference_key_contact_search_typo_assist)), context.resources.getBoolean(R.bool.default_contact_search_typo_assist))
 
     // App-level data
     val loadInProgress = MutableStateFlow(true)
@@ -134,7 +134,7 @@ class Repository(context: Context) {
         }.launchIn(CoroutineScope(Dispatchers.Unconfined))
     }
     val bills = database.getSavedBills()
-    val selfContact = combine(userName.stateFlow, userPhotoUri.stateFlow) { userName, userPhotoUri ->
+    val selfContact = combine(prefUserName.stateFlow, prefUserPhotoUri.stateFlow) { userName, userPhotoUri ->
         Contact.updateSelfContactData(userName, userPhotoUri)
         //TODO database.contactDao().save(Contact.self)
         Contact.self
@@ -196,6 +196,8 @@ class Repository(context: Context) {
     val tipPercent: Flow<Double> = _tipPercent
     val groupTipAmount: Flow<Double> = _groupTipAmount
     val groupTotal: Flow<Double> = _groupTotal
+    val taxIsTipped: Flow<Boolean> = bill.mapLatest { it.isTaxTipped }
+    val discountsReduceTip: Flow<Boolean> = bill.mapLatest { it.discountsReduceTip }
 
     // Individual bill calculation results
     private val _individualSubtotals = MutableStateFlow(emptyMap<Diner, Double>())
@@ -232,6 +234,7 @@ class Repository(context: Context) {
     val discountValues: StateFlow<Map<Discount, Double>> = _discountValues
     val numberOfDiners = diners.mapLatest { it.size }.stateIn(CoroutineScope(Dispatchers.Unconfined), SharingStarted.Eagerly, 0)
     val numberOfItems = items.mapLatest { it.size }.stateIn(CoroutineScope(Dispatchers.Unconfined), SharingStarted.Eagerly, 0)
+    val billIncludesSelf = diners.mapLatest { it.any { it.isSelf() } }.stateIn(CoroutineScope(Dispatchers.Unconfined), SharingStarted.Eagerly, false)
     val hasUnprocessedPayments = payments.mapLatest { paymentsList -> paymentsList.any { it.unprocessed()} }
 
     private fun commitBill() = CoroutineScope(Dispatchers.Default).launch {
@@ -304,12 +307,12 @@ class Repository(context: Context) {
             newUUID(),
             "Bill from " + SimpleDateFormat.getDateTimeInstance(DateFormat.DEFAULT, DateFormat.SHORT).format(Date(timestamp)),
             timestamp,
-            defaultTaxPercent.value.toDouble(),
+            prefDefaultTaxPercent.value.toDouble(),
             true,
-            defaultTipPercent.value.toDouble(),
+            prefDefaultTipPercent.value.toDouble(),
             true,
-            taxIsTipped.value,
-            discountsReduceTip.value)
+            prefTaxIsTipped.value,
+            prefDiscountsReduceTip.value)
 
         maxDinerListIndex = 0
         maxItemListIndex = 0
@@ -320,7 +323,7 @@ class Repository(context: Context) {
         mBill = newBill
         mCashPool = Diner(newUUID(), newBill.id, -1, Contact.cashPool)
         mRestaurant = Diner(newUUID(), newBill.id, -1, Contact.restaurant)
-        if (autoAddSelf.value) {
+        if (prefAutoAddSelf.value) {
             Diner(newUUID(), newBill.id, ++maxDinerListIndex, Contact.self).also {
                 mSelfDiner = it
                 mDiners = mutableListOf(it)
@@ -341,7 +344,7 @@ class Repository(context: Context) {
 
         // Write updates to the database
         database.saveBill(newBill).invokeOnCompletion {
-            loadedBillId.value = newBill.id
+            prefLoadedBillId.value = newBill.id
 
             database.saveDiner(mCashPool)
             database.saveDiner(mRestaurant)
@@ -378,7 +381,7 @@ class Repository(context: Context) {
             }
 
             // Save ID of newly loaded bill so it will reload automatically on app relaunch
-            loadedBillId.value = payload.bill.id
+            prefLoadedBillId.value = payload.bill.id
         }
     }
     fun deleteBill(bill: Bill) {
@@ -424,9 +427,37 @@ class Repository(context: Context) {
         commitBill()
         database.saveBill(mBill)
     }
+    fun resetTaxAndTip(): () -> Unit {
+        val oldTaxAsPercent = mBill.taxAsPercent
+        val oldTipAsPercent = mBill.tipAsPercent
+        val oldTax = mBill.tax
+        val oldTip = mBill.tip
+
+        mBill = mBill
+            .withTaxPercent(prefDefaultTaxPercent.value.toDouble())
+            .withTipPercent(prefDefaultTipPercent.value.toDouble())
+        commitBill()
+        database.saveBill(mBill)
+
+        return {
+            mBill = mBill
+                .let { if (oldTaxAsPercent) it.withTaxPercent(oldTax) else it.withTaxAmount(oldTax) }
+                .let { if (oldTipAsPercent) it.withTipPercent(oldTip) else it.withTipAmount(oldTip) }
+            commitBill()
+            database.saveBill(mBill)
+        }
+    }
+    fun toggleTaxIsTipped() { setTaxTipped(!mBill.isTaxTipped) }
+    fun toggleDiscountsReduceTip() { setDiscountsReduceTip(!mBill.discountsReduceTip) }
 
     // Diner Functions
     fun addSelfAsDiner(name: String? = null, includeWithEveryone: Boolean = true) {
+        // Return if self is already on the bill
+        if (mDiners.any { it.isSelf() }) {
+            Log.e("addSelfAsDiner", "Self is already included on the bill")
+            return
+        }
+
         // Save new name to Contact.self before instantiating the self Diner
         if (name != null) {
             Contact.updateSelfContactData(name, Contact.self.photoUri)
@@ -519,6 +550,27 @@ class Repository(context: Context) {
         database.deleteDiner(diner)
         // TODO warn if any entities are without diners
     }
+    fun removeAllDiners() {
+        val oldDiners = mDiners
+
+        mDiners.forEach { diner ->
+            diner.items.forEach { it.removeDiner(diner) }
+            diner.debtsOwed.forEach { it.removeDebtor(diner) }
+            diner.debtsHeld.forEach { it.removeCreditor(diner) }
+            diner.discountsReceived.forEach { it.removeRecipient(diner) }
+            diner.discountsPurchased.forEach { it.removePurchaser(diner) }
+            diner.paymentsSent.forEach { mPayments.remove(it) }
+            diner.paymentsReceived.forEach { mPayments.remove(it) }
+        }
+        mDiners = mutableListOf()
+        mSelfDiner = null
+
+        commitBill()
+
+        database.deleteDiners(oldDiners)
+
+        // TODO warn if any entities are without items
+    }
 
     // Item Functions
     fun createNewItem(price: Double, name: String, diners: Collection<Diner>): Item {
@@ -569,6 +621,21 @@ class Repository(context: Context) {
         commitBill()
 
         database.deleteItem(item)
+        // TODO warn if any item discounts are without items
+    }
+    fun removeAllItems() {
+        val oldItems = mItems
+
+        mItems.forEach { item ->
+            item.diners.forEach { it.removeItem(item) }
+            item.discounts.forEach { it.removeItem(item) }
+        }
+
+        mItems = mutableListOf()
+
+        commitBill()
+
+        database.deleteItems(oldItems)
         // TODO warn if any item discounts are without items
     }
 
@@ -716,10 +783,13 @@ class Repository(context: Context) {
 
         database.saveDiner(payer)
     }
+    fun resetAllPaymentTemplates() {
+        // TODO
+    }
 
     init {
         ProcessLifecycleOwner.get().lifecycleScope.launchWhenResumed {
-            when(val billId = loadedBillId.value) {
+            when(val billId = prefLoadedBillId.value) {
                 "uninitialized" -> createAndLoadNewBill()
                 mBill.id -> { /* Correct bill already loaded */ }
                 else -> {
