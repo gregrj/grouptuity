@@ -1,6 +1,8 @@
 package com.grouptuity.grouptuity
 
-import android.app.Activity
+import android.animation.ObjectAnimator
+import android.animation.ValueAnimator
+import android.app.ActivityManager
 import android.app.SearchManager
 import android.content.Intent
 import android.graphics.Bitmap
@@ -12,7 +14,10 @@ import android.util.TypedValue
 import android.view.PixelCopy
 import android.view.View
 import android.view.ViewGroup
+import android.view.animation.AnticipateInterpolator
 import androidx.appcompat.app.AppCompatActivity
+import androidx.core.animation.doOnEnd
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.core.view.*
 import androidx.drawerlayout.widget.DrawerLayout
 import androidx.lifecycle.ViewModelProvider
@@ -37,6 +42,21 @@ class MainActivity: AppCompatActivity() {
 
         appViewModel = ViewModelProvider(this)[AppViewModel::class.java]
 
+        installSplashScreen().setOnExitAnimationListener { splashScreenView ->
+            ValueAnimator.ofFloat(1f, 0f).apply {
+                interpolator = AnticipateInterpolator()
+                duration = 600L
+                addUpdateListener {
+                    splashScreenView.iconView.scaleX = it.animatedValue as Float
+                    splashScreenView.iconView.scaleY = it.animatedValue as Float
+
+                    splashScreenView.view.alpha = it.animatedValue as Float
+
+                }
+                doOnEnd { splashScreenView.remove() }
+            }.start()
+        }
+
         binding = ActivityMainBinding.inflate(layoutInflater)
         setContentView(binding.root)
 
@@ -47,10 +67,16 @@ class MainActivity: AppCompatActivity() {
         listener. */
         WindowCompat.setDecorFitsSystemWindows(window, false)
         ViewCompat.setOnApplyWindowInsetsListener(binding.root) { view, insets ->
-            val systemInsets = insets.getInsets(WindowInsetsCompat.Type.systemBars() and WindowInsetsCompat.Type.statusBars().inv())
+            val systemInsets = insets.getInsets(
+                WindowInsetsCompat.Type.systemBars() and
+                        WindowInsetsCompat.Type.statusBars().inv())
 
             view.updateLayoutParams<ViewGroup.MarginLayoutParams> {
-                updateMargins(systemInsets.left, systemInsets.top, systemInsets.right, systemInsets.bottom)
+                updateMargins(
+                    systemInsets.left,
+                    systemInsets.top,
+                    systemInsets.right,
+                    systemInsets.bottom)
             }
 
             insets
@@ -60,7 +86,8 @@ class MainActivity: AppCompatActivity() {
 
         // TODO figure out what to do about menu item clickability
         // TODO Retain setting and allow reversion to system default
-        val switchWidget = binding.drawerNavView.menu.findItem(R.id.dark_mode_switch).actionView.findViewById<SwitchMaterial>(R.id.switch_widget)
+        val switchWidget = binding.drawerNavView.menu.findItem(R.id.dark_mode_switch).actionView
+            .findViewById<SwitchMaterial>(R.id.switch_widget)
         switchWidget.setOnClickListener {
             if(switchWidget.isChecked) {
                 appViewModel.switchToDarkTheme()
@@ -69,12 +96,27 @@ class MainActivity: AppCompatActivity() {
             }
         }
 
-        // Hack: Setting the navigation bar color with xml style had issues during testing. Setting
-        // the color programmatically works.
+        // Setting the navigation bar color with xml style had issues during testing, but setting
+        // the color programmatically works
         appViewModel.darkThemeActive.observe(this) { darkThemeActive ->
             switchWidget.isChecked = darkThemeActive
-            window.navigationBarColor = TypedValue().also { this.theme.resolveAttribute(R.attr.colorBackground, it, true) }.data
+            window.navigationBarColor = TypedValue().also {
+                this.theme.resolveAttribute(R.attr.colorBackground, it, true)
+            }.data
         }
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        // Need to manually set task description (i.e., header on window shown in recent apps) or it
+        // will render with a black bar
+        setTaskDescription(ActivityManager.TaskDescription(
+            getString(R.string.app_name),
+            R.mipmap.ic_launcher,
+            TypedValue().also {
+                this.theme.resolveAttribute(R.attr.colorPrimary, it, true)
+            }.data))
     }
 
     override fun onBackPressed() {

@@ -290,7 +290,7 @@ class BillSplitFragment: Fragment() {
         binding.paymentFab.setOnClickListener { billSplitViewModel.requestProcessPayments() }
     }
 
-    fun setupToolbar() {
+    private fun setupToolbar() {
         binding.toolbar.inflateMenu(R.menu.toolbar_billsplit)
 
         billSplitViewModel.toolbarState.observe(viewLifecycleOwner) {
