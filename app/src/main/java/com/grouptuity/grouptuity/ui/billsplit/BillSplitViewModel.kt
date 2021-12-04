@@ -10,18 +10,39 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.mapLatest
 
+data class BillSplitToolbarState(
+    val activePage: Int,
+    val showIncludeSelf: Boolean,
+    val showClearDiners: Boolean,
+    val showClearItems: Boolean,
+    val checkTaxIsTipped: Boolean,
+    val checkDiscountsReduceTip: Boolean)
 
 class BillSplitViewModel(application: Application): UIViewModel(application) {
     val dinerCount = repository.numberOfDiners.asLiveData()
     val itemCount = repository.numberOfItems.asLiveData()
-    val billIncludesSelf = repository.billIncludesSelf.asLiveData()
-    val taxIsTipped = repository.taxIsTipped.asLiveData()
-    val discountsReduceTip = repository.discountsReduceTip.asLiveData()
 
     val activeFragmentIndex = repository.activeFragmentIndex
     val activeFragmentIndexLiveData = activeFragmentIndex.asLiveData()
 
     val isProcessingPayments = repository.processingPayments.withOutputSwitch(isOutputFlowing).asLiveData()
+
+    val toolbarState: LiveData<BillSplitToolbarState> = combine(
+        activeFragmentIndex,
+        repository.billIncludesSelf,
+        repository.numberOfDiners,
+        repository.numberOfItems,
+        repository.taxIsTipped,
+        repository.discountsReduceTip) {
+
+        BillSplitToolbarState(
+            activePage = it[0] as Int,
+            showIncludeSelf = !(it[1] as Boolean),
+            showClearDiners = (it[2] as Int) > 0,
+            showClearItems = (it[3] as Int) > 0,
+            checkTaxIsTipped = it[4] as Boolean,
+            checkDiscountsReduceTip = it[5] as Boolean)
+    }.asLiveData()
 
     private val showProcessPaymentsButtonFlow = combine(
         activeFragmentIndex,

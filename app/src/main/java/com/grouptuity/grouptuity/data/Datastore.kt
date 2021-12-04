@@ -234,7 +234,7 @@ class Repository(context: Context) {
     val discountValues: StateFlow<Map<Discount, Double>> = _discountValues
     val numberOfDiners = diners.mapLatest { it.size }.stateIn(CoroutineScope(Dispatchers.Unconfined), SharingStarted.Eagerly, 0)
     val numberOfItems = items.mapLatest { it.size }.stateIn(CoroutineScope(Dispatchers.Unconfined), SharingStarted.Eagerly, 0)
-    val billIncludesSelf = diners.mapLatest { it.any { it.isSelf() } }.stateIn(CoroutineScope(Dispatchers.Unconfined), SharingStarted.Eagerly, false)
+    val billIncludesSelf = diners.mapLatest { it.any { diner -> diner.isSelf() } }.stateIn(CoroutineScope(Dispatchers.Unconfined), SharingStarted.Eagerly, false)
     val hasUnprocessedPayments = payments.mapLatest { paymentsList -> paymentsList.any { it.unprocessed()} }
 
     private fun commitBill() = CoroutineScope(Dispatchers.Default).launch {

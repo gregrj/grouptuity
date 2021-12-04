@@ -5,9 +5,7 @@ import android.animation.ArgbEvaluator
 import android.animation.ValueAnimator
 import android.os.Bundle
 import android.util.TypedValue
-import android.view.LayoutInflater
-import android.view.View
-import android.view.ViewGroup
+import android.view.*
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.ImageView
 import android.widget.LinearLayout
@@ -73,8 +71,6 @@ class BillSplitFragment: Fragment() {
             args.clear()
         }
 
-        setupToolbarMenu()
-
         binding.viewPager.also { viewPager ->
             viewPager.adapter = object: FragmentStateAdapter(this) {
 
@@ -113,6 +109,14 @@ class BillSplitFragment: Fragment() {
                 else -> ""
             }
         }.attach()
+
+        setupToolbar()
+
+        setupTabBadges()
+
+        billSplitViewModel.toolbarState.observe(viewLifecycleOwner) {
+            requireActivity().invalidateOptionsMenu()
+        }
 
         val primaryColor = TypedValue().also { requireContext().theme.resolveAttribute(R.attr.colorPrimary, it, true) }.data
         val primaryDarkColor = TypedValue().also { requireContext().theme.resolveAttribute(R.attr.colorPrimaryVariant, it, true) }.data
@@ -221,28 +225,6 @@ class BillSplitFragment: Fragment() {
             }
         }
 
-        // Overlay badge on diners tab showing how many diners are on the bill
-        billSplitViewModel.dinerCount.observe(viewLifecycleOwner) {
-            binding.tabLayout.getTabAt(FRAG_DINERS)?.apply {
-                if(it > 0) {
-                    orCreateBadge.number = it
-                } else {
-                    removeBadge()
-                }
-            }
-        }
-
-        // Overlay badge on items tab showing how many items are on the bill
-        billSplitViewModel.itemCount.observe(viewLifecycleOwner) {
-            binding.tabLayout.getTabAt(FRAG_ITEMS)?.apply {
-                if(it > 0) {
-                    orCreateBadge.number = it
-                } else {
-                    removeBadge()
-                }
-            }
-        }
-
         billSplitViewModel.fabDrawableId.observe(viewLifecycleOwner) { drawableId ->
             when {
                 (drawableId != fabActiveDrawableId) -> {
@@ -308,25 +290,46 @@ class BillSplitFragment: Fragment() {
         binding.paymentFab.setOnClickListener { billSplitViewModel.requestProcessPayments() }
     }
 
-    override fun onViewStateRestored(savedInstanceState: Bundle?) {
-        super.onViewStateRestored(savedInstanceState)
-
-        //Restore view pager state to the active fragment index
-        binding.viewPager.setCurrentItem(billSplitViewModel.activeFragmentIndex.value, false)
-    }
-
-    override fun onResume() {
-        super.onResume()
-
-        // Disable all surrogate views used for simulated shared element return transitions
-        binding.newDinerSharedElement.cardBackground.visibility = View.GONE
-        binding.newItemSharedElement.cardBackground.visibility = View.GONE
-        newDinerIdForTransition = null
-        newItemIdForTransition = null
-    }
-
-    private fun setupToolbarMenu() {
+    fun setupToolbar() {
         binding.toolbar.inflateMenu(R.menu.toolbar_billsplit)
+
+        billSplitViewModel.toolbarState.observe(viewLifecycleOwner) {
+            binding.toolbar.menu.also { menu ->
+                menu.findItem(R.id.add_self).isEnabled = it.showIncludeSelf
+                menu.findItem(R.id.clear_diners).isEnabled = it.showClearDiners
+                menu.findItem(R.id.clear_items).isEnabled = it.showClearItems
+                menu.findItem(R.id.tax_is_tipped).isChecked = it.checkTaxIsTipped
+                menu.findItem(R.id.discounts_reduce_tip).isChecked = it.checkDiscountsReduceTip
+
+                when (it.activePage) {
+                    FRAG_DINERS -> {
+                        menu.setGroupVisible(R.id.group_diners, true)
+                        menu.setGroupVisible(R.id.group_items, false)
+                        menu.setGroupVisible(R.id.group_taxtip, false)
+                        menu.setGroupVisible(R.id.group_pay, false)
+                    }
+                    FRAG_ITEMS -> {
+                        menu.setGroupVisible(R.id.group_diners, false)
+                        menu.setGroupVisible(R.id.group_items, true)
+                        menu.setGroupVisible(R.id.group_taxtip, false)
+                        menu.setGroupVisible(R.id.group_pay, false)
+                    }
+                    FRAG_TAX_TIP -> {
+                        menu.setGroupVisible(R.id.group_diners, false)
+                        menu.setGroupVisible(R.id.group_items, false)
+                        menu.setGroupVisible(R.id.group_taxtip, true)
+                        menu.setGroupVisible(R.id.group_pay, false)
+                    }
+                    FRAG_PAYMENTS -> {
+                        menu.setGroupVisible(R.id.group_diners, false)
+                        menu.setGroupVisible(R.id.group_items, false)
+                        menu.setGroupVisible(R.id.group_taxtip, false)
+                        menu.setGroupVisible(R.id.group_pay, true)
+                    }
+                }
+            }
+        }
+
         binding.toolbar.setOnMenuItemClickListener { item ->
             when(item.itemId) {
                 R.id.new_bill -> { billSplitViewModel.createNewBill() }
@@ -345,57 +348,48 @@ class BillSplitFragment: Fragment() {
                 R.id.add_self -> { billSplitViewModel.includeSelfAsDiner() }
                 R.id.tax_is_tipped -> { billSplitViewModel.toggleTaxIsTipped() }
                 R.id.discounts_reduce_tip -> { billSplitViewModel.toggleDiscountsReduceTip() }
-                else -> { return@setOnMenuItemClickListener false }
+                else -> {  return@setOnMenuItemClickListener false }
             }
             true
         }
+    }
 
-        Off load logic into viewmodel
-        billSplitViewModel.billIncludesSelf.observe(viewLifecycleOwner) {
-            binding.toolbar.menu.findItem(R.id.add_self).isVisible = !it
-        }
+    override fun onViewStateRestored(savedInstanceState: Bundle?) {
+        super.onViewStateRestored(savedInstanceState)
 
+        //Restore view pager state to the active fragment index
+        binding.viewPager.setCurrentItem(billSplitViewModel.activeFragmentIndex.value, false)
+    }
+
+    override fun onResume() {
+        super.onResume()
+
+        // Disable all surrogate views used for simulated shared element return transitions
+        binding.newDinerSharedElement.cardBackground.visibility = View.GONE
+        binding.newItemSharedElement.cardBackground.visibility = View.GONE
+        newDinerIdForTransition = null
+        newItemIdForTransition = null
+    }
+
+    private fun setupTabBadges() {
+        // Overlay badge on diners tab showing how many diners are on the bill
         billSplitViewModel.dinerCount.observe(viewLifecycleOwner) {
-            binding.toolbar.menu.findItem(R.id.clear_diners).isVisible = it > 0
+            binding.tabLayout.getTabAt(FRAG_DINERS)?.apply {
+                if(it > 0) {
+                    orCreateBadge.number = it
+                } else {
+                    removeBadge()
+                }
+            }
         }
 
+        // Overlay badge on items tab showing how many items are on the bill
         billSplitViewModel.itemCount.observe(viewLifecycleOwner) {
-            binding.toolbar.menu.findItem(R.id.clear_items).isVisible = it > 0
-        }
-
-        billSplitViewModel.taxIsTipped.observe(viewLifecycleOwner) {
-            binding.toolbar.menu.findItem(R.id.tax_is_tipped).isChecked = it
-        }
-
-        billSplitViewModel.discountsReduceTip.observe(viewLifecycleOwner) {
-            binding.toolbar.menu.findItem(R.id.discounts_reduce_tip).isChecked = it
-        }
-
-        billSplitViewModel.activeFragmentIndexLiveData.observe(viewLifecycleOwner) {
-            when (it) {
-                FRAG_DINERS -> {
-                    binding.toolbar.menu.setGroupVisible(R.id.group_diners, true)
-                    binding.toolbar.menu.setGroupVisible(R.id.group_items, false)
-                    binding.toolbar.menu.setGroupVisible(R.id.group_taxtip, false)
-                    binding.toolbar.menu.setGroupVisible(R.id.group_pay, false)
-                }
-                FRAG_ITEMS -> {
-                    binding.toolbar.menu.setGroupVisible(R.id.group_diners, false)
-                    binding.toolbar.menu.setGroupVisible(R.id.group_items, true)
-                    binding.toolbar.menu.setGroupVisible(R.id.group_taxtip, false)
-                    binding.toolbar.menu.setGroupVisible(R.id.group_pay, false)
-                }
-                FRAG_TAX_TIP -> {
-                    binding.toolbar.menu.setGroupVisible(R.id.group_diners, false)
-                    binding.toolbar.menu.setGroupVisible(R.id.group_items, false)
-                    binding.toolbar.menu.setGroupVisible(R.id.group_taxtip, true)
-                    binding.toolbar.menu.setGroupVisible(R.id.group_pay, false)
-                }
-                FRAG_PAYMENTS -> {
-                    binding.toolbar.menu.setGroupVisible(R.id.group_diners, false)
-                    binding.toolbar.menu.setGroupVisible(R.id.group_items, false)
-                    binding.toolbar.menu.setGroupVisible(R.id.group_taxtip, false)
-                    binding.toolbar.menu.setGroupVisible(R.id.group_pay, true)
+            binding.tabLayout.getTabAt(FRAG_ITEMS)?.apply {
+                if(it > 0) {
+                    orCreateBadge.number = it
+                } else {
+                    removeBadge()
                 }
             }
         }
