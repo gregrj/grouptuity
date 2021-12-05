@@ -362,7 +362,13 @@ class ItemEntryFragment: Fragment() {
         // Observers and listeners for the number pad buttons
         itemEntryViewModel.priceZeroButtonEnabled.observe(viewLifecycleOwner) { binding.calculator.button0.isEnabled = it }
         itemEntryViewModel.priceDecimalButtonEnabled.observe(viewLifecycleOwner) { binding.calculator.buttonDecimal.isEnabled = it }
-        itemEntryViewModel.priceAcceptButtonEnabled.observe(viewLifecycleOwner) { binding.calculator.buttonAccept.isEnabled = it }
+        itemEntryViewModel.priceAcceptButtonEnabled.observe(viewLifecycleOwner) {
+            if(it) {
+                binding.calculator.buttonAccept.show()
+            } else {
+                binding.calculator.buttonAccept.hide()
+            }
+        }
         binding.calculator.buttonDecimal.setOnClickListener { itemEntryViewModel.addDecimalToPrice() }
         binding.calculator.button0.setOnClickListener { itemEntryViewModel.addDigitToPrice('0') }
         binding.calculator.button1.setOnClickListener { itemEntryViewModel.addDigitToPrice('1') }

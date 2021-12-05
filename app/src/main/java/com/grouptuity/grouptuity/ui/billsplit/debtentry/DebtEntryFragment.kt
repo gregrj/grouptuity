@@ -320,7 +320,13 @@ class DebtEntryFragment: Fragment() {
         // Observers and listeners for the number pad buttons
         debtEntryViewModel.priceZeroButtonEnabled.observe(viewLifecycleOwner) { binding.calculator.button0.isEnabled = it }
         debtEntryViewModel.priceDecimalButtonEnabled.observe(viewLifecycleOwner) { binding.calculator.buttonDecimal.isEnabled = it }
-        debtEntryViewModel.priceAcceptButtonEnabled.observe(viewLifecycleOwner) { binding.calculator.buttonAccept.isEnabled = it }
+        debtEntryViewModel.priceAcceptButtonEnabled.observe(viewLifecycleOwner) {
+            if(it) {
+                binding.calculator.buttonAccept.show()
+            } else {
+                binding.calculator.buttonAccept.hide()
+            }
+        }
         binding.calculator.buttonDecimal.setOnClickListener { debtEntryViewModel.addDecimalToPrice() }
         binding.calculator.button0.setOnClickListener { debtEntryViewModel.addDigitToPrice('0') }
         binding.calculator.button1.setOnClickListener { debtEntryViewModel.addDigitToPrice('1') }

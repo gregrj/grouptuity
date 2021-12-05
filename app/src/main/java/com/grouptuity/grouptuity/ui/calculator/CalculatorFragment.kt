@@ -148,7 +148,11 @@ class CalculatorFragment: Fragment() {
             binding.numberPad.buttonDecimal.isEnabled = it
         }
         calculatorViewModel.acceptButtonEnabled.observe(viewLifecycleOwner) {
-            binding.numberPad.buttonAccept.isEnabled = it
+            if(it) {
+                binding.numberPad.buttonAccept.show()
+            } else {
+                binding.numberPad.buttonAccept.hide()
+            }
         }
 
         binding.numberPad.buttonDecimal.setOnClickListener { calculatorViewModel.addDecimalToPrice() }

@@ -203,18 +203,17 @@
             app:layout_constraintTop_toTopOf="@id/button_0"
             app:layout_constraintBottom_toBottomOf="@id/button_0"/>
 
-        <com.google.android.material.button.MaterialButton
+        <com.google.android.material.floatingactionbutton.FloatingActionButton
             android:id="@+id/button_accept"
-            android:layout_width="96dp"
-            android:layout_height="96dp"
-            android:text="@string/checkmark_symbol"
-            android:textSize="@dimen/calculator_button_text_size"
-            style="@style/Widget.MaterialComponents.Button.UnelevatedButton"
-            android:textColor="@color/secondary_button_text_colors"
-            android:backgroundTint="@color/secondary_button_background_colors"
-            app:shapeAppearanceOverlay="@style/circleShape"
-            app:layout_constraintBaseline_toBaselineOf="@+id/button_decimal"
-            app:layout_constraintLeft_toRightOf="@id/button_decimal"
-            app:layout_constraintRight_toRightOf="parent"/>
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            app:layout_constraintTop_toBottomOf="@id/button_3"
+            app:layout_constraintBottom_toBottomOf="parent"
+            app:layout_constraintLeft_toRightOf="@+id/button_decimal"
+            app:layout_constraintRight_toRightOf="parent"
+            android:layout_margin="@dimen/fab_margin"
+            android:src="@drawable/ic_arrow_forward"
+            android:visibility="invisible"
+            android:contentDescription="@string/accept" />
     </androidx.constraintlayout.widget.ConstraintLayout>
 </LinearLayout>

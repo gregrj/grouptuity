@@ -394,7 +394,13 @@ class DiscountEntryFragment: Fragment() {
             binding.costNumberPad.button9.isEnabled = it
         }
         discountEntryViewModel.costDecimalButtonEnabled.observe(viewLifecycleOwner) { binding.costNumberPad.buttonDecimal.isEnabled = it }
-        discountEntryViewModel.costAcceptButtonEnabled.observe(viewLifecycleOwner) { binding.costNumberPad.buttonAccept.isEnabled = it }
+        discountEntryViewModel.costAcceptButtonEnabled.observe(viewLifecycleOwner) {
+            if(it) {
+                binding.costNumberPad.buttonAccept.show()
+            } else {
+                binding.costNumberPad.buttonAccept.hide()
+            }
+        }
 
         discountEntryViewModel.costAcceptEvents.observe(viewLifecycleOwner) {
             it.consume()?.apply {
@@ -461,7 +467,13 @@ class DiscountEntryFragment: Fragment() {
             binding.priceNumberPad.button9.isEnabled = it
         }
         discountEntryViewModel.priceDecimalButtonEnabled.observe(viewLifecycleOwner) { binding.priceNumberPad.buttonDecimal.isEnabled = it }
-        discountEntryViewModel.priceAcceptButtonEnabled.observe(viewLifecycleOwner) { binding.priceNumberPad.buttonAccept.isEnabled = it }
+        discountEntryViewModel.priceAcceptButtonEnabled.observe(viewLifecycleOwner) {
+            if(it) {
+                binding.priceNumberPad.buttonAccept.show()
+            } else {
+                binding.priceNumberPad.buttonAccept.hide()
+            }
+        }
 
         binding.priceNumberPad.buttonCurrency.setOnClickListener { discountEntryViewModel.switchPriceToCurrency() }
         binding.priceNumberPad.buttonPercent.setOnClickListener { discountEntryViewModel.switchPriceToPercent() }
