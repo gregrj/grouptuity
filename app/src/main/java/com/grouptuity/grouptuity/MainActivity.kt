@@ -1,6 +1,5 @@
 package com.grouptuity.grouptuity
 
-import android.animation.ObjectAnimator
 import android.animation.ValueAnimator
 import android.app.ActivityManager
 import android.app.SearchManager
@@ -24,7 +23,7 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.NavHostFragment
 import com.google.android.material.switchmaterial.SwitchMaterial
 import com.grouptuity.grouptuity.databinding.ActivityMainBinding
-import com.grouptuity.grouptuity.ui.custom.CustomNavigator
+import com.grouptuity.grouptuity.ui.util.CustomNavigator
 
 // TODO make FAB show done check mark if completing entry
 

@@ -31,42 +31,7 @@ const val FRAG_PAYMENTS = 3
 fun newUUID(): String = UUID.randomUUID().toString()
 
 
-fun <T> Flow<T>.withOutputSwitch(switch: Flow<Boolean>): Flow<T> { return combineTransform(switch) { data, enabled -> if(enabled) emit(data) } }
-
-
 val Context.preferenceDataStore: DataStore<Preferences> by preferencesDataStore(name = "grouptuity_preferences")
-
-
-abstract class UIViewModel(app: Application): AndroidViewModel(app) {
-    protected val repository = Repository.getInstance(app)
-
-    protected val context: Context
-        get() = getApplication<Application>().applicationContext
-
-    private val transitionInputLocked = MutableStateFlow(false)
-    private val inputLocks = mutableListOf<Flow<Boolean>>(transitionInputLocked)
-    var isInputLocked: StateFlow<Boolean> = transitionInputLocked
-        private set
-
-    private val _isOutputFlowing = MutableStateFlow(true)
-    protected val isOutputFlowing: Flow<Boolean> = _isOutputFlowing
-
-    protected fun addInputLock(lock: Flow<Boolean>) {
-        inputLocks.add(lock)
-        isInputLocked = combine(inputLocks) { locks ->
-            locks.any { it }
-        }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, true)
-    }
-    fun unLockInput() { inputLocks.forEach { if(it is MutableStateFlow) it.value = false } }
-
-    fun freezeOutput() { _isOutputFlowing.value = false }
-    fun unFreezeOutput() { _isOutputFlowing.value = true }
-
-    open fun notifyTransitionStarted() { transitionInputLocked.value = true }
-    open fun notifyTransitionFinished() { transitionInputLocked.value = false }
-
-    fun isPermissionGranted(permissionString: String) = getApplication<Application>().checkSelfPermission(permissionString) == PackageManager.PERMISSION_GRANTED
-}
 
 
 class Repository(context: Context) {

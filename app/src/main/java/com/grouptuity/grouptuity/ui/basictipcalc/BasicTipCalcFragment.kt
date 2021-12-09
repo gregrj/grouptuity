@@ -14,11 +14,12 @@ import androidx.navigation.fragment.findNavController
 import com.google.android.material.card.MaterialCardView
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.transition.Hold
+import com.grouptuity.grouptuity.MainActivity
 import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.CalculationType
 import com.grouptuity.grouptuity.databinding.FragBasicTipCalcBinding
 import com.grouptuity.grouptuity.ui.calculator.CALCULATOR_RETURN_KEY
-import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
+import com.grouptuity.grouptuity.ui.util.views.setNullOnDestroy
 import java.text.NumberFormat
 
 
@@ -230,6 +231,8 @@ class BasicTipCalcFragment: Fragment() {
             duration = 0L
             addTarget(requireView())
         }
+
+        (requireActivity() as MainActivity).storeViewAsBitmap(requireParentFragment().requireView())
 
         findNavController().navigate(
             BasicTipCalcFragmentDirections.editSimpleCalcTaxTip(

@@ -11,7 +11,7 @@
     app:layout_behavior="com.google.android.material.bottomsheet.BottomSheetBehavior">
 
     <TextView
-        android:id="@+id/price_placeholder"
+        android:id="@+id/display_placeholder"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:paddingTop="16dp"

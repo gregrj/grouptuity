@@ -15,7 +15,7 @@ import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.CalculationType
 import com.grouptuity.grouptuity.databinding.FragTaxTipBinding
 import com.grouptuity.grouptuity.ui.calculator.CALCULATOR_RETURN_KEY
-import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
+import com.grouptuity.grouptuity.ui.util.views.setNullOnDestroy
 import java.text.NumberFormat
 
 

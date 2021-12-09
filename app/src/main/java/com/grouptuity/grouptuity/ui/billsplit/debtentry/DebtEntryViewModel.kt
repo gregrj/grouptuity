@@ -19,7 +19,8 @@ class DebtEntryViewModel(app: Application): UIViewModel(app) {
     }
 
     private val currencyFormatter = NumberFormat.getCurrencyInstance()
-    private val calculator = CalculatorData(CalculationType.DEBT_AMOUNT)
+    private val numberPadInputLock = MutableStateFlow(false).also { addInputLock(it) }
+    val calculatorData = CalculatorData(CalculationType.DEBT_AMOUNT, numberPadInputLock, isOutputFlowing)
     var launchingDiner: Diner? = null
         private set
 
@@ -46,7 +47,7 @@ class DebtEntryViewModel(app: Application): UIViewModel(app) {
     val isLaunchingDinerPresent: Boolean get() = launchingDiner == null || creditorSelectionSet.contains(launchingDiner) || debtorSelectionSet.contains(launchingDiner)
 
     // Live Data Output
-    val dinerData: LiveData<List<DinerDatapoint>> = combine(repository.diners, _creditorSelections, _debtorSelections, calculator.numericalValue) { diners, creditors, debtors, value ->
+    val dinerData: LiveData<List<DinerDatapoint>> = combine(repository.diners, _creditorSelections, _debtorSelections, calculatorData.numericalValue) { diners, creditors, debtors, value ->
         val amount = value ?: 0.0
         val debtShare = amount / debtors.size
         val creditShare = amount / creditors.size
@@ -84,11 +85,11 @@ class DebtEntryViewModel(app: Application): UIViewModel(app) {
     val debtName: LiveData<String> = repository.debts.combine(debtNameInput) { debts, nameInput ->
         nameInput ?: getApplication<Application>().resources.getString(R.string.debtentry_toolbar_debt_number) + (debts.size + 1)
     }.withOutputSwitch(isOutputFlowing).asLiveData()
-    val areDebtInputsValid: LiveData<Boolean> = combine(calculator.numericalValue, creditorSelectionCount, debtorSelectionCount) { debtValue, creditorCount, debtorCount ->
+    val areDebtInputsValid: LiveData<Boolean> = combine(calculatorData.numericalValue, creditorSelectionCount, debtorSelectionCount) { debtValue, creditorCount, debtorCount ->
         debtValue != null && creditorCount > 0 && debtorCount > 0
     }.withOutputSwitch(isOutputFlowing).asLiveData()
 
-    val toolBarState: LiveData<ToolBarState> = combine(calculator.isNumberPadVisible, editingName, debtName.asFlow(), debtorSelectionCount, creditorSelectionCount) { calcVisible, editing, name, debtorCount, creditorCount ->
+    val toolBarState: LiveData<ToolBarState> = combine(calculatorData.isNumberPadVisible.asFlow(), editingName, debtName.asFlow(), debtorSelectionCount, creditorSelectionCount) { calcVisible, editing, name, debtorCount, creditorCount ->
         when {
             calcVisible -> {
                 ToolBarState(
@@ -157,14 +158,6 @@ class DebtEntryViewModel(app: Application): UIViewModel(app) {
     }.withOutputSwitch(isOutputFlowing).asLiveData()
     val editNameShimVisible: LiveData<Boolean> = editingName.withOutputSwitch(isOutputFlowing).asLiveData()
 
-    val formattedPrice: LiveData<String> = calculator.displayValue.withOutputSwitch(isOutputFlowing).asLiveData()
-    val numberPadVisible: LiveData<Boolean> = calculator.isNumberPadVisible.withOutputSwitch(isOutputFlowing).asLiveData()
-    val priceBackspaceButtonVisible: LiveData<Boolean> = calculator.backspaceButtonVisible.withOutputSwitch(isOutputFlowing).asLiveData()
-    val priceEditButtonVisible: LiveData<Boolean> = calculator.editButtonVisible.withOutputSwitch(isOutputFlowing).asLiveData()
-    val priceZeroButtonEnabled: LiveData<Boolean> = calculator.zeroButtonEnabled.withOutputSwitch(isOutputFlowing).asLiveData()
-    val priceDecimalButtonEnabled: LiveData<Boolean> = calculator.decimalButtonEnabled.withOutputSwitch(isOutputFlowing).asLiveData()
-    val priceAcceptButtonEnabled: LiveData<Boolean> = calculator.acceptButtonEnabled.withOutputSwitch(isOutputFlowing).asLiveData()
-
     fun initializeForDiner(diner: Diner?) {
         unFreezeOutput()
 
@@ -182,7 +175,7 @@ class DebtEntryViewModel(app: Application): UIViewModel(app) {
         hasEditedDebtorSelections = false
         lastEditWasCreditor = true
 
-        calculator.reset(CalculationType.ITEM_PRICE, null, showNumberPad = true)
+        calculatorData.reset(CalculationType.ITEM_PRICE, null, showNumberPad = true)
         debtNameInput.value = null
 
         _creditorSelections.value = creditorSelectionSet.toSet()
@@ -191,13 +184,13 @@ class DebtEntryViewModel(app: Application): UIViewModel(app) {
 
     fun handleOnBackPressed(): Boolean = when {
         isInputLocked.value -> { false }
-        numberPadVisible.value == true -> {
+        calculatorData.isNumberPadVisible.value == true -> {
             when {
                 editingName.value -> {
                     stopNameEdit()
                     false
                 }
-                calculator.tryRevertToLastValue() -> { false }
+                calculatorData.tryRevertToLastValue() -> { false }
                 else -> { true }
             }
         }
@@ -236,14 +229,14 @@ class DebtEntryViewModel(app: Application): UIViewModel(app) {
     }
 
     fun openCalculator() {
-        calculator.clearValue()
-        calculator.showNumberPad()
+        calculatorData.clearValue()
+        calculatorData.showNumberPad()
     }
-    fun addDigitToPrice(digit: Char) = calculator.addDigit(digit)
-    fun addDecimalToPrice() = calculator.addDecimal()
-    fun removeDigitFromPrice() = calculator.removeDigit()
-    fun resetPrice() = calculator.clearValue()
-    fun acceptPrice() = calculator.tryAcceptValue()
+    fun addDigitToPrice(digit: Char) = calculatorData.addDigit(digit)
+    fun addDecimalToPrice() = calculatorData.addDecimal()
+    fun removeDigitFromPrice() = calculatorData.removeDigit()
+    fun resetPrice() = calculatorData.clearValue()
+    fun acceptPrice() = calculatorData.tryAcceptValue()
 
     fun startNameEdit() { editingName.value = true }
     fun stopNameEdit() {
@@ -316,7 +309,7 @@ class DebtEntryViewModel(app: Application): UIViewModel(app) {
 
     fun addDebtToBill() {
         repository.addDebt(
-            calculator.numericalValue.value ?: 0.0,
+            calculatorData.numericalValue.value ?: 0.0,
             debtName.value ?: "Debt",
             debtorSelectionSet,
             creditorSelectionSet)

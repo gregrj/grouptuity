@@ -4,7 +4,6 @@ import android.animation.Animator
 import android.animation.ValueAnimator
 import android.graphics.Typeface
 import android.os.Bundle
-import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
@@ -23,8 +22,10 @@ import com.grouptuity.grouptuity.MainActivity
 import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.CalculationType
 import com.grouptuity.grouptuity.databinding.FragCalculatorBinding
-import com.grouptuity.grouptuity.ui.custom.transitions.CardViewExpandTransition
-import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
+import com.grouptuity.grouptuity.ui.util.transitions.CardViewExpandTransition
+import com.grouptuity.grouptuity.ui.util.views.setNullOnDestroy
+import com.grouptuity.grouptuity.ui.util.views.setupFixedNumberPad
+import com.grouptuity.grouptuity.ui.util.views.setupToolbarSecondaryTertiaryAnimation
 
 // TODO handle inset changes
 
@@ -66,29 +67,19 @@ class CalculatorFragment: Fragment() {
         setupEnterTransition()
         binding.fadeOutEditText.setText(args.previousValue)
 
-        // Setup toolbar
-        binding.toolbar.apply {
-            title = args.title
+        setupToolbar()
 
-            // Set toolbar back navigation icon and its color
-            setNavigationIcon(R.drawable.ic_arrow_back_light)
-
-            // Close fragment using default onBackPressed behavior unless animation in progress
-            setNavigationOnClickListener {
-                if (!calculatorViewModel.isInputLocked.value)
-                    closeFragment()
-            }
-        }
-
-        setupNumberPad()
+        setupFixedNumberPad(
+            viewLifecycleOwner,
+            calculatorViewModel.calcData,
+            binding.numberPad)
 
         calculatorViewModel.acceptEvents.observe(viewLifecycleOwner) {
             it.consume()?.apply {
                 findNavController().previousBackStackEntry?.savedStateHandle?.set(
                     CALCULATOR_RETURN_KEY, Pair(args.calculationType, this.first)
                 )
-                binding.numberPad.displayTextview.text = this.second
-                binding.fadeOutEditText.setText(this.third)
+                binding.fadeOutEditText.setText(this.second)
                 closeFragment()
             }
         }
@@ -116,57 +107,27 @@ class CalculatorFragment: Fragment() {
         requireActivity().onBackPressed()
     }
 
-    private fun setupNumberPad() {
-        calculatorViewModel.formattedValue.observe(viewLifecycleOwner, {
-            binding.numberPad.displayTextview.text = it
-        })
+    private fun setupToolbar() {
+        binding.toolbar.apply {
+            title = args.title
 
-        calculatorViewModel.backspaceButtonVisible.observe(viewLifecycleOwner) {
-            binding.numberPad.buttonBackspace.visibility = if(it) View.VISIBLE else View.GONE
-        }
-        binding.numberPad.buttonBackspace.setOnClickListener { calculatorViewModel.removeDigitFromPrice() }
-        binding.numberPad.buttonBackspace.setOnLongClickListener {
-            calculatorViewModel.resetPrice()
-            true
-        }
+            // Set toolbar back navigation icon and its color
+            setNavigationIcon(R.drawable.ic_arrow_back_light)
 
-        calculatorViewModel.zeroButtonEnabled.observe(viewLifecycleOwner) {
-            binding.numberPad.button0.isEnabled = it
-        }
-        calculatorViewModel.nonZeroButtonsEnabled.observe(viewLifecycleOwner) {
-            binding.numberPad.button1.isEnabled = it
-            binding.numberPad.button2.isEnabled = it
-            binding.numberPad.button3.isEnabled = it
-            binding.numberPad.button4.isEnabled = it
-            binding.numberPad.button5.isEnabled = it
-            binding.numberPad.button6.isEnabled = it
-            binding.numberPad.button7.isEnabled = it
-            binding.numberPad.button8.isEnabled = it
-            binding.numberPad.button9.isEnabled = it
-        }
-        calculatorViewModel.decimalButtonEnabled.observe(viewLifecycleOwner) {
-            binding.numberPad.buttonDecimal.isEnabled = it
-        }
-        calculatorViewModel.acceptButtonEnabled.observe(viewLifecycleOwner) {
-            if(it) {
-                binding.numberPad.buttonAccept.show()
-            } else {
-                binding.numberPad.buttonAccept.hide()
+            // Close fragment using default onBackPressed behavior unless animation in progress
+            setNavigationOnClickListener {
+                if (!calculatorViewModel.isInputLocked.value)
+                    closeFragment()
             }
-        }
 
-        binding.numberPad.buttonDecimal.setOnClickListener { calculatorViewModel.addDecimalToPrice() }
-        binding.numberPad.button0.setOnClickListener { calculatorViewModel.addDigitToPrice('0') }
-        binding.numberPad.button1.setOnClickListener { calculatorViewModel.addDigitToPrice('1') }
-        binding.numberPad.button2.setOnClickListener { calculatorViewModel.addDigitToPrice('2') }
-        binding.numberPad.button3.setOnClickListener { calculatorViewModel.addDigitToPrice('3') }
-        binding.numberPad.button4.setOnClickListener { calculatorViewModel.addDigitToPrice('4') }
-        binding.numberPad.button5.setOnClickListener { calculatorViewModel.addDigitToPrice('5') }
-        binding.numberPad.button6.setOnClickListener { calculatorViewModel.addDigitToPrice('6') }
-        binding.numberPad.button7.setOnClickListener { calculatorViewModel.addDigitToPrice('7') }
-        binding.numberPad.button8.setOnClickListener { calculatorViewModel.addDigitToPrice('8') }
-        binding.numberPad.button9.setOnClickListener { calculatorViewModel.addDigitToPrice('9') }
-        binding.numberPad.buttonAccept.setOnClickListener { calculatorViewModel.tryAcceptValue() }
+            setupToolbarSecondaryTertiaryAnimation(
+                viewLifecycleOwner,
+                this,
+                binding.statusBarBackgroundView,
+                calculatorViewModel.toolBarInTertiaryState,
+                requireContext().theme,
+                resources.getInteger(R.integer.viewprop_animation_duration).toLong())
+        }
     }
 
     private fun setupEnterTransition() {

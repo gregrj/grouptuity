@@ -1,6 +1,9 @@
 package com.grouptuity.grouptuity.data
 
+import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.asFlow
+import androidx.lifecycle.asLiveData
 import com.grouptuity.grouptuity.Event
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -13,6 +16,7 @@ private const val percentMaxDecimals = 3
 private const val percentMaxIntegers = 3
 private val currencyMaxDecimals = NumberFormat.getCurrencyInstance().maximumFractionDigits
 private val currencyMaxIntegers = 9 - currencyMaxDecimals
+
 
 enum class CalculationType(val isPercent: Boolean,
                            val isZeroAcceptable: Boolean,
@@ -32,16 +36,46 @@ enum class CalculationType(val isPercent: Boolean,
     AFTER_DISCOUNT(false, true, currencyMaxDecimals, currencyMaxIntegers),
     AFTER_TAX(false, true, currencyMaxDecimals, currencyMaxIntegers),
     TOTAL(false, true, currencyMaxDecimals, currencyMaxIntegers),
-    DEBT_AMOUNT(false, false, currencyMaxDecimals, currencyMaxIntegers),
+    DEBT_AMOUNT(false, false, currencyMaxDecimals, currencyMaxIntegers);
+
+    companion object {
+        fun getCurrencyCounterpartTo(calculationType: CalculationType) = when(calculationType) {
+            ITEMIZED_DISCOUNT_PERCENT -> ITEMIZED_DISCOUNT_AMOUNT
+            ITEMIZED_DISCOUNT_AMOUNT -> ITEMIZED_DISCOUNT_AMOUNT
+            OVERALL_DISCOUNT_PERCENT -> OVERALL_DISCOUNT_AMOUNT
+            OVERALL_DISCOUNT_AMOUNT -> OVERALL_DISCOUNT_AMOUNT
+            TAX_PERCENT -> TAX_AMOUNT
+            TAX_AMOUNT -> TAX_AMOUNT
+            TIP_PERCENT -> TIP_AMOUNT
+            TIP_AMOUNT -> TIP_AMOUNT
+            else -> null
+        }
+
+        fun getPercentCounterpartTo(calculationType: CalculationType) = when(calculationType) {
+            ITEMIZED_DISCOUNT_PERCENT -> ITEMIZED_DISCOUNT_PERCENT
+            ITEMIZED_DISCOUNT_AMOUNT -> ITEMIZED_DISCOUNT_PERCENT
+            OVERALL_DISCOUNT_PERCENT -> OVERALL_DISCOUNT_PERCENT
+            OVERALL_DISCOUNT_AMOUNT -> OVERALL_DISCOUNT_PERCENT
+            TAX_PERCENT -> TAX_PERCENT
+            TAX_AMOUNT -> TAX_PERCENT
+            TIP_PERCENT -> TIP_PERCENT
+            TIP_AMOUNT -> TIP_PERCENT
+            else -> null
+        }
+    }
 }
 
-class CalculatorData(initialCalculationType: CalculationType, val autoHideNumberPad: Boolean=true, private val acceptValueCallback: () -> Unit = {}) {
-    private val calculationType = MutableStateFlow(initialCalculationType)
 
-    val isNumberPadVisible = MutableStateFlow(false)
-    val isInPercent: StateFlow<Boolean> = calculationType.mapLatest {
-        it.isPercent
-    }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, initialCalculationType.isPercent)
+class CalculatorData(
+    initialCalculationType: CalculationType,
+    val inputLock: MutableStateFlow<Boolean>,
+    isParentOutputFlowing: Flow<Boolean>,
+    val autoHideNumberPad: Boolean=true,
+    private val acceptValueCallback: () -> Unit = {}) {
+
+    private val isOutputFlowing = inputLock.mapLatest { !it }.withOutputSwitch(isParentOutputFlowing)
+
+    private val calculationType = MutableStateFlow(initialCalculationType)
     private val isZeroAcceptable: StateFlow<Boolean> = calculationType.mapLatest {
         it.isZeroAcceptable
     }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, initialCalculationType.isZeroAcceptable)
@@ -51,9 +85,14 @@ class CalculatorData(initialCalculationType: CalculationType, val autoHideNumber
     private val maxIntegersAllowed: StateFlow<Int> = calculationType.mapLatest {
         it.maxIntegers
     }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, initialCalculationType.maxIntegers)
+    val isInPercent: LiveData<Boolean> = calculationType.mapLatest {
+        it.isPercent
+    }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, initialCalculationType.isPercent).asLiveData(isOutputFlowing)
 
     private val rawInputValue: MutableStateFlow<String?> = MutableStateFlow(null)
     private val _lastCompletedRawValue = MutableLiveData<String?>(null)
+    private val _isNumberPadVisible = MutableStateFlow(false)
+    val isNumberPadVisible = _isNumberPadVisible.asLiveData()
 
     var editedValue: Boolean? = null // null == not set, false == prior value unchanged, true == new value set
         private set
@@ -64,13 +103,15 @@ class CalculatorData(initialCalculationType: CalculationType, val autoHideNumber
             else -> { it.toDouble() }
         }
     }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, null)
-    val displayValue: StateFlow<String> = combine(isNumberPadVisible, rawInputValue, isInPercent) { numberPadVisible, rawValue, inPercent ->
+    val displayValue: LiveData<String> = combine(_isNumberPadVisible, rawInputValue, isInPercent.asFlow()) { numberPadVisible, rawValue, inPercent ->
         formatRawValue(numberPadVisible, rawValue, inPercent)
-    }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, "")
+    }.asLiveData(isParentOutputFlowing)
 
-    val editButtonVisible: Flow<Boolean> = isNumberPadVisible.mapLatest { !it }
-    val backspaceButtonVisible: Flow<Boolean> = combine(isNumberPadVisible, rawInputValue) { visible, rawValue -> visible && rawValue != null }
-    val zeroButtonEnabled: Flow<Boolean> = combine(rawInputValue, maxDecimalsAllowed, maxIntegersAllowed) { rawValue, maxDecimals, maxIntegers ->
+    val editButtonVisible: LiveData<Boolean> = _isNumberPadVisible.mapLatest { !it }.asLiveData(isOutputFlowing)
+    val backspaceButtonVisible: LiveData<Boolean> = combine(_isNumberPadVisible, rawInputValue) { visible, rawValue ->
+        visible && rawValue != null
+    }.asLiveData(isOutputFlowing)
+    val zeroButtonEnabled: LiveData<Boolean> = combine(rawInputValue, maxDecimalsAllowed, maxIntegersAllowed) { rawValue, maxDecimals, maxIntegers ->
         when(rawValue) {
             null -> false
             else -> {
@@ -86,18 +127,22 @@ class CalculatorData(initialCalculationType: CalculationType, val autoHideNumber
                 }
             }
         }
-    }
-    val nonZeroButtonsEnabled: Flow<Boolean> = combine(rawInputValue, maxDecimalsAllowed, maxIntegersAllowed) { rawValue, maxDecimals, maxIntegers ->
+    }.asLiveData(isOutputFlowing)
+    val nonZeroButtonsEnabled: LiveData<Boolean> = combine(rawInputValue, maxDecimalsAllowed, maxIntegersAllowed) { rawValue, maxDecimals, maxIntegers ->
         when(val numDecimals = numDecimalPlaces(rawValue)) {
             null -> { rawValue == null || rawValue.length < maxIntegers }
             else -> { numDecimals < maxDecimals }
         }
-    }
-    val decimalButtonEnabled: Flow<Boolean> = combine(rawInputValue, maxDecimalsAllowed) { rawValue, maxDecimals -> maxDecimals > 0 && numDecimalPlaces(rawValue) == null }
-    val acceptButtonEnabled: Flow<Boolean> = combine(rawInputValue, isZeroAcceptable) { rawValue, zeroAcceptable -> zeroAcceptable || (rawValue != null && rawValue.contains(Regex("[1-9]"))) }
+    }.asLiveData(isOutputFlowing)
+    val decimalButtonEnabled: LiveData<Boolean> = combine(rawInputValue, maxDecimalsAllowed) {
+            rawValue, maxDecimals -> maxDecimals > 0 && numDecimalPlaces(rawValue) == null
+    }.asLiveData(isOutputFlowing)
+    val acceptButtonEnabled: LiveData<Boolean> = combine(rawInputValue, isZeroAcceptable) { rawValue, zeroAcceptable ->
+        zeroAcceptable || (rawValue != null && rawValue.contains(Regex("[1-9]")))
+    }.asLiveData(isOutputFlowing)
 
     private val _acceptEvents = MutableStateFlow<Event<String>?>(null)
-    val acceptEvents: Flow<Event<String>> = _acceptEvents.filterNotNull()
+    val acceptEvents: LiveData<Event<String>> = _acceptEvents.filterNotNull().asLiveData()
 
     fun reset(type: CalculationType, newRawInputValue: Double?, showNumberPad: Boolean = false) {
         // Invalidate any unconsumed events
@@ -115,87 +160,73 @@ class CalculatorData(initialCalculationType: CalculationType, val autoHideNumber
             rawInputValue.value = newRawInputValue.toString()
         }
 
-        isNumberPadVisible.value = showNumberPad
+        _isNumberPadVisible.value = showNumberPad
     }
 
-    fun switchCalculationType(type: CalculationType) { calculationType.value = type }
+    fun switchToCurrency() {
+        CalculationType.getCurrencyCounterpartTo(calculationType.value)?.also {
+            calculationType.value = it
+        }
+    }
+    fun switchToPercent() {
+        CalculationType.getPercentCounterpartTo(calculationType.value)?.also {
+            calculationType.value = it
+        }
+    }
 
-    fun showNumberPad() { isNumberPadVisible.value = true }
-    fun hideNumberPad() { isNumberPadVisible.value = false }
+    fun showNumberPad() { _isNumberPadVisible.value = true }
+    fun hideNumberPad() { _isNumberPadVisible.value = false }
+    fun openCalculator() {
+        clearValue()
+        _isNumberPadVisible.value = true
+    }
 
-    fun addDigit(digit: Char) = when(val rawValue = rawInputValue.value) {
-        null -> {
-            if(digit == '0'){
-                false
-            } else {
+    fun addDigit(digit: Char) {
+        val rawValue = rawInputValue.value
+        if (rawValue == null) {
+            if(digit != '0') {
+                // Assumes maxIntegersAllowed is greater than one
                 rawInputValue.value = digit.toString()
-                true
             }
         }
-        else -> {
+        else {
             val newRawValue = rawValue + digit
             when(numDecimalPlaces(newRawValue)) {
                 null -> {
-                    when(newRawValue.length) {
-                        in 0 until maxIntegersAllowed.value -> {
-                            rawInputValue.value = newRawValue
-                            true
-                        }
-                        maxIntegersAllowed.value -> {
-                            if (maxDecimalsAllowed.value == 0) {
-                                acceptValue(newRawValue)
-                            } else {
-                                rawInputValue.value = newRawValue
-                            }
-                            true
-                        }
-                        else -> {
-                            false
-                        }
+                    // Input does not have a decimal point
+                    if (newRawValue.length <= maxIntegersAllowed.value) {
+                        rawInputValue.value = newRawValue
+                    } else if (maxDecimalsAllowed.value == 0) {
+                        acceptValue(newRawValue)
                     }
                 }
                 in 0 until maxDecimalsAllowed.value -> {
                     rawInputValue.value = newRawValue
-                    true
                 }
                 maxDecimalsAllowed.value -> {
                     acceptValue(newRawValue)
-                    true
-                }
-                else -> {
-                    false
                 }
             }
         }
     }
-    fun addDecimal(): Boolean {
+    fun addDecimal() {
         if(maxDecimalsAllowed.value < 1)
-            return false
+            return
 
-        return when (val rawValue = rawInputValue.value) {
-            null -> {
-                rawInputValue.value = "."
-                true
-            }
-            else -> {
-                if (!rawValue.contains('.')) {
-                    rawInputValue.value = "$rawValue."
-                    true
-                } else {
-                    false
-                }
-            }
+        val rawValue = rawInputValue.value
+        if (rawValue == null) {
+            rawInputValue.value = "."
+        } else if (!rawValue.contains('.')) {
+            rawInputValue.value = "$rawValue."
         }
     }
     fun removeDigit() {
-        when(val rawInput = rawInputValue.value) {
-            null -> return
-            else -> {
-                if(rawInput.length == 1) {
-                    rawInputValue.value = null
-                } else {
-                    rawInputValue.value = rawInput.substring(0, rawInput.length - 1)
-                }
+        val rawInput = rawInputValue.value
+        if (rawInput != null) {
+            if(rawInput.length == 1) {
+                rawInputValue.value = null
+            } else {
+                rawInputValue.value = rawInput.substring(0, rawInput.length - 1)
             }
         }
     }
@@ -223,24 +254,23 @@ class CalculatorData(initialCalculationType: CalculationType, val autoHideNumber
         }
     }
     fun tryAcceptValue(): Boolean {
-        val value = rawInputValue.value
-
+        val inputValue = rawInputValue.value
         return when {
-            (value == null) -> {
-                if(isZeroAcceptable.value) {
-                    acceptValue("0")
+            inputValue == null -> {
+                if (isZeroAcceptable.value) {
+                    acceptValue(inputValue)
                     true
                 } else {
                     false
                 }
             }
-            value.contains(Regex("[1-9]")) -> {
-                acceptValue(value)
+            inputValue.contains(Regex("[1-9]")) -> {
+                acceptValue(inputValue)
                 true
             }
             isZeroAcceptable.value -> {
-                // Value must be combination of zeros and/or decimal
-                acceptValue("0")
+                // Value is combination of zeros and/or decimal
+                acceptValue(inputValue)
                 true
             }
             else -> {
@@ -249,7 +279,10 @@ class CalculatorData(initialCalculationType: CalculationType, val autoHideNumber
         }
     }
 
-    private fun acceptValue(value: String) {
+    private fun acceptValue(value: String?) {
+        inputLock.value = true
+
+        rawInputValue.value = value
         _lastCompletedRawValue.value = value
         editedValue = true
 
@@ -258,7 +291,11 @@ class CalculatorData(initialCalculationType: CalculationType, val autoHideNumber
         }
 
         acceptValueCallback()
-        _acceptEvents.value = Event(value)
+        _acceptEvents.value = if (value == null || value == ".") {
+            Event("0")
+        } else {
+            Event(value)
+        }
     }
 
     companion object {

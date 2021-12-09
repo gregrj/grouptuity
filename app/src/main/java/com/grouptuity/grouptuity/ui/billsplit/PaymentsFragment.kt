@@ -47,9 +47,9 @@ import com.grouptuity.grouptuity.ui.billsplit.qrcodescanner.QRCodeScannerActivit
 import com.grouptuity.grouptuity.ui.billsplit.payments.sendPaybackLaterEmail
 import com.grouptuity.grouptuity.ui.billsplit.payments.sendVenmoRequest
 import com.grouptuity.grouptuity.ui.billsplit.payments.startAlgorandTransaction
-import com.grouptuity.grouptuity.ui.custom.views.RecyclerViewBottomOffset
-import com.grouptuity.grouptuity.ui.custom.views.focusAndShowKeyboard
-import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
+import com.grouptuity.grouptuity.ui.util.views.RecyclerViewBottomOffset
+import com.grouptuity.grouptuity.ui.util.views.focusAndShowKeyboard
+import com.grouptuity.grouptuity.ui.util.views.setNullOnDestroy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext

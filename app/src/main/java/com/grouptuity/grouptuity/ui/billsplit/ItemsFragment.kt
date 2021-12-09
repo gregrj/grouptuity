@@ -23,10 +23,10 @@ import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.Item
 import com.grouptuity.grouptuity.databinding.FragItemsBinding
 import com.grouptuity.grouptuity.databinding.FragItemsListitemBinding
-import com.grouptuity.grouptuity.ui.custom.views.RecyclerViewBottomOffset
-import com.grouptuity.grouptuity.ui.custom.views.RecyclerViewListener
-import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
-import com.grouptuity.grouptuity.ui.custom.views.ContactIcon
+import com.grouptuity.grouptuity.ui.util.views.RecyclerViewBottomOffset
+import com.grouptuity.grouptuity.ui.util.views.RecyclerViewListener
+import com.grouptuity.grouptuity.ui.util.views.setNullOnDestroy
+import com.grouptuity.grouptuity.ui.util.views.ContactIcon
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext

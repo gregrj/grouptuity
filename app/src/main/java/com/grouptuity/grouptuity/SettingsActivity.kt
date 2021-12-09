@@ -26,8 +26,8 @@ import com.grouptuity.grouptuity.data.UIViewModel
 import com.grouptuity.grouptuity.databinding.ActivityMainBinding
 import com.grouptuity.grouptuity.databinding.FragSettingsHolderBinding
 import com.grouptuity.grouptuity.ui.calculator.CALCULATOR_RETURN_KEY
-import com.grouptuity.grouptuity.ui.custom.CustomNavigator
-import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
+import com.grouptuity.grouptuity.ui.util.CustomNavigator
+import com.grouptuity.grouptuity.ui.util.views.setNullOnDestroy
 import java.text.NumberFormat
 
 

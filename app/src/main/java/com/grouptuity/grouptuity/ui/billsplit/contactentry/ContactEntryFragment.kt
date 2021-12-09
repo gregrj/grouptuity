@@ -41,9 +41,9 @@ import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.PaymentMethod
 import com.grouptuity.grouptuity.databinding.FragContactEntryBinding
 import com.grouptuity.grouptuity.ui.billsplit.qrcodescanner.QRCodeScannerActivity
-import com.grouptuity.grouptuity.ui.custom.transitions.CardViewExpandTransition
-import com.grouptuity.grouptuity.ui.custom.transitions.progressWindow
-import com.grouptuity.grouptuity.ui.custom.views.*
+import com.grouptuity.grouptuity.ui.util.transitions.CardViewExpandTransition
+import com.grouptuity.grouptuity.ui.util.transitions.progressWindow
+import com.grouptuity.grouptuity.ui.util.views.*
 
 
 class ContactEntryFragment: Fragment() {

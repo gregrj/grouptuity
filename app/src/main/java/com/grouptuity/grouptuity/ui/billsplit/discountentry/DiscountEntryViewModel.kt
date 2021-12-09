@@ -3,6 +3,7 @@ package com.grouptuity.grouptuity.ui.billsplit.discountentry
 import android.app.Application
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import androidx.lifecycle.asFlow
 import androidx.lifecycle.asLiveData
 import com.grouptuity.grouptuity.Event
 import com.grouptuity.grouptuity.R
@@ -27,8 +28,8 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
 
     val topViewPagerInputLocked = MutableStateFlow(false).also { addInputLock(it) }
     val discountBasisInputLocked = MutableStateFlow(false).also { addInputLock(it) }
-    val priceNumberPadInputLocked = MutableStateFlow(false).also { addInputLock(it) }
-    val costNumberPadInputLocked = MutableStateFlow(false).also { addInputLock(it) }
+    private val priceNumberPadInputLock = MutableStateFlow(false).also { addInputLock(it) }
+    private val costNumberPadInputLock = MutableStateFlow(false).also { addInputLock(it) }
 
     private val startTransitionEventMutable = MutableLiveData<Event<Boolean>>()
     private val loadDinerListFragmentEventMutable = MutableLiveData<Event<Boolean>>()
@@ -43,8 +44,8 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
     val loadItemRecyclerViewEvent: LiveData<Event<Boolean>> = loadItemRecyclerViewEventMutable
     val loadReimbursementFragmentEvent: LiveData<Event<Boolean>> = loadReimbursementFragmentEventMutable
 
-    private val priceCalcData = CalculatorData(CalculationType.ITEMIZED_DISCOUNT_AMOUNT)
-    private val costCalcData = CalculatorData(CalculationType.REIMBURSEMENT_AMOUNT)
+    val priceCalcData = CalculatorData(CalculationType.ITEMIZED_DISCOUNT_AMOUNT, priceNumberPadInputLock, isOutputFlowing)
+    val costCalcData = CalculatorData(CalculationType.REIMBURSEMENT_AMOUNT, costNumberPadInputLock, isOutputFlowing)
 
     private val _isHandlingReimbursements = MutableStateFlow(false)
     private val _isDiscountOnItems = MutableStateFlow(true)
@@ -67,7 +68,7 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
         loadedDiscount,
         priceCalcData.numericalValue,
         costCalcData.numericalValue,
-        priceCalcData.isInPercent,
+        priceCalcData.isInPercent.asFlow(),
         _itemSelections,
         _dinerSelections,
         _reimburseeSelections) {
@@ -104,7 +105,7 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
     }
     private val currencyValue: Flow<Double?> = combine(
         _isDiscountOnItems,
-        priceCalcData.isInPercent,
+        priceCalcData.isInPercent.asFlow(),
         priceCalcData.numericalValue,
         _itemSelections,
         _dinerSelections,
@@ -130,7 +131,7 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
     }
     private val recipientShares: Flow<Map<Diner, Double>> = combine(
         _isDiscountOnItems,
-        priceCalcData.isInPercent,
+        priceCalcData.isInPercent.asFlow(),
         priceCalcData.numericalValue,
         _itemSelections,
         repository.items,
@@ -166,7 +167,7 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
         shares.mapValues { subtotals.getOrDefault(it.key, 0.0) - it.value }
     }
 
-    private val calculatorToolBarTitle: Flow<String> = combine(_isHandlingReimbursements, priceCalcData.isInPercent) { handlingReimbursements, inPercent ->
+    private val calculatorToolBarTitle: Flow<String> = combine(_isHandlingReimbursements, priceCalcData.isInPercent.asFlow()) { handlingReimbursements, inPercent ->
         if(handlingReimbursements) {
             getApplication<Application>().resources.getString(R.string.discountentry_toolbar_reimbursemententry)
         } else {
@@ -179,7 +180,7 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
     private val itemsToolBarTitle: Flow<String> = combine(
         _itemSelections,
         repository.items,
-        priceCalcData.isInPercent) { selectedItems, items, inPercent ->
+        priceCalcData.isInPercent.asFlow()) { selectedItems, items, inPercent ->
 
         when(selectedItems.size) {
             0 -> { getApplication<Application>().resources.getString(R.string.discountentry_toolbar_selection_zeroitems) }
@@ -205,7 +206,7 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
     private val dinersToolBarTitle: Flow<String> = combine(
         _dinerSelections,
         repository.diners,
-        priceCalcData.isInPercent) { selectedDiners, diners, inPercent ->
+        priceCalcData.isInPercent.asFlow()) { selectedDiners, diners, inPercent ->
 
         if(inPercent) {
             when(selectedDiners.size) {
@@ -250,8 +251,8 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
     private val uiInTertiaryState: Flow<Boolean> = combine(
         _isHandlingReimbursements,
         _isDiscountOnItems,
-        priceCalcData.isNumberPadVisible,
-        costCalcData.isNumberPadVisible,
+        priceCalcData.isNumberPadVisible.asFlow(),
+        costCalcData.isNumberPadVisible.asFlow(),
         _reimburseeSelections,
         _itemSelections,
         _dinerSelections) {
@@ -271,7 +272,7 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
     // Live Data Output
     val isHandlingReimbursements: LiveData<Boolean> = _isHandlingReimbursements.withOutputSwitch(isOutputFlowing).asLiveData()
     val isDiscountOnItems: LiveData<Boolean> = _isDiscountOnItems.withOutputSwitch(isOutputFlowing).asLiveData()
-    val tabsVisible: LiveData<Boolean> = combine(priceCalcData.isNumberPadVisible, costCalcData.isNumberPadVisible){ price, cost -> !price && !cost }.withOutputSwitch(isOutputFlowing).asLiveData()
+    val tabsVisible: LiveData<Boolean> = combine(priceCalcData.isNumberPadVisible.asFlow(), costCalcData.isNumberPadVisible.asFlow()){ price, cost -> !price && !cost }.withOutputSwitch(isOutputFlowing).asLiveData()
 
     val itemData: LiveData<List<Triple<Item, Boolean, Triple<String, String?, String>>>> = combine(
         repository.diners,
@@ -279,7 +280,7 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
         _itemSelections,
         _isDiscountOnItems,
         priceCalcData.numericalValue.filterNotNull(),
-        priceCalcData.isInPercent) {
+        priceCalcData.isInPercent.asFlow()) {
 
         val diners = it[0] as List<Diner>
         val items = it[1] as List<Item>
@@ -457,8 +458,8 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
     val toolbarTitle: LiveData<String> = combine(
         _isHandlingReimbursements,
         _isDiscountOnItems,
-        priceCalcData.isNumberPadVisible,
-        costCalcData.isNumberPadVisible,
+        priceCalcData.isNumberPadVisible.asFlow(),
+        costCalcData.isNumberPadVisible.asFlow(),
         calculatorToolBarTitle,
         reimbursementToolBarTitle,
         itemsToolBarTitle,
@@ -483,25 +484,6 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
     val clearDinersButtonDeemphasized: LiveData<Boolean> = _dinerSelections.mapLatest { it.isEmpty() }.withOutputSwitch(isOutputFlowing).asLiveData()
     val clearReimburseeButtonDeemphasized: LiveData<Boolean> = _reimburseeSelections.mapLatest { it.isEmpty() }.withOutputSwitch(isOutputFlowing).asLiveData()
 
-    val priceNumberPadVisible: LiveData<Boolean> = priceCalcData.isNumberPadVisible.withOutputSwitch(isOutputFlowing).asLiveData()
-    val isPriceInPercent: LiveData<Boolean> = priceCalcData.isInPercent.withOutputSwitch(isOutputFlowing).asLiveData()
-    val formattedPrice: LiveData<String> = priceCalcData.displayValue.withOutputSwitch(isOutputFlowing).asLiveData()
-    val priceBackspaceButtonVisible: LiveData<Boolean> = priceCalcData.backspaceButtonVisible.withOutputSwitch(isOutputFlowing).asLiveData()
-    val priceEditButtonVisible: LiveData<Boolean> = priceCalcData.editButtonVisible.withOutputSwitch(isOutputFlowing).asLiveData()
-    val priceZeroButtonEnabled: LiveData<Boolean> = priceCalcData.zeroButtonEnabled.withOutputSwitch(isOutputFlowing).asLiveData()
-    val priceNonZeroButtonsEnabled: LiveData<Boolean> = priceCalcData.nonZeroButtonsEnabled.withOutputSwitch(isOutputFlowing).asLiveData()
-    val priceDecimalButtonEnabled: LiveData<Boolean> = priceCalcData.decimalButtonEnabled.withOutputSwitch(isOutputFlowing).asLiveData()
-    val priceAcceptButtonEnabled: LiveData<Boolean> = priceCalcData.acceptButtonEnabled.withOutputSwitch(isOutputFlowing).asLiveData()
-
-    val costNumberPadVisible: LiveData<Boolean> = costCalcData.isNumberPadVisible.withOutputSwitch(isOutputFlowing).asLiveData()
-    val formattedCost: LiveData<String> = costCalcData.displayValue.withOutputSwitch(isOutputFlowing).asLiveData()
-    val costBackspaceButtonVisible: LiveData<Boolean> = costCalcData.backspaceButtonVisible.withOutputSwitch(isOutputFlowing).asLiveData()
-    val costEditButtonVisible: LiveData<Boolean> = costCalcData.editButtonVisible.withOutputSwitch(isOutputFlowing).asLiveData()
-    val costZeroButtonEnabled: LiveData<Boolean> = costCalcData.zeroButtonEnabled.withOutputSwitch(isOutputFlowing).asLiveData()
-    val costNonZeroButtonsEnabled: LiveData<Boolean> = costCalcData.nonZeroButtonsEnabled.withOutputSwitch(isOutputFlowing).asLiveData()
-    val costDecimalButtonEnabled: LiveData<Boolean> = costCalcData.decimalButtonEnabled.withOutputSwitch(isOutputFlowing).asLiveData()
-    val costAcceptButtonEnabled: LiveData<Boolean> = costCalcData.acceptButtonEnabled.withOutputSwitch(isOutputFlowing).asLiveData()
-
     val selectAllItemsButtonDisabled: LiveData<Boolean> = combine(_itemSelections, repository.items) { selections, items ->
         selections.size == items.size
     }.withOutputSwitch(isOutputFlowing).distinctUntilChanged().asLiveData()
@@ -512,7 +494,6 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
         selections.size == diners.size
     }.withOutputSwitch(isOutputFlowing).distinctUntilChanged().asLiveData()
 
-    val costAcceptEvents: LiveData<Event<String>> = costCalcData.acceptEvents.asLiveData()
     private val showUnsavedInvalidEditsAlertEventMutable = MutableLiveData<Event<Boolean>>()
     val showUnsavedInvalidEditsAlertEvent: LiveData<Event<Boolean>> = showUnsavedInvalidEditsAlertEventMutable
     private val showUnsavedValidEditsAlertEventMutable = MutableLiveData<Event<Boolean>>()
@@ -600,7 +581,7 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
             isInputLocked.value -> { /* Ignore back press while input is locked */ }
             _isHandlingReimbursements.value -> {
                 when {
-                    costCalcData.isNumberPadVisible.value -> {
+                    costCalcData.isNumberPadVisible.value == true -> {
                         /* User is editing the reimbursement cost so try to return to the last
                          value. If successful, the number pad will be dismissed. */
                         if(!revertToLastCost()) {
@@ -625,7 +606,7 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
                     }
                 }
             }
-            priceCalcData.isNumberPadVisible.value -> {
+            priceCalcData.isNumberPadVisible.value == true -> {
                 /* User is editing the discount amount so try to return to the last value. If
                  successful, the number pad will be dismissed. */
                 if(!revertToLastPrice()) {
@@ -707,7 +688,7 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
         _isHandlingReimbursements.value = true
     }
     fun switchToDiscountProperties() {
-        if(costCalcData.isNumberPadVisible.value) {
+        if(costCalcData.isNumberPadVisible.value == true) {
             costCalcData.discardEntry()
         }
 
@@ -715,35 +696,19 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
     }
     fun switchDiscountBasisToItems() { _isDiscountOnItems.value = true }
     fun switchDiscountBasisToDiners() { _isDiscountOnItems.value = false }
-    fun switchPriceToPercent() { priceCalcData.switchCalculationType(CalculationType.ITEMIZED_DISCOUNT_PERCENT) }
-    fun switchPriceToCurrency() { priceCalcData.switchCalculationType(CalculationType.ITEMIZED_DISCOUNT_AMOUNT) }
 
-    fun editPrice() {
-        priceCalcData.clearValue()
-        priceCalcData.showNumberPad()
-    }
-    fun addDigitToPrice(digit: Char) = priceCalcData.addDigit(digit)
-    fun addDecimalToPrice() = priceCalcData.addDecimal()
-    fun removeDigitFromPrice() = priceCalcData.removeDigit()
-    fun resetPrice() = priceCalcData.clearValue()
     private fun revertToLastPrice() = priceCalcData.tryRevertToLastValue()
-    fun acceptPrice() = priceCalcData.tryAcceptValue()
 
     fun editCost() {
         costCalcData.clearValue()
         costCalcData.showNumberPad()
     }
-    fun addDigitToCost(digit: Char) = costCalcData.addDigit(digit)
-    fun addDecimalToCost() = costCalcData.addDecimal()
-    fun removeDigitFromCost() = costCalcData.removeDigit()
-    fun resetCost() = costCalcData.clearValue()
     private fun revertToLastCost() = costCalcData.tryRevertToLastValue()
     fun cancelCost() {
         costCalcData.discardEntry()
         clearReimburseeSelections()
         switchToDiscountProperties()
     }
-    fun acceptCost() = costCalcData.tryAcceptValue()
 
     fun isDinerSelected(diner: Diner) = dinerSelectionSet.contains(diner)
     fun toggleDinerSelection(diner: Diner) {
@@ -821,7 +786,7 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
 
     fun saveDiscount(): Int {
         val price = priceCalcData.numericalValue.value
-        val asPercent = priceCalcData.isInPercent.value
+        val asPercent = priceCalcData.isInPercent.value == true
         val onItems = _isDiscountOnItems.value
         val items = itemSelectionSet.toList()
         val recipients = dinerSelectionSet.toList()

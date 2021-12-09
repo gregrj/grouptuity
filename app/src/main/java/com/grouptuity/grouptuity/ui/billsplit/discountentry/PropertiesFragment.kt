@@ -25,9 +25,10 @@ import com.grouptuity.grouptuity.databinding.FragDiscountEntryListBinding
 import com.grouptuity.grouptuity.databinding.FragDiscountEntryPropertiesBinding
 import com.grouptuity.grouptuity.databinding.ListDinerBinding
 import com.grouptuity.grouptuity.databinding.ListItemBinding
-import com.grouptuity.grouptuity.ui.custom.views.RecyclerViewListener
-import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
-import com.grouptuity.grouptuity.ui.custom.views.ContactIcon
+import com.grouptuity.grouptuity.ui.util.views.RecyclerViewListener
+import com.grouptuity.grouptuity.ui.util.views.setNullOnDestroy
+import com.grouptuity.grouptuity.ui.util.views.ContactIcon
+import com.grouptuity.grouptuity.ui.util.views.setupCalculatorDisplay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -114,25 +115,12 @@ class PropertiesFragment: Fragment() {
             binding.buttonDiners.hasColor = !inTertiary
         }
 
-        discountEntryViewModel.formattedPrice.observe(viewLifecycleOwner, { price: String -> binding.priceTextview.text = price })
-        discountEntryViewModel.priceBackspaceButtonVisible.observe(viewLifecycleOwner) { binding.buttonBackspace.visibility = if(it) View.VISIBLE else View.GONE }
-        discountEntryViewModel.priceEditButtonVisible.observe(viewLifecycleOwner) { binding.buttonEdit.visibility = if(it) View.VISIBLE else View.GONE }
-
-        discountEntryViewModel.priceNumberPadVisible.observe(viewLifecycleOwner, {
-            if(it) {
-                binding.priceTextview.setOnClickListener(null)
-                binding.priceTextview.setOnTouchListener { _, _ -> true }
-            } else {
-                binding.priceTextview.setOnClickListener { discountEntryViewModel.editPrice() }
-                binding.priceTextview.setOnTouchListener(null)
-            }
-        })
-
-        binding.buttonBackspace.setOnClickListener { discountEntryViewModel.removeDigitFromPrice() }
-        binding.buttonBackspace.setOnLongClickListener {
-            discountEntryViewModel.resetPrice()
-            true
-        }
+        setupCalculatorDisplay(
+            viewLifecycleOwner,
+            discountEntryViewModel.priceCalcData,
+            binding.priceTextview,
+            binding.buttonEdit,
+            binding.buttonBackspace)
 
         binding.buttonItems.setOnClickListener {
             if(discountEntryViewModel.dinerSelections.value?.isNotEmpty() == true) {

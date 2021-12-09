@@ -27,11 +27,11 @@ import com.grouptuity.grouptuity.data.*
 import com.grouptuity.grouptuity.databinding.FragBillSplitBinding
 import com.grouptuity.grouptuity.databinding.FragDinersListitemBinding
 import com.grouptuity.grouptuity.databinding.FragItemsListitemBinding
-import com.grouptuity.grouptuity.ui.custom.transitions.CardViewExpandTransition
-import com.grouptuity.grouptuity.ui.custom.transitions.CircularRevealTransition
-import com.grouptuity.grouptuity.ui.custom.transitions.progressWindow
-import com.grouptuity.grouptuity.ui.custom.views.ContactIcon
-import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
+import com.grouptuity.grouptuity.ui.util.transitions.CardViewExpandTransition
+import com.grouptuity.grouptuity.ui.util.transitions.CircularRevealTransition
+import com.grouptuity.grouptuity.ui.util.transitions.progressWindow
+import com.grouptuity.grouptuity.ui.util.views.ContactIcon
+import com.grouptuity.grouptuity.ui.util.views.setNullOnDestroy
 import java.text.NumberFormat
 
 // TODO prevent double tap on fab causing navigation error

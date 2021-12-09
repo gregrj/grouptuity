@@ -22,7 +22,6 @@ import androidx.transition.Transition
 import androidx.transition.TransitionValues
 import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
-import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.floatingactionbutton.FloatingActionButton
 import com.google.android.material.snackbar.Snackbar
@@ -31,10 +30,8 @@ import com.google.android.material.transition.Hold
 import com.grouptuity.grouptuity.MainActivity
 import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.databinding.*
-import com.grouptuity.grouptuity.ui.custom.transitions.*
-import com.grouptuity.grouptuity.ui.custom.views.TabLayoutMediator
-import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
-import com.grouptuity.grouptuity.ui.custom.views.slideUp
+import com.grouptuity.grouptuity.ui.util.transitions.*
+import com.grouptuity.grouptuity.ui.util.views.*
 import java.text.NumberFormat
 
 // TODO handle inset changes
@@ -120,8 +117,18 @@ class DiscountEntryFragment: Fragment() {
 
         setupMainTabs()
 
-        setupCostCalculator()
-        setupPriceCalculator()
+        setupCollapsibleNumberPad(
+            viewLifecycleOwner,
+            discountEntryViewModel.priceCalcData,
+            binding.priceNumberPad,
+            useValuePlaceholder = false,
+            showBasisToggleButtons = false)
+
+        setupCollapsibleNumberPad(viewLifecycleOwner,
+            discountEntryViewModel.costCalcData,
+            binding.costNumberPad,
+            useValuePlaceholder = true,
+            showBasisToggleButtons = false)
 
         setupFAB()
 
@@ -214,16 +221,6 @@ class DiscountEntryFragment: Fragment() {
                     selectTab(getTabAt(1))
                 }
             }
-            .setPositiveButton(resources.getString(R.string.discard)) { _, _ -> discountEntryViewModel.cancelCost() }
-            .show()
-    }
-
-    private fun showReimbursementZeroValueAlert() {
-        MaterialAlertDialogBuilder(requireContext(), R.style.AlertDialogPosSuggestionSecondary)
-            .setTitle(resources.getString(R.string.discountentry_alert_abort_reimbursement_zero_value_title))
-            .setMessage(resources.getString(R.string.discountentry_alert_abort_reimbursement_zero_value_message))
-            .setCancelable(false)
-            .setNegativeButton(resources.getString(R.string.edit)) { _, _ -> discountEntryViewModel.editCost() }
             .setPositiveButton(resources.getString(R.string.discard)) { _, _ -> discountEntryViewModel.cancelCost() }
             .show()
     }
@@ -351,144 +348,6 @@ class DiscountEntryFragment: Fragment() {
         discountEntryViewModel.tabsVisible.observe(viewLifecycleOwner, {
             binding.tabLayout.visibility = if(it) View.VISIBLE else View.GONE
         })
-    }
-
-    private fun setupCostCalculator() {
-        val costBottomSheetBehavior = BottomSheetBehavior.from(binding.costNumberPad.container)
-        costBottomSheetBehavior.isDraggable = false
-        costBottomSheetBehavior.addBottomSheetCallback(object: BottomSheetBehavior.BottomSheetCallback(){
-            override fun onSlide(bottomSheet: View, slideOffset: Float) {
-                /* HACK: Disable input lock when sheet is nearly settled. State change updates have
-                         an apparent delay that blocks resumption of user input for too long after
-                         the sheet has visually settled. */
-                if(slideOffset <= 0.05f) {
-                    discountEntryViewModel.costNumberPadInputLocked.value = false
-                } else if(slideOffset >= 0.95) {
-                    discountEntryViewModel.costNumberPadInputLocked.value = false
-                }
-            }
-            override fun onStateChanged(bottomSheet: View, newState: Int) {
-                when (newState) {
-                    BottomSheetBehavior.STATE_EXPANDED -> { discountEntryViewModel.costNumberPadInputLocked.value = false }
-                    BottomSheetBehavior.STATE_COLLAPSED -> { discountEntryViewModel.costNumberPadInputLocked.value = false }
-                    else -> { discountEntryViewModel.costNumberPadInputLocked.value = true }
-                }
-            }
-        })
-
-        binding.costNumberPad.basisToggleButtons.visibility = View.GONE
-
-        discountEntryViewModel.costNumberPadVisible.observe(viewLifecycleOwner, {
-            BottomSheetBehavior.from(binding.costNumberPad.container).state = if(it) BottomSheetBehavior.STATE_EXPANDED else BottomSheetBehavior.STATE_COLLAPSED
-        })
-        discountEntryViewModel.costZeroButtonEnabled.observe(viewLifecycleOwner) { binding.costNumberPad.button0.isEnabled = it }
-        discountEntryViewModel.costNonZeroButtonsEnabled.observe(viewLifecycleOwner) {
-            binding.costNumberPad.button1.isEnabled = it
-            binding.costNumberPad.button2.isEnabled = it
-            binding.costNumberPad.button3.isEnabled = it
-            binding.costNumberPad.button4.isEnabled = it
-            binding.costNumberPad.button5.isEnabled = it
-            binding.costNumberPad.button6.isEnabled = it
-            binding.costNumberPad.button7.isEnabled = it
-            binding.costNumberPad.button8.isEnabled = it
-            binding.costNumberPad.button9.isEnabled = it
-        }
-        discountEntryViewModel.costDecimalButtonEnabled.observe(viewLifecycleOwner) { binding.costNumberPad.buttonDecimal.isEnabled = it }
-        discountEntryViewModel.costAcceptButtonEnabled.observe(viewLifecycleOwner) {
-            if(it) {
-                binding.costNumberPad.buttonAccept.show()
-            } else {
-                binding.costNumberPad.buttonAccept.hide()
-            }
-        }
-
-        discountEntryViewModel.costAcceptEvents.observe(viewLifecycleOwner) {
-            it.consume()?.apply {
-                if (!this.contains(Regex("[1-9]"))) {
-                    showReimbursementZeroValueAlert()
-                }
-            }
-        }
-
-        binding.costNumberPad.buttonDecimal.setOnClickListener { discountEntryViewModel.addDecimalToCost() }
-        binding.costNumberPad.button0.setOnClickListener { discountEntryViewModel.addDigitToCost('0') }
-        binding.costNumberPad.button1.setOnClickListener { discountEntryViewModel.addDigitToCost('1') }
-        binding.costNumberPad.button2.setOnClickListener { discountEntryViewModel.addDigitToCost('2') }
-        binding.costNumberPad.button3.setOnClickListener { discountEntryViewModel.addDigitToCost('3') }
-        binding.costNumberPad.button4.setOnClickListener { discountEntryViewModel.addDigitToCost('4') }
-        binding.costNumberPad.button5.setOnClickListener { discountEntryViewModel.addDigitToCost('5') }
-        binding.costNumberPad.button6.setOnClickListener { discountEntryViewModel.addDigitToCost('6') }
-        binding.costNumberPad.button7.setOnClickListener { discountEntryViewModel.addDigitToCost('7') }
-        binding.costNumberPad.button8.setOnClickListener { discountEntryViewModel.addDigitToCost('8') }
-        binding.costNumberPad.button9.setOnClickListener { discountEntryViewModel.addDigitToCost('9') }
-        binding.costNumberPad.buttonAccept.setOnClickListener { discountEntryViewModel.acceptCost() }
-    }
-
-    private fun setupPriceCalculator() {
-        val priceBottomSheetBehavior = BottomSheetBehavior.from(binding.priceNumberPad.container)
-        priceBottomSheetBehavior.isDraggable = false
-        priceBottomSheetBehavior.addBottomSheetCallback(object: BottomSheetBehavior.BottomSheetCallback(){
-            override fun onSlide(bottomSheet: View, slideOffset: Float) {
-                /* HACK: Disable input lock when sheet is nearly settled. State change updates have
-                         an apparent delay that blocks resumption of user input for too long after
-                         the sheet has visually settled. */
-                if(slideOffset <= 0.05f) {
-                    discountEntryViewModel.priceNumberPadInputLocked.value = false
-                } else if(slideOffset >= 0.95) {
-                    discountEntryViewModel.priceNumberPadInputLocked.value = false
-                }
-            }
-            override fun onStateChanged(bottomSheet: View, newState: Int) {
-                when (newState) {
-                    BottomSheetBehavior.STATE_EXPANDED -> { discountEntryViewModel.priceNumberPadInputLocked.value = false }
-                    BottomSheetBehavior.STATE_COLLAPSED -> { discountEntryViewModel.priceNumberPadInputLocked.value = false }
-                    else -> { discountEntryViewModel.priceNumberPadInputLocked.value = true }
-                }
-            }
-        })
-
-        discountEntryViewModel.priceNumberPadVisible.observe(viewLifecycleOwner, {
-            BottomSheetBehavior.from(binding.priceNumberPad.container).state = if(it) BottomSheetBehavior.STATE_EXPANDED else BottomSheetBehavior.STATE_COLLAPSED
-        })
-        discountEntryViewModel.isPriceInPercent.observe(viewLifecycleOwner) {
-            binding.priceNumberPad.buttonPercent.isEnabled = !it
-            binding.priceNumberPad.buttonCurrency.isEnabled = it
-        }
-        discountEntryViewModel.priceZeroButtonEnabled.observe(viewLifecycleOwner) { binding.priceNumberPad.button0.isEnabled = it }
-        discountEntryViewModel.priceNonZeroButtonsEnabled.observe(viewLifecycleOwner) {
-            binding.priceNumberPad.button1.isEnabled = it
-            binding.priceNumberPad.button2.isEnabled = it
-            binding.priceNumberPad.button3.isEnabled = it
-            binding.priceNumberPad.button4.isEnabled = it
-            binding.priceNumberPad.button5.isEnabled = it
-            binding.priceNumberPad.button6.isEnabled = it
-            binding.priceNumberPad.button7.isEnabled = it
-            binding.priceNumberPad.button8.isEnabled = it
-            binding.priceNumberPad.button9.isEnabled = it
-        }
-        discountEntryViewModel.priceDecimalButtonEnabled.observe(viewLifecycleOwner) { binding.priceNumberPad.buttonDecimal.isEnabled = it }
-        discountEntryViewModel.priceAcceptButtonEnabled.observe(viewLifecycleOwner) {
-            if(it) {
-                binding.priceNumberPad.buttonAccept.show()
-            } else {
-                binding.priceNumberPad.buttonAccept.hide()
-            }
-        }
-
-        binding.priceNumberPad.buttonCurrency.setOnClickListener { discountEntryViewModel.switchPriceToCurrency() }
-        binding.priceNumberPad.buttonPercent.setOnClickListener { discountEntryViewModel.switchPriceToPercent() }
-        binding.priceNumberPad.buttonDecimal.setOnClickListener { discountEntryViewModel.addDecimalToPrice() }
-        binding.priceNumberPad.button0.setOnClickListener { discountEntryViewModel.addDigitToPrice('0') }
-        binding.priceNumberPad.button1.setOnClickListener { discountEntryViewModel.addDigitToPrice('1') }
-        binding.priceNumberPad.button2.setOnClickListener { discountEntryViewModel.addDigitToPrice('2') }
-        binding.priceNumberPad.button3.setOnClickListener { discountEntryViewModel.addDigitToPrice('3') }
-        binding.priceNumberPad.button4.setOnClickListener { discountEntryViewModel.addDigitToPrice('4') }
-        binding.priceNumberPad.button5.setOnClickListener { discountEntryViewModel.addDigitToPrice('5') }
-        binding.priceNumberPad.button6.setOnClickListener { discountEntryViewModel.addDigitToPrice('6') }
-        binding.priceNumberPad.button7.setOnClickListener { discountEntryViewModel.addDigitToPrice('7') }
-        binding.priceNumberPad.button8.setOnClickListener { discountEntryViewModel.addDigitToPrice('8') }
-        binding.priceNumberPad.button9.setOnClickListener { discountEntryViewModel.addDigitToPrice('9') }
-        binding.priceNumberPad.buttonAccept.setOnClickListener { discountEntryViewModel.acceptPrice() }
     }
 
     private fun setupFAB() {

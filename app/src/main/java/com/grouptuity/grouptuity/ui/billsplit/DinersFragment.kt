@@ -2,7 +2,6 @@ package com.grouptuity.grouptuity.ui.billsplit
 
 import android.content.Context
 import android.os.Bundle
-import android.util.Log
 import android.view.*
 import android.widget.EditText
 import androidx.appcompat.app.AlertDialog
@@ -23,9 +22,9 @@ import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.Diner
 import com.grouptuity.grouptuity.databinding.FragDinersBinding
 import com.grouptuity.grouptuity.databinding.FragDinersListitemBinding
-import com.grouptuity.grouptuity.ui.custom.views.RecyclerViewBottomOffset
-import com.grouptuity.grouptuity.ui.custom.views.RecyclerViewListener
-import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
+import com.grouptuity.grouptuity.ui.util.views.RecyclerViewBottomOffset
+import com.grouptuity.grouptuity.ui.util.views.RecyclerViewListener
+import com.grouptuity.grouptuity.ui.util.views.setNullOnDestroy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext

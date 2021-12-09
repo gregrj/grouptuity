@@ -40,9 +40,9 @@ import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.Contact
 import com.grouptuity.grouptuity.databinding.FragAddressBookBinding
 import com.grouptuity.grouptuity.databinding.FragAddressBookListitemBinding
-import com.grouptuity.grouptuity.ui.custom.views.RecyclerViewListener
-import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
-import com.grouptuity.grouptuity.ui.custom.transitions.CircularRevealTransition
+import com.grouptuity.grouptuity.ui.util.views.RecyclerViewListener
+import com.grouptuity.grouptuity.ui.util.views.setNullOnDestroy
+import com.grouptuity.grouptuity.ui.util.transitions.CircularRevealTransition
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -304,6 +304,11 @@ class AddressBookFragment: Fragment() {
             }
         }
 
+        val secondaryColor = TypedValue().also { requireContext().theme.resolveAttribute(R.attr.colorSecondary, it, true) }.data
+        val secondaryDarkColor = TypedValue().also { requireContext().theme.resolveAttribute(R.attr.colorSecondaryVariant, it, true) }.data
+        val tertiaryColor = TypedValue().also { requireContext().theme.resolveAttribute(R.attr.colorTertiary, it, true) }.data
+        val tertiaryDarkColor = TypedValue().also { requireContext().theme.resolveAttribute(R.attr.colorTertiaryVariant, it, true) }.data
+
         addressBookViewModel.toolBarState.observe(viewLifecycleOwner) { toolBarState ->
             binding.toolbar.title = toolBarState.title
 
@@ -341,11 +346,6 @@ class AddressBookFragment: Fragment() {
             binding.toolbar.menu.setGroupVisible(R.id.group_other, toolBarState.showOtherButtons)
 
             if(toolBarState.tertiaryBackground != toolbarInTertiaryState) {
-                val secondaryColor = TypedValue().also { requireContext().theme.resolveAttribute(R.attr.colorSecondary, it, true) }.data
-                val secondaryDarkColor = TypedValue().also { requireContext().theme.resolveAttribute(R.attr.colorSecondaryVariant, it, true) }.data
-                val tertiaryColor = TypedValue().also { requireContext().theme.resolveAttribute(R.attr.colorTertiary, it, true) }.data
-                val tertiaryDarkColor = TypedValue().also { requireContext().theme.resolveAttribute(R.attr.colorTertiaryVariant, it, true) }.data
-
                 if(toolbarInTertiaryState) {
                     ValueAnimator.ofObject(ArgbEvaluator(), tertiaryColor, secondaryColor).apply {
                         duration = resources.getInteger(R.integer.viewprop_animation_duration).toLong()

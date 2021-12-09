@@ -1,4 +1,4 @@
-package com.grouptuity.grouptuity.ui.custom
+package com.grouptuity.grouptuity.ui.util
 
 import android.content.Context
 import android.os.Bundle

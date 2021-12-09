@@ -6,7 +6,6 @@ import android.annotation.SuppressLint
 import android.app.SearchManager
 import android.content.Context
 import android.os.Bundle
-import android.util.Log
 import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
@@ -33,12 +32,9 @@ import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.Diner
 import com.grouptuity.grouptuity.databinding.FragItementryBinding
 import com.grouptuity.grouptuity.databinding.ListDinerBinding
-import com.grouptuity.grouptuity.ui.billsplit.contactentry.ContactEntryFragmentDirections
-import com.grouptuity.grouptuity.ui.custom.views.RecyclerViewListener
-import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
-import com.grouptuity.grouptuity.ui.custom.transitions.CardViewExpandTransition
-import com.grouptuity.grouptuity.ui.custom.transitions.CircularRevealTransition
-import com.grouptuity.grouptuity.ui.custom.views.slideUp
+import com.grouptuity.grouptuity.ui.util.transitions.CardViewExpandTransition
+import com.grouptuity.grouptuity.ui.util.transitions.CircularRevealTransition
+import com.grouptuity.grouptuity.ui.util.views.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -97,34 +93,26 @@ class ItemEntryFragment: Fragment() {
         }
         */
 
-        val bottomSheetBehavior = BottomSheetBehavior.from(binding.calculator.container)
-        bottomSheetBehavior.isDraggable = false
-        bottomSheetBehavior.addBottomSheetCallback(object: BottomSheetBehavior.BottomSheetCallback() {
-            override fun onSlide(bottomSheet: View, slideOffset: Float) {  }
+        setupCollapsibleNumberPad(
+            viewLifecycleOwner,
+            itemEntryViewModel.calculatorData,
+            binding.numberPad,
+            useValuePlaceholder = false,
+            showBasisToggleButtons = false)
 
-            @SuppressLint("ClickableViewAccessibility")
-            override fun onStateChanged(bottomSheet: View, newState: Int) {
-                when(newState) {
-                    BottomSheetBehavior.STATE_COLLAPSED -> {
-                        binding.priceTextview.setOnClickListener { itemEntryViewModel.openCalculator() }
-                        binding.priceTextview.setOnTouchListener(null)
-                    }
-                    else -> {
-                        binding.priceTextview.setOnClickListener(null)
-                        binding.priceTextview.setOnTouchListener { _, _ -> true }
-                    }
-                }
-            }
-        })
+        setupCalculatorDisplay(
+            viewLifecycleOwner,
+            itemEntryViewModel.calculatorData,
+            binding.priceTextview,
+            binding.buttonEdit,
+            binding.buttonBackspace)
 
         //Reset state and setup transitions
         if(args.editedItem == null) {
             // New item
             binding.innerCoveredFragment.setImageBitmap(MainActivity.storedViewBitmap)
 
-            bottomSheetBehavior.state = BottomSheetBehavior.STATE_EXPANDED
-            binding.priceTextview.setOnClickListener(null)
-            binding.priceTextview.setOnTouchListener { _, _ -> true }
+            BottomSheetBehavior.from(binding.numberPad.container).state = BottomSheetBehavior.STATE_EXPANDED
 
             enterTransition = CircularRevealTransition(
                 binding.fadeView,
@@ -142,8 +130,7 @@ class ItemEntryFragment: Fragment() {
             // Editing existing item
             binding.fadeView.visibility = View.GONE
 
-            bottomSheetBehavior.state = BottomSheetBehavior.STATE_COLLAPSED
-            binding.priceTextview.setOnClickListener { itemEntryViewModel.openCalculator() }
+            BottomSheetBehavior.from(binding.numberPad.container).state = BottomSheetBehavior.STATE_COLLAPSED
 
             setupEnterTransition()
         }
@@ -152,8 +139,6 @@ class ItemEntryFragment: Fragment() {
         view.doOnPreDraw { startPostponedEnterTransition() }
 
         setupToolbar()
-
-        setupCalculator()
 
         setupDinerList()
 
@@ -339,58 +324,6 @@ class ItemEntryFragment: Fragment() {
                 searchView.setQuery(this, false)
             }
         })
-    }
-
-    private fun setupCalculator() {
-        // Layout sets correct calculator height without needing placeholder for the price TextView
-        binding.calculator.pricePlaceholder.visibility = View.GONE
-
-        // Only currency mode will be used so no need to show basis toggle buttons
-        binding.calculator.basisToggleButtons.visibility = View.GONE
-
-        // Observer for expanding and collapsing the number pad
-        itemEntryViewModel.numberPadVisible.observe(viewLifecycleOwner, { visible ->
-            BottomSheetBehavior.from(binding.calculator.container).state =
-                if (visible)
-                    BottomSheetBehavior.STATE_EXPANDED
-                else
-                    BottomSheetBehavior.STATE_COLLAPSED
-        })
-
-        itemEntryViewModel.formattedPrice.observe(viewLifecycleOwner, { price: String -> binding.priceTextview.text = price })
-
-        // Observers and listeners for the number pad buttons
-        itemEntryViewModel.priceZeroButtonEnabled.observe(viewLifecycleOwner) { binding.calculator.button0.isEnabled = it }
-        itemEntryViewModel.priceDecimalButtonEnabled.observe(viewLifecycleOwner) { binding.calculator.buttonDecimal.isEnabled = it }
-        itemEntryViewModel.priceAcceptButtonEnabled.observe(viewLifecycleOwner) {
-            if(it) {
-                binding.calculator.buttonAccept.show()
-            } else {
-                binding.calculator.buttonAccept.hide()
-            }
-        }
-        binding.calculator.buttonDecimal.setOnClickListener { itemEntryViewModel.addDecimalToPrice() }
-        binding.calculator.button0.setOnClickListener { itemEntryViewModel.addDigitToPrice('0') }
-        binding.calculator.button1.setOnClickListener { itemEntryViewModel.addDigitToPrice('1') }
-        binding.calculator.button2.setOnClickListener { itemEntryViewModel.addDigitToPrice('2') }
-        binding.calculator.button3.setOnClickListener { itemEntryViewModel.addDigitToPrice('3') }
-        binding.calculator.button4.setOnClickListener { itemEntryViewModel.addDigitToPrice('4') }
-        binding.calculator.button5.setOnClickListener { itemEntryViewModel.addDigitToPrice('5') }
-        binding.calculator.button6.setOnClickListener { itemEntryViewModel.addDigitToPrice('6') }
-        binding.calculator.button7.setOnClickListener { itemEntryViewModel.addDigitToPrice('7') }
-        binding.calculator.button8.setOnClickListener { itemEntryViewModel.addDigitToPrice('8') }
-        binding.calculator.button9.setOnClickListener { itemEntryViewModel.addDigitToPrice('9') }
-        binding.calculator.buttonAccept.setOnClickListener { itemEntryViewModel.acceptPrice() }
-
-        // Observers and listeners for the backspace/clear button
-        itemEntryViewModel.priceBackspaceButtonVisible.observe(viewLifecycleOwner) { binding.buttonBackspace.visibility = if(it) View.VISIBLE else View.GONE }
-        binding.buttonBackspace.setOnClickListener { itemEntryViewModel.removeDigitFromPrice() }
-        binding.buttonBackspace.setOnLongClickListener {
-            itemEntryViewModel.resetPrice()
-            true
-        }
-
-        itemEntryViewModel.priceEditButtonVisible.observe(viewLifecycleOwner) { binding.buttonEdit.visibility = if(it) View.VISIBLE else View.GONE }
     }
 
     private fun setupDinerList() {

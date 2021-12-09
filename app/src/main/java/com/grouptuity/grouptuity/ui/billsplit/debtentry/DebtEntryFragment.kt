@@ -36,9 +36,11 @@ import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.Diner
 import com.grouptuity.grouptuity.databinding.FragDebtentryBinding
 import com.grouptuity.grouptuity.databinding.FragDebtentryListdinerBinding
-import com.grouptuity.grouptuity.ui.custom.transitions.CardViewExpandTransition
-import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
-import com.grouptuity.grouptuity.ui.custom.views.slideUp
+import com.grouptuity.grouptuity.ui.util.transitions.CardViewExpandTransition
+import com.grouptuity.grouptuity.ui.util.views.setNullOnDestroy
+import com.grouptuity.grouptuity.ui.util.views.setupCalculatorDisplay
+import com.grouptuity.grouptuity.ui.util.views.setupCollapsibleNumberPad
+import com.grouptuity.grouptuity.ui.util.views.slideUp
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -98,36 +100,26 @@ class DebtEntryFragment: Fragment() {
         }
         */
 
-        val bottomSheetBehavior = BottomSheetBehavior.from(binding.calculator.container)
-        bottomSheetBehavior.isDraggable = false
-        bottomSheetBehavior.addBottomSheetCallback(object: BottomSheetBehavior.BottomSheetCallback() {
-            override fun onSlide(bottomSheet: View, slideOffset: Float) {  }
-
-            @SuppressLint("ClickableViewAccessibility")
-            override fun onStateChanged(bottomSheet: View, newState: Int) {
-                when(newState) {
-                    BottomSheetBehavior.STATE_COLLAPSED -> {
-                        binding.priceTextview.setOnClickListener { debtEntryViewModel.openCalculator() }
-                        binding.priceTextview.setOnTouchListener(null)
-                    }
-                    else -> {
-                        binding.priceTextview.setOnClickListener(null)
-                        binding.priceTextview.setOnTouchListener { _, _ -> true }
-                    }
-                }
-            }
-        })
-
-        // Reset bottom sheet number pad
-        bottomSheetBehavior.state = BottomSheetBehavior.STATE_EXPANDED
-        binding.priceTextview.setOnClickListener(null)
-        binding.priceTextview.setOnTouchListener { _, _ -> true }
-
         setupEnterTransition()
 
         setupToolbar()
 
-        setupCalculator()
+        setupCollapsibleNumberPad(
+            viewLifecycleOwner,
+            debtEntryViewModel.calculatorData,
+            binding.numberPad,
+            useValuePlaceholder = false,
+            showBasisToggleButtons = false)
+
+        setupCalculatorDisplay(
+            viewLifecycleOwner,
+            debtEntryViewModel.calculatorData,
+            binding.priceTextview,
+            binding.buttonEdit,
+            binding.buttonBackspace)
+
+        // Reset bottom sheet number pad
+        BottomSheetBehavior.from(binding.numberPad.container).state = BottomSheetBehavior.STATE_EXPANDED
 
         setupDinerList()
 
@@ -297,58 +289,6 @@ class DebtEntryFragment: Fragment() {
                 searchView.setQuery(this, false)
             }
         })
-    }
-
-    private fun setupCalculator() {
-        // Layout sets correct calculator height without needing placeholder for the price TextView
-        binding.calculator.pricePlaceholder.visibility = View.GONE
-
-        // Only currency mode will be used so no need to show basis toggle buttons
-        binding.calculator.basisToggleButtons.visibility = View.GONE
-
-        // Observer for expanding and collapsing the number pad
-        debtEntryViewModel.numberPadVisible.observe(viewLifecycleOwner, { visible ->
-            BottomSheetBehavior.from(binding.calculator.container).state =
-                if (visible)
-                    BottomSheetBehavior.STATE_EXPANDED
-                else
-                    BottomSheetBehavior.STATE_COLLAPSED
-        })
-
-        debtEntryViewModel.formattedPrice.observe(viewLifecycleOwner, { price: String -> binding.priceTextview.text = price })
-
-        // Observers and listeners for the number pad buttons
-        debtEntryViewModel.priceZeroButtonEnabled.observe(viewLifecycleOwner) { binding.calculator.button0.isEnabled = it }
-        debtEntryViewModel.priceDecimalButtonEnabled.observe(viewLifecycleOwner) { binding.calculator.buttonDecimal.isEnabled = it }
-        debtEntryViewModel.priceAcceptButtonEnabled.observe(viewLifecycleOwner) {
-            if(it) {
-                binding.calculator.buttonAccept.show()
-            } else {
-                binding.calculator.buttonAccept.hide()
-            }
-        }
-        binding.calculator.buttonDecimal.setOnClickListener { debtEntryViewModel.addDecimalToPrice() }
-        binding.calculator.button0.setOnClickListener { debtEntryViewModel.addDigitToPrice('0') }
-        binding.calculator.button1.setOnClickListener { debtEntryViewModel.addDigitToPrice('1') }
-        binding.calculator.button2.setOnClickListener { debtEntryViewModel.addDigitToPrice('2') }
-        binding.calculator.button3.setOnClickListener { debtEntryViewModel.addDigitToPrice('3') }
-        binding.calculator.button4.setOnClickListener { debtEntryViewModel.addDigitToPrice('4') }
-        binding.calculator.button5.setOnClickListener { debtEntryViewModel.addDigitToPrice('5') }
-        binding.calculator.button6.setOnClickListener { debtEntryViewModel.addDigitToPrice('6') }
-        binding.calculator.button7.setOnClickListener { debtEntryViewModel.addDigitToPrice('7') }
-        binding.calculator.button8.setOnClickListener { debtEntryViewModel.addDigitToPrice('8') }
-        binding.calculator.button9.setOnClickListener { debtEntryViewModel.addDigitToPrice('9') }
-        binding.calculator.buttonAccept.setOnClickListener { debtEntryViewModel.acceptPrice() }
-
-        // Observers and listeners for the backspace/clear button
-        debtEntryViewModel.priceBackspaceButtonVisible.observe(viewLifecycleOwner) { binding.buttonBackspace.visibility = if(it) View.VISIBLE else View.GONE }
-        binding.buttonBackspace.setOnClickListener { debtEntryViewModel.removeDigitFromPrice() }
-        binding.buttonBackspace.setOnLongClickListener {
-            debtEntryViewModel.resetPrice()
-            true
-        }
-
-        debtEntryViewModel.priceEditButtonVisible.observe(viewLifecycleOwner) { binding.buttonEdit.visibility = if(it) View.VISIBLE else View.GONE }
     }
 
     private fun setupDinerList() {

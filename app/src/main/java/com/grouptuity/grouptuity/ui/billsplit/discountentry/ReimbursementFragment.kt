@@ -16,8 +16,9 @@ import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.Diner
 import com.grouptuity.grouptuity.databinding.FragDiscountEntryReimbursementBinding
 import com.grouptuity.grouptuity.databinding.ListDinerBinding
-import com.grouptuity.grouptuity.ui.custom.views.RecyclerViewListener
-import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
+import com.grouptuity.grouptuity.ui.util.views.RecyclerViewListener
+import com.grouptuity.grouptuity.ui.util.views.setNullOnDestroy
+import com.grouptuity.grouptuity.ui.util.views.setupCalculatorDisplay
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -73,15 +74,12 @@ class ReimbursementFragment: Fragment() {
             }
         }
 
-        discountEntryViewModel.formattedCost.observe(viewLifecycleOwner, { cost: String -> binding.priceTextview.text = cost })
-        discountEntryViewModel.costBackspaceButtonVisible.observe(viewLifecycleOwner) { binding.buttonBackspace.visibility = if(it) View.VISIBLE else View.GONE }
-        discountEntryViewModel.costEditButtonVisible.observe(viewLifecycleOwner) { binding.buttonEdit.visibility = if(it) View.VISIBLE else View.GONE }
-
-        binding.buttonBackspace.setOnClickListener { discountEntryViewModel.removeDigitFromCost() }
-        binding.buttonBackspace.setOnLongClickListener {
-            discountEntryViewModel.resetCost()
-            true
-        }
+        setupCalculatorDisplay(
+            viewLifecycleOwner,
+            discountEntryViewModel.costCalcData,
+            binding.costTextview,
+            binding.buttonEdit,
+            binding.buttonBackspace)
 
         binding.selections.selectAll.text = getString(R.string.discountentry_button_selectalldiners)
         binding.selections.selectAll.setOnClickListener { discountEntryViewModel.selectAllReimbursees() }
@@ -93,17 +91,6 @@ class ReimbursementFragment: Fragment() {
             binding.selections.clearSelections.setTextColor(if(it) textColorDeemphasized else textColor)
         }
         binding.selections.clearSelections.setOnClickListener { discountEntryViewModel.clearReimburseeSelections() }
-
-        discountEntryViewModel.costNumberPadVisible.observe(viewLifecycleOwner, {
-            if(it) {
-                binding.priceTextview.setOnClickListener(null)
-                binding.priceTextview.setOnTouchListener { _, _ -> true }
-
-            } else {
-                binding.priceTextview.setOnClickListener { discountEntryViewModel.editCost() }
-                binding.priceTextview.setOnTouchListener(null)
-            }
-        })
 
         binding.selections.swipeRefreshLayout.isEnabled = false
         binding.selections.swipeRefreshLayout.isRefreshing = true

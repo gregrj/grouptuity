@@ -30,11 +30,11 @@ import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.Discount
 import com.grouptuity.grouptuity.databinding.FragDiscountsBinding
 import com.grouptuity.grouptuity.databinding.FragDiscountsListitemBinding
-import com.grouptuity.grouptuity.ui.custom.transitions.CardViewExpandTransition
-import com.grouptuity.grouptuity.ui.custom.transitions.CircularRevealTransition
-import com.grouptuity.grouptuity.ui.custom.views.RecyclerViewBottomOffset
-import com.grouptuity.grouptuity.ui.custom.views.RecyclerViewListener
-import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
+import com.grouptuity.grouptuity.ui.util.transitions.CardViewExpandTransition
+import com.grouptuity.grouptuity.ui.util.transitions.CircularRevealTransition
+import com.grouptuity.grouptuity.ui.util.views.RecyclerViewBottomOffset
+import com.grouptuity.grouptuity.ui.util.views.RecyclerViewListener
+import com.grouptuity.grouptuity.ui.util.views.setNullOnDestroy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext

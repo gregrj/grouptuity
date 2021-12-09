@@ -59,9 +59,9 @@ import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.*
 import com.grouptuity.grouptuity.databinding.*
 import com.grouptuity.grouptuity.ui.billsplit.qrcodescanner.QRCodeScannerActivity
-import com.grouptuity.grouptuity.ui.custom.CustomNavigator
-import com.grouptuity.grouptuity.ui.custom.transitions.CardViewExpandTransition
-import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
+import com.grouptuity.grouptuity.ui.util.CustomNavigator
+import com.grouptuity.grouptuity.ui.util.transitions.CardViewExpandTransition
+import com.grouptuity.grouptuity.ui.util.views.setNullOnDestroy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext

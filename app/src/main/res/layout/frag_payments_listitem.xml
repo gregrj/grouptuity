@@ -31,7 +31,7 @@
             app:layout_constraintStart_toEndOf="@+id/payment_method_flip_button"
             app:layout_constraintTop_toTopOf="parent"/>
 
-        <com.grouptuity.grouptuity.ui.custom.views.FlipButton
+        <com.grouptuity.grouptuity.ui.util.views.FlipButton
             android:id="@+id/payment_method_flip_button"
             android:layout_width="48dp"
             android:layout_height="48dp"
@@ -66,9 +66,9 @@
                 android:visibility="gone"
                 app:tint="?attr/colorOnTertiary"
                 android:contentDescription="@string/payments_close_selection_list" />
-        </com.grouptuity.grouptuity.ui.custom.views.FlipButton>
+        </com.grouptuity.grouptuity.ui.util.views.FlipButton>
 
-        <com.grouptuity.grouptuity.ui.custom.views.ExpandableLayout
+        <com.grouptuity.grouptuity.ui.util.views.ExpandableLayout
             android:id="@+id/payment_methods_expanding_layout"
             android:layout_width="0dp"
             android:layout_height="0dp"
@@ -199,9 +199,9 @@
                 android:layout_width="0dp"
                 android:layout_height="0dp"
                 android:layout_weight="1"/>
-        </com.grouptuity.grouptuity.ui.custom.views.ExpandableLayout>
+        </com.grouptuity.grouptuity.ui.util.views.ExpandableLayout>
 
-        <com.grouptuity.grouptuity.ui.custom.views.ContactIcon
+        <com.grouptuity.grouptuity.ui.util.views.ContactIcon
             android:id="@+id/payer_contact_icon"
             android:layout_width="0dp"
             android:layout_height="0dp"
@@ -286,7 +286,7 @@
             app:layout_constraintStart_toEndOf="@id/payer_contact_icon_reference"
             android:visibility="invisible"/>
 
-        <com.grouptuity.grouptuity.ui.custom.views.ContactIcon
+        <com.grouptuity.grouptuity.ui.util.views.ContactIcon
             android:id="@+id/payer_contact_icon_reference"
             android:layout_width="0dp"
             android:layout_height="0dp"

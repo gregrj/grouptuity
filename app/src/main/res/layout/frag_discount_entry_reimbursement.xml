@@ -13,7 +13,7 @@
         android:background="?attr/colorBackground">
 
         <TextView
-            android:id="@+id/price_textview"
+            android:id="@+id/cost_textview"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:paddingTop="16dp"
