@@ -13,14 +13,19 @@ data class BillSplitToolbarState(
     val showClearDiners: Boolean,
     val showClearItems: Boolean,
     val checkTaxIsTipped: Boolean,
-    val checkDiscountsReduceTip: Boolean)
+    val checkDiscountsReduceTip: Boolean,
+    val showGeneralMenuGroup: Boolean,
+    val showDinersMenuGroup: Boolean,
+    val showItemsMenuGroup: Boolean,
+    val showTaxTipMenuGroup: Boolean,
+    val showPayMenuGroup: Boolean)
+
 
 class BillSplitViewModel(application: Application): BaseUIViewModel(application) {
     val dinerCount = repository.numberOfDiners.asLiveData()
     val itemCount = repository.numberOfItems.asLiveData()
 
     val activeFragmentIndex = repository.activeFragmentIndex
-    val activeFragmentIndexLiveData = activeFragmentIndex.asLiveData()
 
     val isProcessingPayments = repository.processingPayments.asLiveData(isOutputLocked)
 
@@ -30,15 +35,24 @@ class BillSplitViewModel(application: Application): BaseUIViewModel(application)
         repository.numberOfDiners,
         repository.numberOfItems,
         repository.taxIsTipped,
-        repository.discountsReduceTip) {
+        repository.discountsReduceTip,
+        repository.processingPayments
+    ) {
+        val page = it[0] as Int
+        val notProcessingPayments = !(it[6] as Boolean)
 
         BillSplitToolbarState(
-            activePage = it[0] as Int,
+            activePage = page,
             showIncludeSelf = !(it[1] as Boolean),
             showClearDiners = (it[2] as Int) > 0,
             showClearItems = (it[3] as Int) > 0,
             checkTaxIsTipped = it[4] as Boolean,
-            checkDiscountsReduceTip = it[5] as Boolean)
+            checkDiscountsReduceTip = it[5] as Boolean,
+            showGeneralMenuGroup = notProcessingPayments,
+            showDinersMenuGroup = page == FRAG_DINERS,
+            showItemsMenuGroup = page == FRAG_ITEMS,
+            showTaxTipMenuGroup = page == FRAG_TAX_TIP,
+            showPayMenuGroup = page == FRAG_PAYMENTS && notProcessingPayments)
     }.asLiveData()
 
     private val showProcessPaymentsButtonFlow = combine(

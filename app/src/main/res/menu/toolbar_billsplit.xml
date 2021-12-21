@@ -4,11 +4,12 @@
     xmlns:tools="http://schemas.android.com/tools"
     tools:context=".MainActivity">
 
-    <item
-        android:id="@+id/new_bill"
-        android:title="@string/billsplit_menu_diners_new_bill"
-        android:orderInCategory="1"
-        app:showAsAction="never" />
+    <group android:id="@+id/group_general">
+        <item
+            android:id="@+id/new_bill"
+            android:title="@string/billsplit_menu_diners_new_bill"
+            app:showAsAction="never" />
+    </group>
 
     <group android:id="@+id/group_diners">
         <item
@@ -27,7 +28,6 @@
         <item
             android:id="@+id/clear_items"
             android:title="@string/billsplit_menu_items_remove_all_items"
-            android:orderInCategory="1"
             app:showAsAction="never" />
     </group>
 
@@ -55,7 +55,6 @@
         <item
             android:id="@+id/reset_payments"
             android:title="@string/billsplit_menu_pay_reset"
-            android:orderInCategory="1"
             app:showAsAction="never" />
     </group>
 

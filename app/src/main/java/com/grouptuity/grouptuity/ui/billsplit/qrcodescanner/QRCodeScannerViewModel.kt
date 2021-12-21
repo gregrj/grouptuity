@@ -106,7 +106,7 @@ class QRCodeScannerViewModel(app: Application): AndroidViewModel(app) {
                                 context.getString(it)
                         } ?: "",
                         venmoDisplayMessage[status]?.let { context.getString(it) } ?: "",
-                        address ?: "",
+                        address?.let { "@$address" } ?: "",
                         status)
                 }
                 PaymentMethod.CASH_APP -> {

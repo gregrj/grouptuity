@@ -301,32 +301,11 @@ class BillSplitFragment: Fragment() {
                 menu.findItem(R.id.tax_is_tipped).isChecked = it.checkTaxIsTipped
                 menu.findItem(R.id.discounts_reduce_tip).isChecked = it.checkDiscountsReduceTip
 
-                when (it.activePage) {
-                    FRAG_DINERS -> {
-                        menu.setGroupVisible(R.id.group_diners, true)
-                        menu.setGroupVisible(R.id.group_items, false)
-                        menu.setGroupVisible(R.id.group_taxtip, false)
-                        menu.setGroupVisible(R.id.group_pay, false)
-                    }
-                    FRAG_ITEMS -> {
-                        menu.setGroupVisible(R.id.group_diners, false)
-                        menu.setGroupVisible(R.id.group_items, true)
-                        menu.setGroupVisible(R.id.group_taxtip, false)
-                        menu.setGroupVisible(R.id.group_pay, false)
-                    }
-                    FRAG_TAX_TIP -> {
-                        menu.setGroupVisible(R.id.group_diners, false)
-                        menu.setGroupVisible(R.id.group_items, false)
-                        menu.setGroupVisible(R.id.group_taxtip, true)
-                        menu.setGroupVisible(R.id.group_pay, false)
-                    }
-                    FRAG_PAYMENTS -> {
-                        menu.setGroupVisible(R.id.group_diners, false)
-                        menu.setGroupVisible(R.id.group_items, false)
-                        menu.setGroupVisible(R.id.group_taxtip, false)
-                        menu.setGroupVisible(R.id.group_pay, true)
-                    }
-                }
+                menu.setGroupVisible(R.id.group_general, it.showGeneralMenuGroup)
+                menu.setGroupVisible(R.id.group_diners, it.showDinersMenuGroup)
+                menu.setGroupVisible(R.id.group_items, it.showItemsMenuGroup)
+                menu.setGroupVisible(R.id.group_taxtip, it.showTaxTipMenuGroup)
+                menu.setGroupVisible(R.id.group_pay, it.showPayMenuGroup)
             }
         }
 
