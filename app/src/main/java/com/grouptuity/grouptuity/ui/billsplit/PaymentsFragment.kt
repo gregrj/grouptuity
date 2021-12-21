@@ -11,9 +11,13 @@ import android.graphics.Color
 import android.os.Bundle
 import android.util.Log
 import android.util.TypedValue
-import android.view.*
-import android.widget.*
-import androidx.activity.OnBackPressedCallback
+import android.view.ContextThemeWrapper
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import android.widget.ArrayAdapter
+import android.widget.EditText
+import android.widget.TextView
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
@@ -22,7 +26,6 @@ import androidx.constraintlayout.widget.ConstraintLayout
 import androidx.core.content.ContextCompat
 import androidx.core.view.*
 import androidx.core.widget.addTextChangedListener
-import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.DefaultItemAnimator
@@ -43,13 +46,13 @@ import com.grouptuity.grouptuity.ui.billsplit.PaymentsViewModel.Companion.PROCES
 import com.grouptuity.grouptuity.ui.billsplit.PaymentsViewModel.Companion.SELECTING_METHOD_STATE
 import com.grouptuity.grouptuity.ui.billsplit.PaymentsViewModel.Companion.SHOWING_INSTRUCTIONS_STATE
 import com.grouptuity.grouptuity.ui.billsplit.payments.sendCashAppRequest
-import com.grouptuity.grouptuity.ui.billsplit.qrcodescanner.QRCodeScannerActivity
 import com.grouptuity.grouptuity.ui.billsplit.payments.sendPaybackLaterEmail
 import com.grouptuity.grouptuity.ui.billsplit.payments.sendVenmoRequest
 import com.grouptuity.grouptuity.ui.billsplit.payments.startAlgorandTransaction
+import com.grouptuity.grouptuity.ui.billsplit.qrcodescanner.QRCodeScannerActivity
+import com.grouptuity.grouptuity.ui.util.BaseUIFragment
 import com.grouptuity.grouptuity.ui.util.views.RecyclerViewBottomOffset
 import com.grouptuity.grouptuity.ui.util.views.focusAndShowKeyboard
-import com.grouptuity.grouptuity.ui.util.views.setNullOnDestroy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -58,15 +61,12 @@ import kotlinx.coroutines.withContext
 // TODO block input from buttons under select payer instructions
 // TODO styling for ineligible surrogate
 
-class PaymentsFragment: Fragment() {
+class PaymentsFragment: BaseUIFragment<FragPaymentsBinding, PaymentsViewModel>() {
     companion object {
         @JvmStatic
         fun newInstance() = PaymentsFragment()
     }
 
-    private var binding by setNullOnDestroy<FragPaymentsBinding>()
-    private lateinit var paymentsViewModel: PaymentsViewModel
-    private lateinit var backPressedCallback: OnBackPressedCallback
     private var paymentInProcessing: Payment? = null
 
     // Activity result launchers for QR code scanning, processing payments, and installing PtP apps
@@ -78,32 +78,13 @@ class PaymentsFragment: Fragment() {
     private lateinit var cashAppInstallerLauncher: ActivityResultLauncher<Intent>
     private lateinit var algorandLauncher: ActivityResultLauncher<Intent>
 
-    override fun onCreateView(
-        inflater: LayoutInflater,
-        container: ViewGroup?,
-        savedInstanceState: Bundle?
-    ): View {
-        paymentsViewModel = ViewModelProvider(requireActivity()).get(PaymentsViewModel::class.java)
-        binding = FragPaymentsBinding.inflate(inflater, container, false)
-        return binding.root
-    }
+    override fun inflate(inflater: LayoutInflater, container: ViewGroup?) =
+        FragPaymentsBinding.inflate(inflater, container, false)
+
+    override fun createViewModel() = ViewModelProvider(requireActivity())[PaymentsViewModel::class.java]
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        // Intercept back pressed events to allow fragment-specific behaviors
-        backPressedCallback = object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                if (paymentsViewModel.handleOnBackPressed()) {
-                    backPressedCallback.isEnabled = false
-                    requireActivity().onBackPressed()
-                }
-            }
-        }
-        requireActivity().onBackPressedDispatcher.addCallback(
-            viewLifecycleOwner,
-            backPressedCallback
-        )
 
         val recyclerAdapter = PaymentRecyclerViewAdapter()
 
@@ -137,15 +118,18 @@ class PaymentsFragment: Fragment() {
             }
         }
 
-        paymentsViewModel.paymentsData.observe(viewLifecycleOwner) { paymentsData ->
+        viewModel.paymentsData.observe(viewLifecycleOwner) { paymentsData ->
             lifecycleScope.launch { recyclerAdapter.updateDataSet(paymentsData) }
 
             binding.noPaymentsHint.visibility =
                 if (paymentsData.first.isEmpty()) View.VISIBLE else View.GONE
         }
 
-        paymentsViewModel.showSetAddressDialogEvent.observe(viewLifecycleOwner) {
-            it.consume()?.apply { showSetAddressDialog(this.first, this.second, this.third) }
+        viewModel.showSetAddressDialogEvent.observe(viewLifecycleOwner) {
+            it.consume()?.apply {
+                val (subject, diner, method) = this.value
+                showSetAddressDialog(subject, diner, method)
+            }
         }
 
         registerActivityLaunchers()
@@ -160,9 +144,9 @@ class PaymentsFragment: Fragment() {
 
                     if (subject != null && address != null) {
                         when (subject) {
-                            PaymentsViewModel.SELECTING_PAYER_ALIAS -> { paymentsViewModel.setPayerAddress(address) }
-                            PaymentsViewModel.SELECTING_PAYEE_ALIAS -> { paymentsViewModel.setPayeeAddress(address) }
-                            PaymentsViewModel.SELECTING_SURROGATE_ALIAS -> { paymentsViewModel.setSurrogateAddress(address) }
+                            PaymentsViewModel.SELECTING_PAYER_ALIAS -> { viewModel.setPayerAddress(address) }
+                            PaymentsViewModel.SELECTING_PAYEE_ALIAS -> { viewModel.setPayeeAddress(address) }
+                            PaymentsViewModel.SELECTING_SURROGATE_ALIAS -> { viewModel.setSurrogateAddress(address) }
                         }
                         // TODO
                     } else {
@@ -236,15 +220,15 @@ class PaymentsFragment: Fragment() {
     }
 
     fun onClickActivePaymentMethodIcon(payment: Payment) {
-        paymentsViewModel.setActivePayment(payment)
+        viewModel.setActivePayment(payment)
     }
 
     fun onClickCloseButton() {
-        paymentsViewModel.setActivePayment(null)
+        viewModel.setActivePayment(null)
     }
 
     fun onClickPaymentMethod(method: PaymentMethod) {
-        paymentsViewModel.setPaymentMethod(method)
+        viewModel.setPaymentMethod(method)
     }
 
     fun onClickShowPtPMethods() {
@@ -252,7 +236,7 @@ class PaymentsFragment: Fragment() {
     }
 
     fun onClickSurrogate(diner: Diner) {
-        paymentsViewModel.setSurrogate(diner)
+        viewModel.setSurrogate(diner)
     }
 
     private fun showSelectPtPMethodDialog() {
@@ -302,13 +286,13 @@ class PaymentsFragment: Fragment() {
             diner.emailAddresses.forEach { email ->
                 items.add(Triple(email, R.drawable.ic_email_surface) {
                     when (subject) {
-                        PaymentsViewModel.SELECTING_PAYER_ALIAS -> paymentsViewModel.setPayerAddress(
+                        PaymentsViewModel.SELECTING_PAYER_ALIAS -> viewModel.setPayerAddress(
                             email
                         )
-                        PaymentsViewModel.SELECTING_PAYEE_ALIAS -> paymentsViewModel.setPayeeAddress(
+                        PaymentsViewModel.SELECTING_PAYEE_ALIAS -> viewModel.setPayeeAddress(
                             email
                         )
-                        PaymentsViewModel.SELECTING_SURROGATE_ALIAS -> paymentsViewModel.setSurrogateAddress(
+                        PaymentsViewModel.SELECTING_SURROGATE_ALIAS -> viewModel.setSurrogateAddress(
                             email
                         )
                     }
@@ -331,13 +315,13 @@ class PaymentsFragment: Fragment() {
                     (dialog as? AlertDialog)?.findViewById<EditText>(R.id.edit_text)?.text?.toString()
                         ?.apply {
                             when (subject) {
-                                PaymentsViewModel.SELECTING_PAYER_ALIAS -> paymentsViewModel.setPayerAddress(
+                                PaymentsViewModel.SELECTING_PAYER_ALIAS -> viewModel.setPayerAddress(
                                     this
                                 )
-                                PaymentsViewModel.SELECTING_PAYEE_ALIAS -> paymentsViewModel.setPayeeAddress(
+                                PaymentsViewModel.SELECTING_PAYEE_ALIAS -> viewModel.setPayeeAddress(
                                     this
                                 )
-                                PaymentsViewModel.SELECTING_SURROGATE_ALIAS -> paymentsViewModel.setSurrogateAddress(
+                                PaymentsViewModel.SELECTING_SURROGATE_ALIAS -> viewModel.setSurrogateAddress(
                                     this
                                 )
                             }

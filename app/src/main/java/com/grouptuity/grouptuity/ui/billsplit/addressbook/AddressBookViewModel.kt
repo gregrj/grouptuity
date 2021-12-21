@@ -4,15 +4,14 @@ import android.Manifest
 import android.app.Application
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.asLiveData
-import com.grouptuity.grouptuity.Event
 import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import java.util.*
 
-class AddressBookViewModel(app: Application): UIViewModel(app) {
+
+class AddressBookViewModel(app: Application): BaseUIViewModel(app) {
 
     // TODO selected contact subsequently hidden. Need to discard selection
 
@@ -71,15 +70,20 @@ class AddressBookViewModel(app: Application): UIViewModel(app) {
     private val acquireReadContactsPermissionEventMutable = MutableLiveData<Event<Int>>()
 
     // Live Data Output
-    val animateListUpdates: LiveData<Boolean> = searchQuery.mapLatest { it == null }.withOutputSwitch(isOutputFlowing).asLiveData()
-    val showRefreshAnimation: LiveData<Boolean> = addressBook.refreshingDeviceContacts.withOutputSwitch(isOutputFlowing).asLiveData()
-    val showHiddenContacts: LiveData<Boolean> = _showHiddenContacts.withOutputSwitch(isOutputFlowing).asLiveData()
+    val voiceInput: LiveData<Event<String>> = repository.voiceInputMutable
+    val animateListUpdates: LiveData<Boolean> = searchQuery.map { it == null }.asLiveData(isOutputLocked)
+    val showRefreshAnimation: LiveData<Boolean> = addressBook.refreshingDeviceContacts.asLiveData(isOutputLocked)
+    val showHiddenContacts: LiveData<Boolean> = _showHiddenContacts.asLiveData(isOutputLocked)
     val acquireReadContactsPermissionEvent: LiveData<Event<Int>> = acquireReadContactsPermissionEventMutable
-    val displayedContacts = _displayedContacts.withOutputSwitch(isOutputFlowing).asLiveData()
-    val selections: LiveData<Set<String>> = _selections.mapLatest {
+    val displayedContacts = _displayedContacts.asLiveData(isOutputLocked)
+    val selections: LiveData<Set<String>> = _selections.map {
         stopSearch()
         it
-    }.withOutputSwitch(isOutputFlowing).asLiveData()
+    }.asLiveData(isOutputLocked)
+    val toolBarInTertiaryState: LiveData<Boolean> = combine(_selections, searchQuery) { selectedContacts, query ->
+        // Set toolbar to tertiary if selections exist and not currently searching
+        selectedContacts.isNotEmpty() && query == null
+    }.asLiveData(isOutputLocked)
     val toolBarState: LiveData<ToolBarState> = combine(_selections, searchQuery, addressBook.allContacts) { selectedContacts, query, allContacts ->
         val isSearching = query != null
 
@@ -88,7 +92,6 @@ class AddressBookViewModel(app: Application): UIViewModel(app) {
                 context.resources.getString(R.string.addressbook_toolbar_select_diners),
                 navIconAsClose = if(isSearching) null else false,
                 searchInactive = !isSearching,
-                tertiaryBackground = false,
                 hideVisibilityButtons = true,
                 showAsUnfavorite = false,
                 showAsUnhide = false,
@@ -98,7 +101,6 @@ class AddressBookViewModel(app: Application): UIViewModel(app) {
                 context.resources.getQuantityString(R.plurals.addressbook_toolbar_num_selected, selectedContacts.size, selectedContacts.size),
                 navIconAsClose = if(isSearching) null else true,
                 searchInactive = !isSearching,
-                tertiaryBackground = !isSearching,
                 hideVisibilityButtons = isSearching,
                 showAsUnfavorite = selectedContacts.isNotEmpty() && selectedContacts.all {
                     allContacts[it]?.visibility == Contact.FAVORITE
@@ -108,14 +110,14 @@ class AddressBookViewModel(app: Application): UIViewModel(app) {
                 },
                 showOtherButtons = false)
         }
-    }.distinctUntilChanged().withOutputSwitch(isOutputFlowing).asLiveData()
+    }.asLiveData(isOutputLocked)
     val fabExtended: LiveData<Boolean?> = combine(_selections, searchQuery) { selectedContacts, query ->
         when {
             query != null -> null
             selectedContacts.isEmpty() -> true
             else -> false
         }
-    }.withOutputSwitch(isOutputFlowing).asLiveData()
+    }.asLiveData(isOutputLocked)
 
     override fun notifyTransitionFinished() {
         super.notifyTransitionFinished()
@@ -126,8 +128,7 @@ class AddressBookViewModel(app: Application): UIViewModel(app) {
         }
     }
 
-    fun initialize() {
-        unFreezeOutput()
+    override fun onInitialize(input: Unit?) {
         searchQuery.value = null
         deselectAllContacts()
 
@@ -135,15 +136,12 @@ class AddressBookViewModel(app: Application): UIViewModel(app) {
         acquireReadContactsPermissionEventMutable.value?.consume()
     }
 
-    //TODO why three values? Simplify across all ViewModels
-    fun handleOnBackPressed(): Boolean? {
+    override fun handleOnBackPressed() {
         when {
-            isInputLocked.value -> { }
             searchQuery.value != null -> { stopSearch() }
             _selections.value.isNotEmpty() -> { deselectAllContacts() }
-            else -> { return false }
+            else -> { finishFragment(null) }
         }
-        return null
     }
 
     fun updateSearchQuery(query: String?) { if(searchQuery.value != null) { searchQuery.value = query ?: "" } }
@@ -279,6 +277,9 @@ class AddressBookViewModel(app: Application): UIViewModel(app) {
     }
 
     fun addSelectedContactsToBill() {
+        // Freeze UI
+        notifyTransitionStarted()
+
         repository.addContactsAsDiners(context, addressBook.allContacts.value.let { allContacts ->
             mSelections.mapNotNull { lookupKey ->
                 allContacts[lookupKey]
@@ -286,13 +287,14 @@ class AddressBookViewModel(app: Application): UIViewModel(app) {
         })
 
         deselectAllContacts()
+
+        finishFragment(null)
     }
 
     companion object {
         data class ToolBarState(val title: String,
                                 val navIconAsClose: Boolean?, // null -> hide navigation icon
                                 val searchInactive: Boolean,
-                                val tertiaryBackground: Boolean,
                                 val hideVisibilityButtons: Boolean,
                                 val showAsUnfavorite: Boolean,
                                 val showAsUnhide: Boolean,

@@ -2,13 +2,10 @@ package com.grouptuity.grouptuity.ui.billsplit
 
 import android.app.Application
 import androidx.lifecycle.LiveData
-import androidx.lifecycle.asFlow
 import androidx.lifecycle.asLiveData
 import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.*
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.mapLatest
 
 data class BillSplitToolbarState(
     val activePage: Int,
@@ -18,14 +15,14 @@ data class BillSplitToolbarState(
     val checkTaxIsTipped: Boolean,
     val checkDiscountsReduceTip: Boolean)
 
-class BillSplitViewModel(application: Application): UIViewModel(application) {
+class BillSplitViewModel(application: Application): BaseUIViewModel(application) {
     val dinerCount = repository.numberOfDiners.asLiveData()
     val itemCount = repository.numberOfItems.asLiveData()
 
     val activeFragmentIndex = repository.activeFragmentIndex
     val activeFragmentIndexLiveData = activeFragmentIndex.asLiveData()
 
-    val isProcessingPayments = repository.processingPayments.withOutputSwitch(isOutputFlowing).asLiveData()
+    val isProcessingPayments = repository.processingPayments.asLiveData(isOutputLocked)
 
     val toolbarState: LiveData<BillSplitToolbarState> = combine(
         activeFragmentIndex,

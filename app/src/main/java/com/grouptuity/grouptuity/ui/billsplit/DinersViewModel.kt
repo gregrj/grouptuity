@@ -4,12 +4,13 @@ import android.accounts.AccountManager
 import android.app.Application
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.asLiveData
+import com.grouptuity.grouptuity.data.BaseUIViewModel
 import com.grouptuity.grouptuity.data.Diner
 import com.grouptuity.grouptuity.data.UIViewModel
 import kotlinx.coroutines.flow.combineTransform
 import java.text.NumberFormat
 
-class DinersViewModel(application: Application): UIViewModel(application) {
+class DinersViewModel(application: Application): BaseUIViewModel(application) {
     private val formatter = NumberFormat.getCurrencyInstance()
 
     // Diners paired with their individual subtotals as currency strings

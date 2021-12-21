@@ -7,7 +7,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.widget.EditText
 import androidx.core.view.doOnPreDraw
-import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.FragmentNavigatorExtras
 import androidx.navigation.fragment.findNavController
@@ -19,19 +18,18 @@ import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.CalculationType
 import com.grouptuity.grouptuity.databinding.FragBasicTipCalcBinding
 import com.grouptuity.grouptuity.ui.calculator.CALCULATOR_RETURN_KEY
-import com.grouptuity.grouptuity.ui.util.views.setNullOnDestroy
+import com.grouptuity.grouptuity.ui.util.UIFragment
 import java.text.NumberFormat
 
 
-class BasicTipCalcFragment: Fragment() {
-    private var binding by setNullOnDestroy<FragBasicTipCalcBinding>()
-    private lateinit var basicTipCalcViewModel: BasicTipCalcViewModel
+class BasicTipCalcFragment: UIFragment<FragBasicTipCalcBinding, BasicTipCalcViewModel, Unit?, Unit?>() {
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        basicTipCalcViewModel = ViewModelProvider(requireActivity()).get(BasicTipCalcViewModel::class.java)
-        binding = FragBasicTipCalcBinding.inflate(inflater, container, false)
-        return binding.root
-    }
+    override fun inflate(inflater: LayoutInflater, container: ViewGroup?) =
+        FragBasicTipCalcBinding.inflate(inflater, container, false)
+
+    override fun createViewModel() = ViewModelProvider(requireActivity())[BasicTipCalcViewModel::class.java]
+
+    override fun getInitialInput(): Unit? = null
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -42,16 +40,16 @@ class BasicTipCalcFragment: Fragment() {
         findNavController().currentBackStackEntry?.savedStateHandle?.getLiveData<Pair<CalculationType, Double>>(
             CALCULATOR_RETURN_KEY)?.observe(viewLifecycleOwner) { pair ->
             when(pair.first) {
-                CalculationType.SUBTOTAL -> { basicTipCalcViewModel.setSubtotal(pair.second) }
-                CalculationType.OVERALL_DISCOUNT_PERCENT -> { basicTipCalcViewModel.setDiscountPercent(pair.second) }
-                CalculationType.OVERALL_DISCOUNT_AMOUNT -> { basicTipCalcViewModel.setDiscountAmount(pair.second) }
-                CalculationType.AFTER_DISCOUNT -> { basicTipCalcViewModel.setAfterDiscount(pair.second) }
-                CalculationType.TAX_PERCENT -> { basicTipCalcViewModel.setTaxPercent(pair.second) }
-                CalculationType.TAX_AMOUNT -> { basicTipCalcViewModel.setTaxAmount(pair.second) }
-                CalculationType.AFTER_TAX -> { basicTipCalcViewModel.setAfterTax(pair.second) }
-                CalculationType.TIP_PERCENT -> { basicTipCalcViewModel.setTipPercent(pair.second) }
-                CalculationType.TIP_AMOUNT -> { basicTipCalcViewModel.setTipAmount(pair.second) }
-                CalculationType.TOTAL -> { basicTipCalcViewModel.setTotal(pair.second) }
+                CalculationType.SUBTOTAL -> { viewModel.setSubtotal(pair.second) }
+                CalculationType.OVERALL_DISCOUNT_PERCENT -> { viewModel.setDiscountPercent(pair.second) }
+                CalculationType.OVERALL_DISCOUNT_AMOUNT -> { viewModel.setDiscountAmount(pair.second) }
+                CalculationType.AFTER_DISCOUNT -> { viewModel.setAfterDiscount(pair.second) }
+                CalculationType.TAX_PERCENT -> { viewModel.setTaxPercent(pair.second) }
+                CalculationType.TAX_AMOUNT -> { viewModel.setTaxAmount(pair.second) }
+                CalculationType.AFTER_TAX -> { viewModel.setAfterTax(pair.second) }
+                CalculationType.TIP_PERCENT -> { viewModel.setTipPercent(pair.second) }
+                CalculationType.TIP_AMOUNT -> { viewModel.setTipAmount(pair.second) }
+                CalculationType.TOTAL -> { viewModel.setTotal(pair.second) }
                 else -> { /* Other CalculationTypes should not be received */ }
             }
         }
@@ -66,15 +64,15 @@ class BasicTipCalcFragment: Fragment() {
             setOnMenuItemClickListener { item ->
                 when(item.itemId) {
                     R.id.tax_is_tipped -> {
-                        basicTipCalcViewModel.toggleTipTaxed()
+                        viewModel.toggleTipTaxed()
                         true
                     }
                     R.id.discount_reduces_tip -> {
-                        basicTipCalcViewModel.toggleDiscountsReduceTip()
+                        viewModel.toggleDiscountsReduceTip()
                         true
                     }
                     R.id.reset -> {
-                        basicTipCalcViewModel.reset()
+                        viewModel.reset()
                         true
                     }
                     else -> { false }
@@ -82,10 +80,10 @@ class BasicTipCalcFragment: Fragment() {
             }
         }
 
-        basicTipCalcViewModel.taxTipped.observe(viewLifecycleOwner, {
+        viewModel.taxTipped.observe(viewLifecycleOwner, {
             binding.toolbar.menu.findItem(R.id.tax_is_tipped).isChecked = it
         })
-        basicTipCalcViewModel.discountReducesTip.observe(viewLifecycleOwner, {
+        viewModel.discountReducesTip.observe(viewLifecycleOwner, {
             binding.toolbar.menu.findItem(R.id.discount_reduces_tip).isChecked = it
         })
 
@@ -99,22 +97,22 @@ class BasicTipCalcFragment: Fragment() {
         percentFormatter.minimumFractionDigits = 0
         percentFormatter.maximumFractionDigits = 3
 
-        basicTipCalcViewModel.subtotalString.observe(viewLifecycleOwner, { binding.subtotal.setText(it) })
-        basicTipCalcViewModel.discountPercentString.observe(viewLifecycleOwner, { binding.discountPercent.setText(it) })
-        basicTipCalcViewModel.discountAmountString.observe(viewLifecycleOwner, { binding.discountAmount.setText(it) })
-        basicTipCalcViewModel.afterDiscountString.observe(viewLifecycleOwner, { binding.afterDiscountAmount.setText(it) })
-        basicTipCalcViewModel.taxPercentString.observe(viewLifecycleOwner, { binding.taxPercent.setText(it) })
-        basicTipCalcViewModel.taxAmountString.observe(viewLifecycleOwner, { binding.taxAmount.setText(it) })
-        basicTipCalcViewModel.afterTaxString.observe(viewLifecycleOwner, { binding.afterTaxAmount.setText(it) })
-        basicTipCalcViewModel.tipPercentString.observe(viewLifecycleOwner, { binding.tipPercent.setText(it) })
-        basicTipCalcViewModel.tipAmountString.observe(viewLifecycleOwner, { binding.tipAmount.setText(it) })
-        basicTipCalcViewModel.totalString.observe(viewLifecycleOwner, { binding.total.setText(it) })
+        viewModel.subtotalString.observe(viewLifecycleOwner, { binding.subtotal.setText(it) })
+        viewModel.discountPercentString.observe(viewLifecycleOwner, { binding.discountPercent.setText(it) })
+        viewModel.discountAmountString.observe(viewLifecycleOwner, { binding.discountAmount.setText(it) })
+        viewModel.afterDiscountString.observe(viewLifecycleOwner, { binding.afterDiscountAmount.setText(it) })
+        viewModel.taxPercentString.observe(viewLifecycleOwner, { binding.taxPercent.setText(it) })
+        viewModel.taxAmountString.observe(viewLifecycleOwner, { binding.taxAmount.setText(it) })
+        viewModel.afterTaxString.observe(viewLifecycleOwner, { binding.afterTaxAmount.setText(it) })
+        viewModel.tipPercentString.observe(viewLifecycleOwner, { binding.tipPercent.setText(it) })
+        viewModel.tipAmountString.observe(viewLifecycleOwner, { binding.tipAmount.setText(it) })
+        viewModel.totalString.observe(viewLifecycleOwner, { binding.total.setText(it) })
 
-        basicTipCalcViewModel.warningMessageEvent.observe(viewLifecycleOwner, {
+        viewModel.warningMessageEvent.observe(viewLifecycleOwner, {
             it.consume()?.apply {
                 Snackbar.make(
                     binding.nestedScrollView,
-                    this,
+                    this.value,
                     Snackbar.LENGTH_SHORT
                 ).show()
             }

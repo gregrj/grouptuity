@@ -1,6 +1,5 @@
 package com.grouptuity.grouptuity.ui.billsplit.itementry
 
-import android.animation.ArgbEvaluator
 import android.animation.ValueAnimator
 import android.annotation.SuppressLint
 import android.app.SearchManager
@@ -13,10 +12,8 @@ import android.view.ViewGroup
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.FrameLayout
 import android.widget.ImageView
-import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.widget.SearchView
 import androidx.core.view.doOnPreDraw
-import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.FragmentNavigatorExtras
@@ -26,12 +23,13 @@ import androidx.recyclerview.widget.*
 import androidx.transition.Transition
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.transition.Hold
-import com.grouptuity.grouptuity.AppViewModel
 import com.grouptuity.grouptuity.MainActivity
 import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.Diner
+import com.grouptuity.grouptuity.data.Item
 import com.grouptuity.grouptuity.databinding.FragItementryBinding
 import com.grouptuity.grouptuity.databinding.ListDinerBinding
+import com.grouptuity.grouptuity.ui.util.UIFragment
 import com.grouptuity.grouptuity.ui.util.transitions.CardViewExpandTransition
 import com.grouptuity.grouptuity.ui.util.transitions.CircularRevealTransition
 import com.grouptuity.grouptuity.ui.util.views.*
@@ -45,41 +43,21 @@ import kotlinx.coroutines.withContext
 // TODO check for substantial edits and show alert on dismiss
 
 
-
-class ItemEntryFragment: Fragment() {
-    private var binding by setNullOnDestroy<FragItementryBinding>()
+class ItemEntryFragment: UIFragment<FragItementryBinding, ItemEntryViewModel, Item?, Item?>() {
     private val args: ItemEntryFragmentArgs by navArgs()
-    private lateinit var appViewModel: AppViewModel
-    private lateinit var itemEntryViewModel: ItemEntryViewModel
     private lateinit var recyclerAdapter: ItemEntryDinerSelectionRecyclerViewAdapter
-    private lateinit var backPressedCallback: OnBackPressedCallback
-    private var toolbarInTertiaryState = false
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        appViewModel = ViewModelProvider(requireActivity())[AppViewModel::class.java]
-        itemEntryViewModel = ViewModelProvider(requireActivity())[ItemEntryViewModel::class.java]
-        itemEntryViewModel.initializeForItem(args.editedItem)
-        binding = FragItementryBinding.inflate(inflater, container, false)
-        return binding.root
-    }
+    override fun inflate(inflater: LayoutInflater, container: ViewGroup?) =
+        FragItementryBinding.inflate(inflater, container, false)
+
+    override fun createViewModel(): ItemEntryViewModel =
+        ViewModelProvider(requireActivity())[ItemEntryViewModel::class.java]
+
+    override fun getInitialInput(): Item? = args.editedItem
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        // Intercept user interactions while fragment transitions are running
-        binding.rootLayout.attachLock(itemEntryViewModel.isInputLocked)
-
-        // Intercept back pressed events to allow fragment-specific behaviors
-        backPressedCallback = object: OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                val addItemToBill = itemEntryViewModel.handleOnBackPressed()
-                if (addItemToBill != null) {
-                    closeFragment(addItemToBill)
-                }
-            }
-        }
-        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, backPressedCallback)
 
         /* Need a way to discriminate between user dismissal of keyboard and system dismissal from starting voice search
         requireActivity().window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN)
@@ -95,14 +73,14 @@ class ItemEntryFragment: Fragment() {
 
         setupCollapsibleNumberPad(
             viewLifecycleOwner,
-            itemEntryViewModel.calculatorData,
+            viewModel.calculator,
             binding.numberPad,
             useValuePlaceholder = false,
             showBasisToggleButtons = false)
 
         setupCalculatorDisplay(
             viewLifecycleOwner,
-            itemEntryViewModel.calculatorData,
+            viewModel.calculator,
             binding.priceTextview,
             binding.buttonEdit,
             binding.buttonBackspace)
@@ -120,8 +98,8 @@ class ItemEntryFragment: Fragment() {
                 args.originParams!!,
                 resources.getInteger(R.integer.frag_transition_duration).toLong(),
                 true).addListener(object : Transition.TransitionListener {
-                override fun onTransitionStart(transition: Transition) { itemEntryViewModel.notifyTransitionStarted() }
-                override fun onTransitionEnd(transition: Transition) { itemEntryViewModel.notifyTransitionFinished() }
+                override fun onTransitionStart(transition: Transition) { viewModel.notifyTransitionStarted() }
+                override fun onTransitionEnd(transition: Transition) { viewModel.notifyTransitionFinished() }
                 override fun onTransitionCancel(transition: Transition) {}
                 override fun onTransitionPause(transition: Transition) {}
                 override fun onTransitionResume(transition: Transition) {}
@@ -142,54 +120,20 @@ class ItemEntryFragment: Fragment() {
 
         setupDinerList()
 
-        binding.fab.setOnClickListener {
-            itemEntryViewModel.selections.value?.apply {
-                if(this.isNotEmpty()) {
-                    closeFragment(true)
-                } //TODO move logic
-            }
-        }
+        binding.fab.setOnClickListener { viewModel.trySavingItem() }
     }
 
     override fun onResume() {
         super.onResume()
         binding.fadeView.visibility = View.GONE
-
-        // Reset UI input/output locks leftover from aborted transitions/animations
-        itemEntryViewModel.unFreezeOutput()
     }
 
-    private fun closeFragment(addItemToBill: Boolean) {
-        // Prevent callback from intercepting back pressed events
-        backPressedCallback.isEnabled = false
-
-        // Freeze UI in place as the fragment closes
-        itemEntryViewModel.freezeOutput()
-
+    override fun onFinish(output: Item?) {
         if (args.editedItem == null) {
-            // Working with new item
-            if (addItemToBill) {
-                itemEntryViewModel.addNewItemToBill()?.also { newItem ->
-
-                    binding.itemEntryContainer.transitionName = "new_item" + newItem.id
-
-                    // Exit transition is needed to prevent next fragment from appearing immediately
-                    exitTransition = Hold().apply {
-                        duration = 0L
-                        addTarget(requireView())
-                    }
-
-                    // Close fragment by popping up to the BillSplitFragment
-                    findNavController().navigate(
-                        ItemEntryFragmentDirections.itemEntryToBillSplit(newItem = newItem),
-                        FragmentNavigatorExtras(
-                            binding.itemEntryContainer to binding.itemEntryContainer.transitionName
-                        )
-                    )
-                }
-            } else {
-                // Closing animation shrinking fragment into the FAB of the previous fragment.
-                // Transition is defined here to incorporate dynamic changes to window insets.
+            if (output == null) {
+                /* Close fragment without creating a new item. Animate fragment shrinking into the
+                   FAB of the previous fragment. Transition is defined here to incorporate dynamic
+                   changes to window insets. */
                 returnTransition = CircularRevealTransition(
                     binding.fadeView,
                     binding.revealedLayout,
@@ -199,13 +143,26 @@ class ItemEntryFragment: Fragment() {
 
                 // Close fragment using default onBackPressed behavior
                 requireActivity().onBackPressed()
+            } else {
+                /* New item was created. Navigate forward to the BillSplitFragment so a collapse
+                   animation can be run into the card view for the new item. */
+                binding.itemEntryContainer.transitionName = "new_item" + output.id
+
+                // Exit transition is needed to prevent next fragment from appearing immediately
+                exitTransition = Hold().apply {
+                    duration = 0L
+                    addTarget(requireView())
+                }
+
+                findNavController().navigate(
+                    ItemEntryFragmentDirections.itemEntryToBillSplit(newItem = output),
+                    FragmentNavigatorExtras(
+                        binding.itemEntryContainer to binding.itemEntryContainer.transitionName
+                    )
+                )
             }
         } else {
-            // Working with existing item
-            if (addItemToBill) {
-                itemEntryViewModel.saveItemEdits()
-            }
-
+            // Editing existing item. Same return animation regardless of whether edits were saved.
             setupExitTransition()
 
             // Close fragment using default onBackPressed behavior
@@ -217,48 +174,26 @@ class ItemEntryFragment: Fragment() {
     private fun setupToolbar() {
         binding.toolbar.inflateMenu(R.menu.toolbar_itementry)
         binding.toolbar.setNavigationIcon(R.drawable.ic_arrow_back_light)
-        binding.toolbar.setNavigationOnClickListener { itemEntryViewModel.handleOnBackPressed() }
+        binding.toolbar.setNavigationOnClickListener { viewModel.handleOnBackPressed() }
 
-        itemEntryViewModel.toolBarState.observe(viewLifecycleOwner) { toolBarState ->
-            binding.toolbar.title = toolBarState.title
+        setupToolbarSecondaryTertiaryAnimation(
+            requireContext(),
+            viewLifecycleOwner,
+            viewModel.toolBarInTertiaryState,
+            binding.toolbar,
+            binding.statusBarBackgroundView)
 
-            if(toolBarState.navIconVisible) {
+        viewModel.toolBarTitle.observe(viewLifecycleOwner) { binding.toolbar.title = it }
+
+        viewModel.toolBarEditButtonVisible.observe(viewLifecycleOwner) {
+            binding.toolbar.menu.setGroupVisible(R.id.group_editor, it)
+        }
+
+        viewModel.toolBarNavIconVisible.observe(viewLifecycleOwner) {
+            if (it) {
                 binding.toolbar.setNavigationIcon(R.drawable.ic_arrow_back_light)
             } else {
                 binding.toolbar.navigationIcon = null
-            }
-
-            binding.toolbar.menu.setGroupVisible(R.id.group_editor, toolBarState.nameEditVisible)
-
-            if(toolBarState.tertiaryBackground != toolbarInTertiaryState) {
-                val secondaryColor = TypedValue().also { requireContext().theme.resolveAttribute(R.attr.colorSecondary, it, true) }.data
-                val secondaryDarkColor = TypedValue().also { requireContext().theme.resolveAttribute(R.attr.colorSecondaryVariant, it, true) }.data
-                val tertiaryColor = TypedValue().also { requireContext().theme.resolveAttribute(R.attr.colorTertiary, it, true) }.data
-                val tertiaryDarkColor = TypedValue().also { requireContext().theme.resolveAttribute(R.attr.colorTertiaryVariant, it, true) }.data
-
-                if(toolbarInTertiaryState) {
-                    ValueAnimator.ofObject(ArgbEvaluator(), tertiaryColor, secondaryColor).apply {
-                        duration = resources.getInteger(R.integer.viewprop_animation_duration).toLong()
-                        addUpdateListener { animator -> binding.toolbar.setBackgroundColor(animator.animatedValue as Int) }
-                    }.start()
-
-                    ValueAnimator.ofObject(ArgbEvaluator(), tertiaryDarkColor, secondaryDarkColor).apply {
-                        duration = resources.getInteger(R.integer.viewprop_animation_duration).toLong()
-                        addUpdateListener { animator -> binding.statusBarBackgroundView.setBackgroundColor(animator.animatedValue as Int) }
-                    }.start()
-                } else {
-                    ValueAnimator.ofObject(ArgbEvaluator(), secondaryColor, tertiaryColor).apply {
-                        duration = resources.getInteger(R.integer.viewprop_animation_duration).toLong()
-                        addUpdateListener { animator -> binding.toolbar.setBackgroundColor(animator.animatedValue as Int) }
-                    }.start()
-
-                    ValueAnimator.ofObject(ArgbEvaluator(), secondaryDarkColor, tertiaryDarkColor).apply {
-                        duration = resources.getInteger(R.integer.viewprop_animation_duration).toLong()
-                        addUpdateListener { animator -> binding.statusBarBackgroundView.setBackgroundColor(animator.animatedValue as Int) }
-                    }.start()
-                }
-
-                toolbarInTertiaryState = toolBarState.tertiaryBackground
             }
         }
 
@@ -272,12 +207,15 @@ class ItemEntryFragment: Fragment() {
         searchView.findViewById<ImageView>(androidx.appcompat.R.id.search_go_btn)?.apply { this.setImageResource(R.drawable.ic_done) }
 
         searchView.setOnSearchClickListener {
-            searchView.setQuery(if(itemEntryViewModel.hasItemNameInput) { itemEntryViewModel.itemName.value } else { "" }, false)
-            itemEntryViewModel.startNameEdit()
+            searchView.setQuery(
+                if(viewModel.hasItemNameInput) { viewModel.itemName.value } else { "" },
+                false
+            )
+            viewModel.startNameEdit()
         }
 
         searchView.setOnCloseListener {
-            itemEntryViewModel.stopNameEdit()
+            viewModel.stopNameEdit()
             false
         }
 
@@ -287,7 +225,7 @@ class ItemEntryFragment: Fragment() {
                 if(string.isNullOrBlank()){
                     // function does not get called if string is blank
                 } else {
-                    itemEntryViewModel.acceptItemNameInput(string.trim())
+                    viewModel.acceptItemNameInput(string.trim())
                     closeSearchView()
                     requireActivity().invalidateOptionsMenu()
                 }
@@ -296,7 +234,7 @@ class ItemEntryFragment: Fragment() {
         })
 
         var activeAnimation: ValueAnimator? = null
-        itemEntryViewModel.editNameShimVisible.observe(viewLifecycleOwner) {
+        viewModel.editNameShimVisible.observe(viewLifecycleOwner) {
             if(it) {
                 binding.editNameScrim.setOnTouchListener { _, _ -> true }
             } else {
@@ -315,13 +253,13 @@ class ItemEntryFragment: Fragment() {
         }
 
         // For handling voice input
-        appViewModel.voiceInput.observe(viewLifecycleOwner, {
+        viewModel.voiceInput.observe(viewLifecycleOwner, {
             it.consume()?.apply {
                 // Update displayed text, but do not submit. Event will cascade to a separate
                 // QueryTextListener, which is responsible for running the search.
-                itemEntryViewModel.startNameEdit()
+                viewModel.startNameEdit()
                 searchView.isIconified = false
-                searchView.setQuery(this, false)
+                searchView.setQuery(this.value, false)
             }
         })
     }
@@ -331,7 +269,7 @@ class ItemEntryFragment: Fragment() {
             requireContext(),
             object: RecyclerViewListener {
                 override fun onClick(view: View) {
-                    itemEntryViewModel.toggleDinerSelection(view.tag as Diner)
+                    viewModel.toggleDinerSelection(view.tag as Diner)
                     binding.fab.slideUp()  // Slide up FAB into view if it was hidden by scrolling
                 }
                 override fun onLongClick(view: View): Boolean { return false }
@@ -354,7 +292,7 @@ class ItemEntryFragment: Fragment() {
                         if (oldHolder === newHolder) {
                             val diner = (this as ItemEntryDinerSelectionRecyclerViewAdapter.ViewHolder).itemView.tag as Diner
 
-                            if (itemEntryViewModel.isDinerSelected(diner)) {
+                            if (viewModel.isDinerSelected(diner)) {
                                 oldHolder.itemView.setBackgroundColor(backgroundColorVariant)
                             } else {
                                 oldHolder.itemView.setBackgroundColor(backgroundColor)
@@ -367,16 +305,16 @@ class ItemEntryFragment: Fragment() {
             }
         }
 
-        binding.clearSelections.setOnClickListener { itemEntryViewModel.clearDinerSelections() }
+        binding.clearSelections.setOnClickListener { viewModel.clearDinerSelections() }
 
         binding.selectAll.setOnClickListener {
-            itemEntryViewModel.selectAllDiners()
+            viewModel.selectAllDiners()
             binding.fab.slideUp()  // Slide up FAB into view if it was hidden by scrolling
         }
 
-        itemEntryViewModel.dinerData.observe(viewLifecycleOwner, { data -> lifecycleScope.launch { recyclerAdapter.updateDataSet(dinerData = data) } })
+        viewModel.dinerData.observe(viewLifecycleOwner, { data -> lifecycleScope.launch { recyclerAdapter.updateDataSet(dinerData = data) } })
 
-        itemEntryViewModel.selections.observe(viewLifecycleOwner, { selections ->
+        viewModel.selections.observe(viewLifecycleOwner, { selections ->
             lifecycleScope.launch { recyclerAdapter.updateDataSet(selections = selections) }
 
             if(selections.isNullOrEmpty()) {
@@ -386,14 +324,14 @@ class ItemEntryFragment: Fragment() {
             }
         })
 
-        itemEntryViewModel.selectAllButtonDisabled.observe(viewLifecycleOwner) { binding.selectAll.isEnabled = !it }
+        viewModel.selectAllButtonDisabled.observe(viewLifecycleOwner) { binding.selectAll.isEnabled = !it }
     }
 
     private fun closeSearchView() {
         val searchView = binding.toolbar.menu.findItem(R.id.edit_item_name).actionView as SearchView
         searchView.setQuery("", false)
         searchView.isIconified = true
-        itemEntryViewModel.stopNameEdit()
+        viewModel.stopNameEdit()
     }
 
     private fun setupEnterTransition() {
@@ -411,8 +349,8 @@ class ItemEntryFragment: Fragment() {
                 }
             }
             .addListener(object : Transition.TransitionListener {
-                override fun onTransitionStart(transition: Transition) { itemEntryViewModel.notifyTransitionStarted() }
-                override fun onTransitionEnd(transition: Transition) { itemEntryViewModel.notifyTransitionFinished() }
+                override fun onTransitionStart(transition: Transition) { viewModel.notifyTransitionStarted() }
+                override fun onTransitionEnd(transition: Transition) { viewModel.notifyTransitionFinished() }
                 override fun onTransitionCancel(transition: Transition) {}
                 override fun onTransitionPause(transition: Transition) {}
                 override fun onTransitionResume(transition: Transition) {}

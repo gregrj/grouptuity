@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.*
 import java.text.NumberFormat
 import kotlin.math.abs
 
-class DinerDetailsViewModel(app: Application): UIViewModel(app) {
+class DinerDetailsViewModel(app: Application): UIViewModel<Diner, Diner>(app) {
     private val currencyFormatter = NumberFormat.getCurrencyInstance()
     private val percentFormatter = NumberFormat.getPercentInstance().also {
         it.maximumFractionDigits = getApplication<Application>().resources.getInteger(R.integer.percent_max_decimals)
@@ -492,24 +492,20 @@ class DinerDetailsViewModel(app: Application): UIViewModel(app) {
         }
     }
 
-    fun initializeForDiner(diner: Diner) {
-        unFreezeOutput()
-
+    override fun onInitialize(input: Diner) {
         editingBiographicsMutable.value = false
-
-        loadedDiner.value = diner
+        loadedDiner.value = input
     }
 
     fun editBiographics() {
         editingBiographicsMutable.value = true
     }
 
-    fun handleOnBackPressed(): Boolean {
-        return if (editingBiographicsMutable.value) {
+    override fun handleOnBackPressed() {
+        if (editingBiographicsMutable.value) {
             editingBiographicsMutable.value = false
-            false
         } else {
-            true
+            loadedDiner.value?.let { finishFragment(it) }
         }
     }
 

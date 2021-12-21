@@ -1,15 +1,14 @@
 package com.grouptuity.grouptuity.ui.billsplit
 
 import android.app.Application
-import androidx.lifecycle.asLiveData
+import com.grouptuity.grouptuity.data.BaseUIViewModel
 import com.grouptuity.grouptuity.data.Item
-import com.grouptuity.grouptuity.data.UIViewModel
-import com.grouptuity.grouptuity.data.withOutputSwitch
-import kotlinx.coroutines.flow.mapLatest
+import com.grouptuity.grouptuity.data.asLiveData
+import kotlinx.coroutines.flow.map
 
-class ItemsViewModel(application: Application): UIViewModel(application) {
-    val items = repository.items.withOutputSwitch(isOutputFlowing).asLiveData()
-    val numberOfDiners = repository.diners.mapLatest { it.size }.withOutputSwitch(isOutputFlowing).asLiveData()
+class ItemsViewModel(application: Application): BaseUIViewModel(application) {
+    val items = repository.items.asLiveData(isOutputLocked)
+    val numberOfDiners = repository.diners.map { it.size }.asLiveData(isOutputLocked)
 
     fun removeItem(item: Item) { repository.removeItem(item) }
 }

@@ -1,7 +1,6 @@
 package com.grouptuity.grouptuity.ui.billsplit.discountentry
 
 import android.animation.Animator
-import android.animation.ArgbEvaluator
 import android.animation.ValueAnimator
 import android.graphics.Color
 import android.os.Bundle
@@ -11,7 +10,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.FrameLayout
-import androidx.activity.OnBackPressedCallback
 import androidx.core.animation.doOnStart
 import androidx.core.view.doOnPreDraw
 import androidx.fragment.app.Fragment
@@ -29,49 +27,33 @@ import com.google.android.material.tabs.TabLayout
 import com.google.android.material.transition.Hold
 import com.grouptuity.grouptuity.MainActivity
 import com.grouptuity.grouptuity.R
+import com.grouptuity.grouptuity.data.Discount
 import com.grouptuity.grouptuity.databinding.*
+import com.grouptuity.grouptuity.ui.util.UIFragment
 import com.grouptuity.grouptuity.ui.util.transitions.*
 import com.grouptuity.grouptuity.ui.util.views.*
 import java.text.NumberFormat
 
-// TODO handle inset changes
 // TODO handle screen orientation change (also on other fragments)
 
 
-class DiscountEntryFragment: Fragment() {
+class DiscountEntryFragment: UIFragment<FragDiscountEntryBinding, DiscountEntryViewModel, Discount?, Discount?>() {
     private val args: DiscountEntryFragmentArgs by navArgs()
-    private var binding by setNullOnDestroy<FragDiscountEntryBinding>()
-    private lateinit var discountEntryViewModel: DiscountEntryViewModel
     private lateinit var tabLayoutMediator: TabLayoutMediator
-    private lateinit var backPressedCallback: OnBackPressedCallback
-    private var toolbarInTertiaryState = false
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        discountEntryViewModel = ViewModelProvider(requireActivity()).get(DiscountEntryViewModel::class.java).also {
-            it.initializeForDiscount(args.editedDiscount)
-        }
-        binding = FragDiscountEntryBinding.inflate(inflater, container, false)
-        return binding.root
-    }
+    override fun inflate(inflater: LayoutInflater, container: ViewGroup?) =
+        FragDiscountEntryBinding.inflate(inflater, container, false)
+
+    override fun createViewModel() = ViewModelProvider(requireActivity())[DiscountEntryViewModel::class.java]
+
+    override fun getInitialInput(): Discount? = args.editedDiscount
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        // Intercept user interactions while fragment transitions and animations are running
-        binding.rootLayout.attachLock(discountEntryViewModel.isInputLocked)
-
-        // Intercept back pressed events to allow fragment-specific behaviors
-        backPressedCallback = object: OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                if (discountEntryViewModel.handleOnBackPressed() != null)
-                    closeFragment(false)
-            }
-        }
-        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, backPressedCallback)
-
         // Reset state and setup transitions
         postponeEnterTransition()
-        discountEntryViewModel.startTransitionEvent.observe(viewLifecycleOwner) {
+        viewModel.startTransitionEvent.observe(viewLifecycleOwner) {
             it.consume()?.also { requireView().doOnPreDraw { startPostponedEnterTransition() } }
         }
         if(args.editedDiscount == null) {
@@ -89,17 +71,17 @@ class DiscountEntryFragment: Fragment() {
                     args.originParams as CircularRevealTransition.OriginParams,
                     resources.getInteger(R.integer.frag_transition_duration).toLong(), true)
                     .addListener(object: Transition.TransitionListener{
-                        override fun onTransitionStart(transition: Transition) { discountEntryViewModel.notifyTransitionStarted() }
+                        override fun onTransitionStart(transition: Transition) { viewModel.notifyTransitionStarted() }
                         override fun onTransitionPause(transition: Transition) { }
                         override fun onTransitionResume(transition: Transition) { }
                         override fun onTransitionCancel(transition: Transition) { }
-                        override fun onTransitionEnd(transition: Transition) { discountEntryViewModel.notifyTransitionFinished() }
+                        override fun onTransitionEnd(transition: Transition) { viewModel.notifyTransitionFinished() }
                     })
             }
         } else {
             // Editing existing discount
             binding.fadeView.visibility = View.GONE
-            binding.container.transitionName = "container" + (discountEntryViewModel.loadedDiscount.value?.id ?: "")
+            binding.container.transitionName = "container" + (viewModel.loadedDiscount.value?.id ?: "")
             binding.coveredFragment.setImageBitmap(MainActivity.storedViewBitmap)
 
             sharedElementEnterTransition = CardViewExpandTransition(binding.container.transitionName, binding.revealedLayout.id, true)
@@ -109,8 +91,8 @@ class DiscountEntryFragment: Fragment() {
                         this.alpha = progress
                     }
                 }
-                .setOnTransitionStartCallback { _, _, _, _ -> discountEntryViewModel.notifyTransitionStarted() }
-                .setOnTransitionEndCallback { _, _, _, _ -> discountEntryViewModel.notifyTransitionFinished() }
+                .setOnTransitionStartCallback { _, _, _, _ -> viewModel.notifyTransitionStarted() }
+                .setOnTransitionEndCallback { _, _, _, _ -> viewModel.notifyTransitionFinished() }
         }
 
         setupToolbar()
@@ -119,13 +101,13 @@ class DiscountEntryFragment: Fragment() {
 
         setupCollapsibleNumberPad(
             viewLifecycleOwner,
-            discountEntryViewModel.priceCalcData,
+            viewModel.priceCalculator,
             binding.priceNumberPad,
-            useValuePlaceholder = false,
+            useValuePlaceholder = true,
             showBasisToggleButtons = false)
 
         setupCollapsibleNumberPad(viewLifecycleOwner,
-            discountEntryViewModel.costCalcData,
+            viewModel.costCalculator,
             binding.costNumberPad,
             useValuePlaceholder = true,
             showBasisToggleButtons = false)
@@ -134,43 +116,32 @@ class DiscountEntryFragment: Fragment() {
 
         binding.pricePlaceholder.text = NumberFormat.getCurrencyInstance().apply { this.minimumFractionDigits = 0 }.format(0)
 
-        discountEntryViewModel.showUnsavedValidEditsAlertEvent.observe(viewLifecycleOwner) { it.consume()?.apply { showUnsavedValidEditsAlert() } }
-        discountEntryViewModel.showUnsavedInvalidEditsAlertEvent.observe(viewLifecycleOwner) { it.consume()?.apply { showUnsavedInvalidEditsAlert() } }
-        discountEntryViewModel.showIncompleteReimbursementAlertEvent.observe(viewLifecycleOwner) { it.consume()?.apply { showReimbursementNoSelectionsAlert() } }
+        viewModel.showUnsavedValidEditsAlertEvent.observe(viewLifecycleOwner) { it.consume()?.apply { showUnsavedValidEditsAlert() } }
+        viewModel.showUnsavedInvalidEditsAlertEvent.observe(viewLifecycleOwner) { it.consume()?.apply { showUnsavedInvalidEditsAlert() } }
+        viewModel.showIncompleteReimbursementAlertEvent.observe(viewLifecycleOwner) { it.consume()?.apply { showReimbursementNoSelectionsAlert() } }
     }
 
     override fun onResume() {
         super.onResume()
         binding.fadeView.visibility = View.GONE
-
-        // Reset UI input/output locks leftover from aborted transitions/animations
-        discountEntryViewModel.unFreezeOutput()
-        discountEntryViewModel.unLockInput()
     }
 
     private fun trySavingDiscount() {
-        when(discountEntryViewModel.saveDiscount()) {
+        when(viewModel.saveDiscount()) {
             DiscountEntryViewModel.INVALID_PRICE -> Snackbar.make(binding.coordinatorLayout, R.string.discountentry_alert_invalid_price, Snackbar.LENGTH_SHORT).show()
             DiscountEntryViewModel.MISSING_ITEMS -> Snackbar.make(binding.coordinatorLayout, R.string.discountentry_alert_missing_items, Snackbar.LENGTH_SHORT).show()
             DiscountEntryViewModel.MISSING_RECIPIENTS -> Snackbar.make(binding.coordinatorLayout, R.string.discountentry_alert_missing_recipients, Snackbar.LENGTH_SHORT).show()
             DiscountEntryViewModel.INVALID_COST -> Snackbar.make(binding.coordinatorLayout, R.string.discountentry_alert_invalid_cost, Snackbar.LENGTH_SHORT).show()
             DiscountEntryViewModel.MISSING_PURCHASERS -> Snackbar.make(binding.coordinatorLayout, R.string.discountentry_alert_missing_purchasers, Snackbar.LENGTH_SHORT).show()
-            DiscountEntryViewModel.DISCOUNT_SAVED -> closeFragment(true)
         }
     }
 
-    private fun closeFragment(discountSaved: Boolean) {
-        // Prevent callback from intercepting back pressed events
-        backPressedCallback.isEnabled = false
-
-        // Prevent live updates to UI during return transition
-        discountEntryViewModel.freezeOutput()
-
+    override fun onFinish(output: Discount?) {
         if (args.editedDiscount == null) {
-            // Not editing an existing discount
+            // Creating a new discount
             if (args.originParams == null) {
                 // Fragment was opened from TaxTipFragment so return to TaxTipFragment
-                setupReturnTransitionToTaxTip(requireView(), discountSaved)
+                setupReturnTransitionToTaxTip(requireView(), output != null)
             } else {
                 // Fragment was opened from DiscountsFragment so close by shrinking into the FAB
                 returnTransition = CircularRevealTransition(
@@ -195,7 +166,7 @@ class DiscountEntryFragment: Fragment() {
             .setMessage(resources.getString(R.string.discountentry_alert_abort_unsaved_valid_edits_message))
             .setCancelable(true)
             .setNeutralButton(resources.getString(R.string.keep_editing)) { _, _ -> }
-            .setNegativeButton(resources.getString(R.string.discard)) { _, _ -> closeFragment(false) }
+            .setNegativeButton(resources.getString(R.string.discard)) { _, _ -> viewModel.finishFragment(null) }
             .setPositiveButton(resources.getString(R.string.save)) { _, _ -> trySavingDiscount() }
             .show()
     }
@@ -206,7 +177,7 @@ class DiscountEntryFragment: Fragment() {
             .setMessage(resources.getString(R.string.discountentry_alert_abort_unsaved_invalid_edits_message))
             .setCancelable(true)
             .setNegativeButton(resources.getString(R.string.keep_editing)) { _, _ ->  }
-            .setPositiveButton(resources.getString(R.string.discard)) { _, _ -> closeFragment(false) }
+            .setPositiveButton(resources.getString(R.string.discard)) { _, _ -> viewModel.finishFragment(null) }
             .show()
     }
 
@@ -221,53 +192,23 @@ class DiscountEntryFragment: Fragment() {
                     selectTab(getTabAt(1))
                 }
             }
-            .setPositiveButton(resources.getString(R.string.discard)) { _, _ -> discountEntryViewModel.cancelCost() }
+            .setPositiveButton(resources.getString(R.string.discard)) { _, _ -> viewModel.cancelCost() }
             .show()
     }
 
     private fun setupToolbar() {
         binding.toolbar.setNavigationIcon(R.drawable.ic_arrow_back_light)
-        binding.toolbar.setNavigationOnClickListener { discountEntryViewModel.handleOnBackPressed() }
+        binding.toolbar.setNavigationOnClickListener { viewModel.handleOnBackPressed() }
 
-        discountEntryViewModel.toolbarTitle.observe(viewLifecycleOwner) { binding.toolbar.title = it }
-        discountEntryViewModel.toolbarInTertiaryState.observe(viewLifecycleOwner) { tertiaryBackground ->
-            if(tertiaryBackground != toolbarInTertiaryState) {
-                val secondaryColor = TypedValue().also { requireContext().theme.resolveAttribute(R.attr.colorSecondary, it, true) }.data
-                val secondaryDarkColor = TypedValue().also { requireContext().theme.resolveAttribute(R.attr.colorSecondaryVariant, it, true) }.data
-                val tertiaryColor = TypedValue().also { requireContext().theme.resolveAttribute(R.attr.colorTertiary, it, true) }.data
-                val tertiaryDarkColor = TypedValue().also { requireContext().theme.resolveAttribute(R.attr.colorTertiaryVariant, it, true) }.data
+        viewModel.toolbarTitle.observe(viewLifecycleOwner) { binding.toolbar.title = it }
 
-                if(toolbarInTertiaryState) {
-                    ValueAnimator.ofObject(ArgbEvaluator(), tertiaryColor, secondaryColor).apply {
-                        duration = resources.getInteger(R.integer.viewprop_animation_duration).toLong()
-                        addUpdateListener { animator ->
-                            binding.toolbar.setBackgroundColor(animator.animatedValue as Int)
-                            binding.tabLayout.setBackgroundColor(animator.animatedValue as Int)
-                        }
-                    }.start()
-
-                    ValueAnimator.ofObject(ArgbEvaluator(), tertiaryDarkColor, secondaryDarkColor).apply {
-                        duration = resources.getInteger(R.integer.viewprop_animation_duration).toLong()
-                        addUpdateListener { animator -> binding.statusBarBackgroundView.setBackgroundColor(animator.animatedValue as Int) }
-                    }.start()
-                } else {
-                    ValueAnimator.ofObject(ArgbEvaluator(), secondaryColor, tertiaryColor).apply {
-                        duration = resources.getInteger(R.integer.viewprop_animation_duration).toLong()
-                        addUpdateListener { animator ->
-                            binding.toolbar.setBackgroundColor(animator.animatedValue as Int)
-                            binding.tabLayout.setBackgroundColor(animator.animatedValue as Int)
-                        }
-                    }.start()
-
-                    ValueAnimator.ofObject(ArgbEvaluator(), secondaryDarkColor, tertiaryDarkColor).apply {
-                        duration = resources.getInteger(R.integer.viewprop_animation_duration).toLong()
-                        addUpdateListener { animator -> binding.statusBarBackgroundView.setBackgroundColor(animator.animatedValue as Int) }
-                    }.start()
-                }
-
-                toolbarInTertiaryState = tertiaryBackground
-            }
-        }
+        setupToolbarSecondaryTertiaryAnimation(
+            requireContext(),
+            viewLifecycleOwner,
+            viewModel.uiInTertiaryState,
+            binding.toolbar,
+            binding.statusBarBackgroundView,
+            extraView = binding.tabLayout)
     }
 
     private fun setupMainTabs() {
@@ -277,8 +218,8 @@ class DiscountEntryFragment: Fragment() {
         binding.viewPager.registerOnPageChangeCallback(object: ViewPager2.OnPageChangeCallback() {
             override fun onPageScrollStateChanged(state: Int) {
                 when(state) {
-                    ViewPager2.SCROLL_STATE_IDLE -> { discountEntryViewModel.topViewPagerInputLocked.value = false }
-                    else -> { discountEntryViewModel.topViewPagerInputLocked.value = true }
+                    ViewPager2.SCROLL_STATE_IDLE -> { viewModel.topViewPagerInputLocked.value = false }
+                    else -> { viewModel.topViewPagerInputLocked.value = true }
                 }
             }
         })
@@ -286,7 +227,7 @@ class DiscountEntryFragment: Fragment() {
             var fragments = mutableListOf(PropertiesFragment(), Fragment())
 
             init {
-                discountEntryViewModel.loadReimbursementFragmentEvent.observe(viewLifecycleOwner) {
+                viewModel.loadReimbursementFragmentEvent.observe(viewLifecycleOwner) {
                     it.consume()?.also {
                         if(fragments[1] !is ReimbursementFragment) {
                             fragments[1] = ReimbursementFragment()
@@ -324,17 +265,17 @@ class DiscountEntryFragment: Fragment() {
         tabLayoutMediator.setOnTabSelectedReviewer { tab ->
             when(tab.position) {
                 0 -> {
-                    if(discountEntryViewModel.isHandlingReimbursements.value == true &&
-                        discountEntryViewModel.reimburseeSelections.value.isNullOrEmpty()) {
+                    if(viewModel.isHandlingReimbursements.value == true &&
+                        viewModel.reimburseeSelections.value.isNullOrEmpty()) {
                         showReimbursementNoSelectionsAlert()
                         false
                     } else {
-                        discountEntryViewModel.switchToDiscountProperties()
+                        viewModel.switchToDiscountProperties()
                         true
                     }
                 }
                 1 -> {
-                    discountEntryViewModel.switchToReimbursements()
+                    viewModel.switchToReimbursements()
                     true
                 }
                 else -> { false /* Only two tabs */ }
@@ -342,17 +283,17 @@ class DiscountEntryFragment: Fragment() {
         }
         tabLayoutMediator.attach()
 
-        discountEntryViewModel.isHandlingReimbursements.observe(viewLifecycleOwner, {
+        viewModel.isHandlingReimbursements.observe(viewLifecycleOwner, {
             binding.viewPager.currentItem = if(it) 1 else 0 })
 
-        discountEntryViewModel.tabsVisible.observe(viewLifecycleOwner, {
+        viewModel.tabsVisible.observe(viewLifecycleOwner, {
             binding.tabLayout.visibility = if(it) View.VISIBLE else View.GONE
         })
     }
 
     private fun setupFAB() {
         var allowReshowFABOnHidden: Boolean
-        discountEntryViewModel.fabIcon.observe(viewLifecycleOwner, {
+        viewModel.fabIcon.observe(viewLifecycleOwner, {
             if(it == null) {
                 allowReshowFABOnHidden = false
                 binding.fab.hide(object: FloatingActionButton.OnVisibilityChangedListener() {
@@ -381,13 +322,13 @@ class DiscountEntryFragment: Fragment() {
         })
 
         // If selections change and FAB should be showing, ensure FAB is not out of view
-        discountEntryViewModel.dinerSelections.observe(viewLifecycleOwner, { if(it.isNotEmpty()) binding.fab.slideUp() })
-        discountEntryViewModel.itemSelections.observe(viewLifecycleOwner, { if(it.isNotEmpty()) binding.fab.slideUp() })
-        discountEntryViewModel.reimburseeSelections.observe(viewLifecycleOwner, { if(it.isNotEmpty()) binding.fab.slideUp() })
+        viewModel.dinerSelections.observe(viewLifecycleOwner, { if(it.isNotEmpty()) binding.fab.slideUp() })
+        viewModel.itemSelections.observe(viewLifecycleOwner, { if(it.isNotEmpty()) binding.fab.slideUp() })
+        viewModel.reimburseeSelections.observe(viewLifecycleOwner, { if(it.isNotEmpty()) binding.fab.slideUp() })
 
         binding.fab.setOnClickListener {
-            when(discountEntryViewModel.fabIcon.value) {
-                R.drawable.ic_arrow_back_light -> discountEntryViewModel.switchToDiscountProperties()
+            when(viewModel.fabIcon.value) {
+                R.drawable.ic_arrow_back_light -> viewModel.switchToDiscountProperties()
                 R.drawable.ic_arrow_forward -> trySavingDiscount()
             }
         }
@@ -461,8 +402,8 @@ class DiscountEntryFragment: Fragment() {
                     return animator
                 }
             }
-        ).setOnTransitionStartCallback { _, _, _, _ -> discountEntryViewModel.notifyTransitionStarted() }
-            .setOnTransitionEndCallback { _, _, _, _ -> discountEntryViewModel.notifyTransitionFinished() }
+        ).setOnTransitionStartCallback { _, _, _, _ -> viewModel.notifyTransitionStarted() }
+            .setOnTransitionEndCallback { _, _, _, _ -> viewModel.notifyTransitionFinished() }
     }
 
     private fun setupReturnTransitionToTaxTip(view: View, withNewDiscount: Boolean) {
@@ -536,7 +477,7 @@ class DiscountEntryFragment: Fragment() {
                     return animator
                 }
             }
-        ).setOnTransitionStartCallback { _, _, _, _ -> discountEntryViewModel.notifyTransitionStarted() }
+        ).setOnTransitionStartCallback { _, _, _, _ -> viewModel.notifyTransitionStarted() }
 
         // Return transition is needed to prevent next fragment from appearing immediately
         returnTransition = Hold().apply {
@@ -547,7 +488,7 @@ class DiscountEntryFragment: Fragment() {
 
     private fun setupReturnTransitionToDiscounts(view: View) {
         binding.fadeView.visibility = View.GONE
-        binding.container.transitionName = "container" + (discountEntryViewModel.loadedDiscount.value?.id ?: "")
+        binding.container.transitionName = "container" + (viewModel.loadedDiscount.value?.id ?: "")
 
         //TODO move to attemptClose  to handle inset changes
         sharedElementReturnTransition = CardViewExpandTransition(binding.container.transitionName, binding.revealedLayout.id, false)

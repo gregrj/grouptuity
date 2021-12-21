@@ -23,8 +23,12 @@ class CardViewExpandTransition(private val containerTransitionName: String,
                                private val contentId: Int,
                                private val expanding: Boolean): Transition() {
     private val elements = mutableMapOf<String, Element>()
-    private var initialContentLayoutParamWidth: Int = ViewGroup.LayoutParams.MATCH_PARENT
+
+    private var initialContainerLayoutParamHeight: Int = ViewGroup.LayoutParams.MATCH_PARENT
+    private var initialContainerLayoutParamWidth: Int = ViewGroup.LayoutParams.MATCH_PARENT
     private var initialContentLayoutParamHeight: Int = ViewGroup.LayoutParams.MATCH_PARENT
+    private var initialContentLayoutParamWidth: Int = ViewGroup.LayoutParams.MATCH_PARENT
+
     private var onTransitionEndCallback: (Transition, ViewGroup, View, View) -> Unit = { _, _, _, _ -> }
     private var onTransitionProgressCallback: (Transition, ViewGroup, View, ValueAnimator) -> Unit = { _, _, _, _ -> }
     private var onTransitionStartCallback: (Transition, ViewGroup, View, View) -> Unit = { _, _, _, _ -> }
@@ -54,8 +58,6 @@ class CardViewExpandTransition(private val containerTransitionName: String,
                 transitionValues.view.getLocationOnScreen(location)
                 transitionValues.values[PROP_CONTAINER_X] = location[0]
                 transitionValues.values[PROP_CONTAINER_Y] = location[1]
-
-
             }
             in elements -> {
                 elements[transitionValues.view.transitionName]?.captureStartValues(this, transitionValues)
@@ -121,13 +123,16 @@ class CardViewExpandTransition(private val containerTransitionName: String,
         endView.translationX = (startX - endX) * (1.0f)
         endView.translationY = (startY - endY) * (1.0f)
         endView.layoutParams = endView.layoutParams.apply {
+            initialContainerLayoutParamWidth = width
+            initialContainerLayoutParamHeight = height
+
             this.height = startHeight
             this.width = startWidth
         }
 
         addListener(object : TransitionListenerAdapter() {
             override fun onTransitionStart(transition: Transition) {
-                sceneRoot.findViewById<View>(contentId)?.apply {
+                endView.findViewById<View>(contentId)?.apply {
                     initialContentLayoutParamWidth = layoutParams.width
                     initialContentLayoutParamHeight = layoutParams.height
 
@@ -141,11 +146,17 @@ class CardViewExpandTransition(private val containerTransitionName: String,
             }
 
             override fun onTransitionEnd(transition: Transition) {
-                // Restore specified layout params for content within container
-                sceneRoot.findViewById<View>(contentId)?.apply {
+                // Restore layout params for container
+                endView.layoutParams = endView.layoutParams.apply {
+                    this.height = initialContainerLayoutParamHeight
+                    this.width = initialContainerLayoutParamWidth
+                }
+
+                // Restore layout params for content within container
+                endView.findViewById<View>(contentId)?.apply {
                     layoutParams = layoutParams.also {
-                        it.height = layoutParams.height
-                        it.width = layoutParams.width
+                        it.height = initialContentLayoutParamHeight
+                        it.width = initialContentLayoutParamWidth
                     }
                 }
 
@@ -195,9 +206,6 @@ class CardViewExpandTransition(private val containerTransitionName: String,
             override fun onTransitionStart(transition: Transition) {
                 // Freeze layout of the content within the container
                 startView.findViewById<View>(contentId)?.apply {
-                    initialContentLayoutParamWidth = layoutParams.width
-                    initialContentLayoutParamHeight = layoutParams.height
-
                     layoutParams = layoutParams.also {
                         it.height = this.measuredHeight
                         it.width = this.measuredWidth
@@ -215,14 +223,6 @@ class CardViewExpandTransition(private val containerTransitionName: String,
                 sceneRoot.overlay.remove(scrim)
                 sceneRoot.overlay.remove(startView)
                 endView.alpha = 1f
-
-                // Restore specified layout params for content within the container
-                sceneRoot.findViewById<View>(contentId)?.apply {
-                    layoutParams = layoutParams.also {
-                        it.height = layoutParams.height
-                        it.width = layoutParams.width
-                    }
-                }
 
                 onTransitionEndCallback(transition, sceneRoot, startView, endView)
             }

@@ -10,10 +10,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.animation.AccelerateDecelerateInterpolator
-import androidx.activity.OnBackPressedCallback
 import androidx.core.animation.doOnStart
 import androidx.core.view.doOnPreDraw
-import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.FragmentNavigatorExtras
@@ -30,11 +28,11 @@ import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.Discount
 import com.grouptuity.grouptuity.databinding.FragDiscountsBinding
 import com.grouptuity.grouptuity.databinding.FragDiscountsListitemBinding
+import com.grouptuity.grouptuity.ui.util.BaseUIFragment
 import com.grouptuity.grouptuity.ui.util.transitions.CardViewExpandTransition
 import com.grouptuity.grouptuity.ui.util.transitions.CircularRevealTransition
 import com.grouptuity.grouptuity.ui.util.views.RecyclerViewBottomOffset
 import com.grouptuity.grouptuity.ui.util.views.RecyclerViewListener
-import com.grouptuity.grouptuity.ui.util.views.setNullOnDestroy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -44,28 +42,22 @@ import kotlinx.coroutines.withContext
 //TODO prevent update to list item during removal showing empty discount data
 //TODO menu button to clear all discounts
 
-class DiscountsFragment: Fragment() {
-    private var binding by setNullOnDestroy<FragDiscountsBinding>()
-    private lateinit var discountsViewModel: DiscountsViewModel
-    private lateinit var backPressedCallback: OnBackPressedCallback
+class DiscountsFragment: BaseUIFragment<FragDiscountsBinding, DiscountsViewModel>() {
     private lateinit var recyclerAdapter: DiscountRecyclerViewAdapter
     private var suppressAutoScroll = false
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        binding = FragDiscountsBinding.inflate(inflater, container, false)
-        discountsViewModel = ViewModelProvider(this)[DiscountsViewModel::class.java]
-        return binding.root
-    }
+    override fun inflate(inflater: LayoutInflater, container: ViewGroup?) =
+        FragDiscountsBinding.inflate(inflater, container, false)
+
+    override fun createViewModel() = ViewModelProvider(requireActivity())[DiscountsViewModel::class.java]
+
+    override fun getInitialInput() {}
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
-        // Intercept user interactions while fragment transitions and animations are running
-        binding.rootLayout.attachLock(discountsViewModel.isInputLocked)
+        super.onViewCreated(view, savedInstanceState)
 
-        // Intercept back pressed events to allow fragment-specific behaviors
-        backPressedCallback = object : OnBackPressedCallback(true) { override fun handleOnBackPressed() { closeFragment() } }
-        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, backPressedCallback)
         binding.toolbar.setNavigationIcon(R.drawable.ic_arrow_back_light)
-        binding.toolbar.setNavigationOnClickListener { closeFragment() }
+        binding.toolbar.setNavigationOnClickListener { viewModel.handleOnBackPressed() }
 
         postponeEnterTransition()
         setupEnterTransitionFromTaxTip()
@@ -76,7 +68,7 @@ class DiscountsFragment: Fragment() {
         binding.fab.setOnClickListener {
             (requireActivity() as MainActivity).storeViewAsBitmap(requireView())
 
-            discountsViewModel.notifyTransitionStarted()
+            viewModel.notifyTransitionStarted()
 
             findNavController().navigate(
                 DiscountsFragmentDirections.editDiscount(
@@ -87,38 +79,30 @@ class DiscountsFragment: Fragment() {
         }
     }
 
-    override fun onResume() {
-        super.onResume()
-
-        // Reset UI input/output locks leftover from aborted transitions/animations
-        discountsViewModel.unLockInput()
-        discountsViewModel.unFreezeOutput()
-    }
-
     private fun setupList() {
-        recyclerAdapter = DiscountRecyclerViewAdapter(requireContext(), discountsViewModel,
-            object: RecyclerViewListener {
-                override fun onClick(view: View) {
-                    suppressAutoScroll = true // Retain scroll position when returning to this fragment
+        recyclerAdapter = DiscountRecyclerViewAdapter(requireContext(), object: RecyclerViewListener {
+            override fun onClick(view: View) {
+                suppressAutoScroll = true // Retain scroll position when returning to this fragment
 
-                    // Exit transition is needed to prevent next fragment from appearing immediately
-                    exitTransition = Hold().apply {
-                        duration = 0L
-                        addTarget(requireView())
-                    }
-
-                    val viewBinding = FragDiscountsListitemBinding.bind(view)
-
-                    (requireActivity() as MainActivity).storeViewAsBitmap(requireView())
-
-                    discountsViewModel.notifyTransitionStarted()
-
-                    findNavController().navigate(
-                        DiscountsFragmentDirections.editDiscount(view.tag as Discount, null),
-                        FragmentNavigatorExtras(viewBinding.cardBackground to viewBinding.cardBackground.transitionName)
-                    )
+                // Exit transition is needed to prevent next fragment from appearing immediately
+                exitTransition = Hold().apply {
+                    duration = 0L
+                    addTarget(requireView())
                 }
-                override fun onLongClick(view: View): Boolean { return false }
+
+                val viewBinding = FragDiscountsListitemBinding.bind(view)
+
+                (requireActivity() as MainActivity).storeViewAsBitmap(requireView())
+
+                viewModel.notifyTransitionStarted()
+
+                findNavController().navigate(
+                    DiscountsFragmentDirections.editDiscount(view.tag as Discount, null),
+                    FragmentNavigatorExtras(viewBinding.cardBackground to viewBinding.cardBackground.transitionName)
+                )
+            }
+
+            override fun onLongClick(view: View): Boolean { return false }
         })
 
         recyclerAdapter.registerAdapterDataObserver(object: RecyclerView.AdapterDataObserver() {
@@ -153,15 +137,13 @@ class DiscountsFragment: Fragment() {
             (itemAnimator as SimpleItemAnimator).supportsChangeAnimations = false
         }
 
-        discountsViewModel.discountData.observe(viewLifecycleOwner) { lifecycleScope.launch { recyclerAdapter.updateDataSet(it) } }
+        viewModel.discountData.observe(viewLifecycleOwner) { lifecycleScope.launch { recyclerAdapter.updateDataSet(it) } }
     }
 
-    private fun closeFragment() {
-        // Prevent callback from intercepting back pressed events
-        backPressedCallback.isEnabled = false
-
+    override fun onFinish(output: Unit?) {
         setupReturnTransitionToTaxTip(requireView())
 
+        // Close fragment using default onBackPressed behavior
         requireActivity().onBackPressed()
     }
 
@@ -232,8 +214,8 @@ class DiscountsFragment: Fragment() {
                 }
             }
         ).addListener(object : Transition.TransitionListener {
-            override fun onTransitionStart(transition: Transition) { discountsViewModel.notifyTransitionStarted() }
-            override fun onTransitionEnd(transition: Transition) { discountsViewModel.notifyTransitionFinished() }
+            override fun onTransitionStart(transition: Transition) { viewModel.notifyTransitionStarted() }
+            override fun onTransitionEnd(transition: Transition) { viewModel.notifyTransitionFinished() }
             override fun onTransitionCancel(transition: Transition) {}
             override fun onTransitionPause(transition: Transition) {}
             override fun onTransitionResume(transition: Transition) {}
@@ -247,7 +229,7 @@ class DiscountsFragment: Fragment() {
         val propTopInset = "com.grouptuity.grouptuity:CardViewExpandTransition:discount_button_top_inset"
         val propCornerRadius = "com.grouptuity.grouptuity:CardViewExpandTransition:discount_button_corner_radius"
 
-        val button = if(discountsViewModel.discounts.value.isNullOrEmpty()) {
+        val button = if(viewModel.discounts.value.isNullOrEmpty()) {
             binding.addDiscountButton.transitionName = "discountButtonTransitionName"
             binding.addDiscountButton.visibility = View.VISIBLE
             binding.editDiscountsButton.transitionName = null
@@ -314,8 +296,8 @@ class DiscountsFragment: Fragment() {
                 }
             }
         ).addListener(object : Transition.TransitionListener {
-            override fun onTransitionStart(transition: Transition) { discountsViewModel.notifyTransitionStarted() }
-            override fun onTransitionEnd(transition: Transition) { discountsViewModel.notifyTransitionFinished() }
+            override fun onTransitionStart(transition: Transition) { viewModel.notifyTransitionStarted() }
+            override fun onTransitionEnd(transition: Transition) { viewModel.notifyTransitionFinished() }
             override fun onTransitionCancel(transition: Transition) {}
             override fun onTransitionPause(transition: Transition) {}
             override fun onTransitionResume(transition: Transition) {}
@@ -330,7 +312,6 @@ class DiscountsFragment: Fragment() {
 
     private inner class DiscountRecyclerViewAdapter(
         private val context: Context,
-        private val discountViewModel: DiscountsViewModel,
         private val listener: RecyclerViewListener): RecyclerView.Adapter<DiscountRecyclerViewAdapter.ViewHolder>() {
 
         private var mData = emptyList<Pair<Discount, Triple<String, String, String>>>()
@@ -364,7 +345,7 @@ class DiscountsFragment: Fragment() {
                 }
 
                 viewBinding.remove.setOnClickListener {
-                    discountViewModel.removeDiscount(newDiscount)
+                    viewModel.removeDiscount(newDiscount)
                 }
 
                 viewBinding.cardBackground.transitionName = "container" + newDiscount.id

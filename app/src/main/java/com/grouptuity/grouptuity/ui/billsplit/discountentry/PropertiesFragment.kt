@@ -25,10 +25,7 @@ import com.grouptuity.grouptuity.databinding.FragDiscountEntryListBinding
 import com.grouptuity.grouptuity.databinding.FragDiscountEntryPropertiesBinding
 import com.grouptuity.grouptuity.databinding.ListDinerBinding
 import com.grouptuity.grouptuity.databinding.ListItemBinding
-import com.grouptuity.grouptuity.ui.util.views.RecyclerViewListener
-import com.grouptuity.grouptuity.ui.util.views.setNullOnDestroy
-import com.grouptuity.grouptuity.ui.util.views.ContactIcon
-import com.grouptuity.grouptuity.ui.util.views.setupCalculatorDisplay
+import com.grouptuity.grouptuity.ui.util.views.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -107,17 +104,19 @@ class PropertiesFragment: Fragment() {
 
         discountEntryViewModel.isDiscountOnItems.observe(viewLifecycleOwner) { binding.viewPager.currentItem = if(it) 0 else 1 }
 
-        discountEntryViewModel.discountBasisButtonState.observe(viewLifecycleOwner) { (onItems, inTertiary) ->
-            binding.buttonItems.isEnabled = !onItems
-            binding.buttonItems.hasColor = !inTertiary
+        discountEntryViewModel.uiInTertiaryState.observe(viewLifecycleOwner) {
+            binding.buttonItems.hasColor = !it
+            binding.buttonDiners.hasColor = !it
+        }
 
-            binding.buttonDiners.isEnabled = onItems
-            binding.buttonDiners.hasColor = !inTertiary
+        discountEntryViewModel.discountBasisButtonsOnItems.observe(viewLifecycleOwner) {
+            binding.buttonItems.isEnabled = !it
+            binding.buttonDiners.isEnabled = it
         }
 
         setupCalculatorDisplay(
             viewLifecycleOwner,
-            discountEntryViewModel.priceCalcData,
+            discountEntryViewModel.priceCalculator,
             binding.priceTextview,
             binding.buttonEdit,
             binding.buttonBackspace)

@@ -76,7 +76,7 @@ class ReimbursementFragment: Fragment() {
 
         setupCalculatorDisplay(
             viewLifecycleOwner,
-            discountEntryViewModel.costCalcData,
+            discountEntryViewModel.costCalculator,
             binding.costTextview,
             binding.buttonEdit,
             binding.buttonBackspace)

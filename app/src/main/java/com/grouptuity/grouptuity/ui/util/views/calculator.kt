@@ -6,11 +6,11 @@ import android.widget.ImageButton
 import android.widget.ImageView
 import android.widget.TextView
 import com.google.android.material.bottomsheet.BottomSheetBehavior
-import com.grouptuity.grouptuity.data.CalculatorData
+import com.grouptuity.grouptuity.data.Calculator
 
 
 fun setupCollapsibleNumberPad(viewLifecycleOwner: androidx.lifecycle.LifecycleOwner,
-                              data: CalculatorData,
+                              calculator: Calculator,
                               numberPad: com.grouptuity.grouptuity.databinding.NumberPadCollapsibleBinding,
                               useValuePlaceholder: Boolean=true,
                               showBasisToggleButtons: Boolean=true) {
@@ -23,19 +23,19 @@ fun setupCollapsibleNumberPad(viewLifecycleOwner: androidx.lifecycle.LifecycleOw
     if (showBasisToggleButtons) {
         numberPad.basisToggleButtons.visibility = View.INVISIBLE
 
-        data.isInPercent.observe(viewLifecycleOwner) {
+        calculator.isInPercent.observe(viewLifecycleOwner) {
             numberPad.buttonCurrency.isEnabled = it
             numberPad.buttonPercent.isEnabled = !it
         }
 
-        numberPad.buttonCurrency.setOnClickListener { data.switchToCurrency() }
-        numberPad.buttonPercent.setOnClickListener { data.switchToPercent() }
+        numberPad.buttonCurrency.setOnClickListener { calculator.switchToCurrency() }
+        numberPad.buttonPercent.setOnClickListener { calculator.switchToPercent() }
     } else {
         numberPad.basisToggleButtons.visibility = View.GONE
     }
 
     // Observer for expanding and collapsing the number pad
-    data.isNumberPadVisible.observe(viewLifecycleOwner, { visible ->
+    calculator.isNumberPadVisible.observe(viewLifecycleOwner, { visible ->
         BottomSheetBehavior.from(numberPad.container).state =
             if (visible)
                 BottomSheetBehavior.STATE_EXPANDED
@@ -44,9 +44,9 @@ fun setupCollapsibleNumberPad(viewLifecycleOwner: androidx.lifecycle.LifecycleOw
     })
 
     // Observers for button states
-    data.decimalButtonEnabled.observe(viewLifecycleOwner) { numberPad.buttonDecimal.isEnabled = it }
-    data.zeroButtonEnabled.observe(viewLifecycleOwner) { numberPad.button0.isEnabled = it }
-    data.nonZeroButtonsEnabled.observe(viewLifecycleOwner) {
+    calculator.decimalButtonEnabled.observe(viewLifecycleOwner) { numberPad.buttonDecimal.isEnabled = it }
+    calculator.zeroButtonEnabled.observe(viewLifecycleOwner) { numberPad.button0.isEnabled = it }
+    calculator.nonZeroButtonsEnabled.observe(viewLifecycleOwner) {
         numberPad.button1.isEnabled = it
         numberPad.button2.isEnabled = it
         numberPad.button3.isEnabled = it
@@ -57,7 +57,7 @@ fun setupCollapsibleNumberPad(viewLifecycleOwner: androidx.lifecycle.LifecycleOw
         numberPad.button8.isEnabled = it
         numberPad.button9.isEnabled = it
     }
-    data.acceptButtonEnabled.observe(viewLifecycleOwner) {
+    calculator.acceptButtonEnabled.observe(viewLifecycleOwner) {
         if(it) {
             numberPad.buttonAccept.show()
         } else {
@@ -66,18 +66,18 @@ fun setupCollapsibleNumberPad(viewLifecycleOwner: androidx.lifecycle.LifecycleOw
     }
 
     // Button click listeners
-    numberPad.button0.setOnClickListener { data.addDigit('0') }
-    numberPad.button1.setOnClickListener { data.addDigit('1') }
-    numberPad.button2.setOnClickListener { data.addDigit('2') }
-    numberPad.button3.setOnClickListener { data.addDigit('3') }
-    numberPad.button4.setOnClickListener { data.addDigit('4') }
-    numberPad.button5.setOnClickListener { data.addDigit('5') }
-    numberPad.button6.setOnClickListener { data.addDigit('6') }
-    numberPad.button7.setOnClickListener { data.addDigit('7') }
-    numberPad.button8.setOnClickListener { data.addDigit('8') }
-    numberPad.button9.setOnClickListener { data.addDigit('9') }
-    numberPad.buttonDecimal.setOnClickListener { data.addDecimal() }
-    numberPad.buttonAccept.setOnClickListener { data.tryAcceptValue() }
+    numberPad.button0.setOnClickListener { calculator.addDigit('0') }
+    numberPad.button1.setOnClickListener { calculator.addDigit('1') }
+    numberPad.button2.setOnClickListener { calculator.addDigit('2') }
+    numberPad.button3.setOnClickListener { calculator.addDigit('3') }
+    numberPad.button4.setOnClickListener { calculator.addDigit('4') }
+    numberPad.button5.setOnClickListener { calculator.addDigit('5') }
+    numberPad.button6.setOnClickListener { calculator.addDigit('6') }
+    numberPad.button7.setOnClickListener { calculator.addDigit('7') }
+    numberPad.button8.setOnClickListener { calculator.addDigit('8') }
+    numberPad.button9.setOnClickListener { calculator.addDigit('9') }
+    numberPad.buttonDecimal.setOnClickListener { calculator.addDecimal() }
+    numberPad.buttonAccept.setOnClickListener { calculator.tryAcceptValue() }
 
     // Prevent number pad from being dragged and block input while in motion
     with(BottomSheetBehavior.from(numberPad.container)) {
@@ -89,17 +89,17 @@ fun setupCollapsibleNumberPad(viewLifecycleOwner: androidx.lifecycle.LifecycleOw
                    apparent delay that blocks resumption of user input for too long after the sheet
                    has settled visually. */
                 if(slideOffset <= 0.05f) {
-                    data.inputLock.value = false
+                    calculator.inputLock.value = false
                 } else if(slideOffset >= 0.95) {
-                    data.inputLock.value = false
+                    calculator.inputLock.value = false
                 }
             }
 
             override fun onStateChanged(bottomSheet: View, newState: Int) {
                 when (newState) {
-                    BottomSheetBehavior.STATE_EXPANDED -> { data.inputLock.value = false }
-                    BottomSheetBehavior.STATE_COLLAPSED -> { data.inputLock.value = false }
-                    else -> { data.inputLock.value = true }
+                    BottomSheetBehavior.STATE_EXPANDED -> { calculator.inputLock.value = false }
+                    BottomSheetBehavior.STATE_COLLAPSED -> { calculator.inputLock.value = false }
+                    else -> { calculator.inputLock.value = true }
                 }
             }
         })
@@ -108,18 +108,16 @@ fun setupCollapsibleNumberPad(viewLifecycleOwner: androidx.lifecycle.LifecycleOw
 
 
 fun setupFixedNumberPad(viewLifecycleOwner: androidx.lifecycle.LifecycleOwner,
-                        data: CalculatorData,
+                        calculator: Calculator,
                         numberPad: com.grouptuity.grouptuity.databinding.NumberPadFixedBinding) {
 
     // Observer for the displayed value
-    data.displayValue.observe(viewLifecycleOwner) {
-            value: String -> numberPad.displayTextview.text = value
-    }
+    calculator.displayValue.observe(viewLifecycleOwner) { numberPad.displayTextview.text = it }
 
     // Observers for button states
-    data.decimalButtonEnabled.observe(viewLifecycleOwner) { numberPad.buttonDecimal.isEnabled = it }
-    data.zeroButtonEnabled.observe(viewLifecycleOwner) { numberPad.button0.isEnabled = it }
-    data.nonZeroButtonsEnabled.observe(viewLifecycleOwner) {
+    calculator.decimalButtonEnabled.observe(viewLifecycleOwner) { numberPad.buttonDecimal.isEnabled = it }
+    calculator.zeroButtonEnabled.observe(viewLifecycleOwner) { numberPad.button0.isEnabled = it }
+    calculator.nonZeroButtonsEnabled.observe(viewLifecycleOwner) {
         numberPad.button1.isEnabled = it
         numberPad.button2.isEnabled = it
         numberPad.button3.isEnabled = it
@@ -130,7 +128,7 @@ fun setupFixedNumberPad(viewLifecycleOwner: androidx.lifecycle.LifecycleOwner,
         numberPad.button8.isEnabled = it
         numberPad.button9.isEnabled = it
     }
-    data.acceptButtonEnabled.observe(viewLifecycleOwner) {
+    calculator.acceptButtonEnabled.observe(viewLifecycleOwner) {
         if(it) {
             numberPad.buttonAccept.show()
         } else {
@@ -139,24 +137,24 @@ fun setupFixedNumberPad(viewLifecycleOwner: androidx.lifecycle.LifecycleOwner,
     }
 
     // Button click listeners
-    numberPad.button0.setOnClickListener { data.addDigit('0') }
-    numberPad.button1.setOnClickListener { data.addDigit('1') }
-    numberPad.button2.setOnClickListener { data.addDigit('2') }
-    numberPad.button3.setOnClickListener { data.addDigit('3') }
-    numberPad.button4.setOnClickListener { data.addDigit('4') }
-    numberPad.button5.setOnClickListener { data.addDigit('5') }
-    numberPad.button6.setOnClickListener { data.addDigit('6') }
-    numberPad.button7.setOnClickListener { data.addDigit('7') }
-    numberPad.button8.setOnClickListener { data.addDigit('8') }
-    numberPad.button9.setOnClickListener { data.addDigit('9') }
-    numberPad.buttonDecimal.setOnClickListener { data.addDecimal() }
-    numberPad.buttonAccept.setOnClickListener { data.tryAcceptValue() }
+    numberPad.button0.setOnClickListener { calculator.addDigit('0') }
+    numberPad.button1.setOnClickListener { calculator.addDigit('1') }
+    numberPad.button2.setOnClickListener { calculator.addDigit('2') }
+    numberPad.button3.setOnClickListener { calculator.addDigit('3') }
+    numberPad.button4.setOnClickListener { calculator.addDigit('4') }
+    numberPad.button5.setOnClickListener { calculator.addDigit('5') }
+    numberPad.button6.setOnClickListener { calculator.addDigit('6') }
+    numberPad.button7.setOnClickListener { calculator.addDigit('7') }
+    numberPad.button8.setOnClickListener { calculator.addDigit('8') }
+    numberPad.button9.setOnClickListener { calculator.addDigit('9') }
+    numberPad.buttonDecimal.setOnClickListener { calculator.addDecimal() }
+    numberPad.buttonAccept.setOnClickListener { calculator.tryAcceptValue() }
 
     // Observers and listeners for the backspace/clear button
-    data.backspaceButtonVisible.observe(viewLifecycleOwner) { numberPad.buttonBackspace.visibility = if(it) View.VISIBLE else View.GONE }
-    numberPad.buttonBackspace.setOnClickListener { data.removeDigit() }
+    calculator.backspaceButtonVisible.observe(viewLifecycleOwner) { numberPad.buttonBackspace.visibility = if(it) View.VISIBLE else View.GONE }
+    numberPad.buttonBackspace.setOnClickListener { calculator.removeDigit() }
     numberPad.buttonBackspace.setOnLongClickListener {
-        data.clearValue()
+        calculator.clearValue()
         true
     }
 }
@@ -164,33 +162,36 @@ fun setupFixedNumberPad(viewLifecycleOwner: androidx.lifecycle.LifecycleOwner,
 
 @SuppressLint("ClickableViewAccessibility")
 fun setupCalculatorDisplay(viewLifecycleOwner: androidx.lifecycle.LifecycleOwner,
-                           data: CalculatorData,
+                           calculator: Calculator,
                            valueTextView: TextView,
                            editButton: ImageView,
                            backSpaceButton: ImageButton) {
 
     // Observer for the displayed value
-    data.displayValue.observe(viewLifecycleOwner) { value: String -> valueTextView.text = value }
+    calculator.displayValue.observe(viewLifecycleOwner) { value: String -> valueTextView.text = value }
 
     // Observer and listener for the edit button
-    data.editButtonVisible.observe(viewLifecycleOwner) { editButton.visibility = if(it) View.VISIBLE else View.GONE }
+    calculator.editButtonVisible.observe(viewLifecycleOwner) { editButton.visibility = if(it) View.VISIBLE else View.GONE }
 
     // Observers and listeners for the backspace/clear button
-    data.backspaceButtonVisible.observe(viewLifecycleOwner) { backSpaceButton.visibility = if(it) View.VISIBLE else View.GONE }
-    backSpaceButton.setOnClickListener { data.removeDigit() }
+    calculator.backspaceButtonVisible.observe(viewLifecycleOwner) { backSpaceButton.visibility = if(it) View.VISIBLE else View.GONE }
+    backSpaceButton.setOnClickListener { calculator.removeDigit() }
     backSpaceButton.setOnLongClickListener {
-        data.clearValue()
+        calculator.clearValue()
         true
     }
 
     // Allow user to open the calculator by clicking the ValueTextView if closed
-    data.isNumberPadVisible.observe(viewLifecycleOwner, {
+    calculator.isNumberPadVisible.observe(viewLifecycleOwner, {
         if(it) {
             valueTextView.setOnClickListener(null)
             valueTextView.setOnTouchListener { _, _ -> true }
 
         } else {
-            valueTextView.setOnClickListener { data.openCalculator() }
+            valueTextView.setOnClickListener {
+                calculator.clearValue()
+                calculator.showNumberPad()
+            }
             valueTextView.setOnTouchListener(null)
         }
     })

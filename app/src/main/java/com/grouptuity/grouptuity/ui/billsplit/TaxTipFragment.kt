@@ -24,7 +24,7 @@ class TaxTipFragment: Fragment() {
     private lateinit var taxTipViewModel: TaxTipViewModel
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        taxTipViewModel = ViewModelProvider(requireActivity()).get(TaxTipViewModel::class.java)
+        taxTipViewModel = ViewModelProvider(requireActivity())[TaxTipViewModel::class.java]
         binding = FragTaxTipBinding.inflate(inflater, container, false)
         return binding.root
     }

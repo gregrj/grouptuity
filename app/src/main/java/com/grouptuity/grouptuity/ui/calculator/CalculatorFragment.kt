@@ -8,10 +8,8 @@ import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.animation.AccelerateDecelerateInterpolator
-import androidx.activity.OnBackPressedCallback
 import androidx.core.animation.doOnStart
 import androidx.core.view.doOnPreDraw
-import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
@@ -22,44 +20,32 @@ import com.grouptuity.grouptuity.MainActivity
 import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.CalculationType
 import com.grouptuity.grouptuity.databinding.FragCalculatorBinding
+import com.grouptuity.grouptuity.ui.util.UIFragment
 import com.grouptuity.grouptuity.ui.util.transitions.CardViewExpandTransition
-import com.grouptuity.grouptuity.ui.util.views.setNullOnDestroy
 import com.grouptuity.grouptuity.ui.util.views.setupFixedNumberPad
 import com.grouptuity.grouptuity.ui.util.views.setupToolbarSecondaryTertiaryAnimation
 
-// TODO handle inset changes
 
 const val CALCULATOR_RETURN_KEY = "calculatorReturnKey"
 
 
-class CalculatorFragment: Fragment() {
-    private val args: CalculatorFragmentArgs by navArgs()
-    private var binding by setNullOnDestroy<FragCalculatorBinding>()
-    private lateinit var calculatorViewModel: CalculatorViewModel
-    private lateinit var backPressedCallback: OnBackPressedCallback
+class CalculatorFragment: UIFragment<
+        FragCalculatorBinding,
+        CalculatorViewModel,
+        CalculationType,
+        Pair<Double, String>?>() {
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        calculatorViewModel = ViewModelProvider(requireActivity())[CalculatorViewModel::class.java].also {
-            it.initialize(args.calculationType)
-        }
-        binding = FragCalculatorBinding.inflate(inflater, container, false)
-        return binding.root
-    }
+    private val args: CalculatorFragmentArgs by navArgs()
+
+    override fun inflate(inflater: LayoutInflater, container: ViewGroup?) =
+        FragCalculatorBinding.inflate(inflater, container, false)
+
+    override fun createViewModel() = ViewModelProvider(requireActivity())[CalculatorViewModel::class.java]
+
+    override fun getInitialInput() = args.calculationType
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        // Intercept user interactions while while fragment transitions and animations are running
-        binding.rootLayout.attachLock(calculatorViewModel.isInputLocked)
-
-        // Intercept back pressed events to allow fragment-specific behaviors
-        backPressedCallback = object: OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                if (!calculatorViewModel.isInputLocked.value)
-                    closeFragment()
-            }
-        }
-        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, backPressedCallback)
 
         // Setup transitions
         postponeEnterTransition()
@@ -71,37 +57,25 @@ class CalculatorFragment: Fragment() {
 
         setupFixedNumberPad(
             viewLifecycleOwner,
-            calculatorViewModel.calcData,
+            viewModel.calculator,
             binding.numberPad)
-
-        calculatorViewModel.acceptEvents.observe(viewLifecycleOwner) {
-            it.consume()?.apply {
-                findNavController().previousBackStackEntry?.savedStateHandle?.set(
-                    CALCULATOR_RETURN_KEY, Pair(args.calculationType, this.first)
-                )
-                binding.fadeOutEditText.setText(this.second)
-                closeFragment()
-            }
-        }
     }
 
     override fun onResume() {
         super.onResume()
         binding.fadeOutEditText.visibility = View.GONE
-
-        // Reset UI input/output locks leftover from aborted transitions/animations
-        calculatorViewModel.unFreezeOutput()
-        calculatorViewModel.unLockInput()
     }
 
-    private fun closeFragment() {
-        // Prevent callback from intercepting back pressed events
-        backPressedCallback.isEnabled = false
-
-        // Prevent live updates to UI during return transition
-        calculatorViewModel.freezeOutput()
-
+    override fun onFinish(output: Pair<Double, String>?) {
         setupReturnTransition()
+
+        if (output != null) {
+            findNavController().previousBackStackEntry?.savedStateHandle?.set(
+                CALCULATOR_RETURN_KEY, Pair(args.calculationType, output.first)
+            )
+
+            binding.fadeOutEditText.setText(output.second)
+        }
 
         // Close fragment using default onBackPressed behavior
         requireActivity().onBackPressed()
@@ -116,17 +90,16 @@ class CalculatorFragment: Fragment() {
 
             // Close fragment using default onBackPressed behavior unless animation in progress
             setNavigationOnClickListener {
-                if (!calculatorViewModel.isInputLocked.value)
-                    closeFragment()
+                if (!viewModel.isInputLocked.value)
+                    viewModel.handleOnBackPressed()
             }
 
             setupToolbarSecondaryTertiaryAnimation(
+                requireContext(),
                 viewLifecycleOwner,
+                viewModel.toolBarInTertiaryState,
                 this,
-                binding.statusBarBackgroundView,
-                calculatorViewModel.toolBarInTertiaryState,
-                requireContext().theme,
-                resources.getInteger(R.integer.viewprop_animation_duration).toLong())
+                binding.statusBarBackgroundView)
         }
     }
 
@@ -198,8 +171,8 @@ class CalculatorFragment: Fragment() {
                     return animator
                 }
             }
-        ).setOnTransitionStartCallback { _, _, _, _ -> calculatorViewModel.notifyTransitionStarted() }
-            .setOnTransitionEndCallback { _, _, _, _ -> calculatorViewModel.notifyTransitionFinished() }
+        ).setOnTransitionStartCallback { _, _, _, _ -> viewModel.notifyTransitionStarted() }
+            .setOnTransitionEndCallback { _, _, _, _ -> viewModel.notifyTransitionFinished() }
 
         binding.coveredFragment.setImageBitmap(MainActivity.storedViewBitmap)
     }
@@ -258,7 +231,7 @@ class CalculatorFragment: Fragment() {
                     return animator
                 }
             }
-        ).setOnTransitionStartCallback { _, _, _, _ -> calculatorViewModel.notifyTransitionStarted() }
+        ).setOnTransitionStartCallback { _, _, _, _ -> viewModel.notifyTransitionStarted() }
 
         // Return transition is needed to prevent next fragment from appearing immediately
         returnTransition = Hold().apply {

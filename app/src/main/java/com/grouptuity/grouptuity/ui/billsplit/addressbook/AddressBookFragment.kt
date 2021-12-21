@@ -1,8 +1,6 @@
 package com.grouptuity.grouptuity.ui.billsplit.addressbook
 
 import android.Manifest
-import android.animation.ArgbEvaluator
-import android.animation.ValueAnimator
 import android.app.Dialog
 import android.app.SearchManager
 import android.content.Context
@@ -13,17 +11,13 @@ import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
-import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.widget.SearchView
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.core.os.bundleOf
 import androidx.core.view.doOnPreDraw
-import androidx.fragment.app.DialogFragment
-import androidx.fragment.app.Fragment
-import androidx.fragment.app.setFragmentResult
-import androidx.fragment.app.setFragmentResultListener
+import androidx.fragment.app.*
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.FragmentNavigatorExtras
@@ -34,15 +28,15 @@ import androidx.transition.Transition
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.snackbar.Snackbar
 import com.google.android.material.transition.Hold
-import com.grouptuity.grouptuity.AppViewModel
 import com.grouptuity.grouptuity.MainActivity
 import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.Contact
 import com.grouptuity.grouptuity.databinding.FragAddressBookBinding
 import com.grouptuity.grouptuity.databinding.FragAddressBookListitemBinding
-import com.grouptuity.grouptuity.ui.util.views.RecyclerViewListener
-import com.grouptuity.grouptuity.ui.util.views.setNullOnDestroy
+import com.grouptuity.grouptuity.ui.util.BaseUIFragment
 import com.grouptuity.grouptuity.ui.util.transitions.CircularRevealTransition
+import com.grouptuity.grouptuity.ui.util.views.RecyclerViewListener
+import com.grouptuity.grouptuity.ui.util.views.setupToolbarSecondaryTertiaryAnimation
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -66,44 +60,19 @@ const val RESET_HIDDEN_CONTACTS_KEY = "reset_hidden_contacts_key"
 const val RESET_FAVORITE_CONTACTS_KEY = "reset_favorite_contacts_key"
 
 
-class AddressBookFragment: Fragment() {
+class AddressBookFragment: BaseUIFragment<FragAddressBookBinding, AddressBookViewModel>() {
     private val args: AddressBookFragmentArgs by navArgs()
-    private lateinit var appViewModel: AppViewModel
-    private lateinit var addressBookViewModel: AddressBookViewModel
-    private var binding by setNullOnDestroy<FragAddressBookBinding>()
     private lateinit var recyclerAdapter: AddressBookRecyclerViewAdapter
-    private lateinit var backPressedCallback: OnBackPressedCallback
     private lateinit var permissionRequestLauncher: ActivityResultLauncher<String>
-    private var toolbarInTertiaryState: Boolean = false
     private var pendingRewind: Boolean = false
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        appViewModel = ViewModelProvider(requireActivity())[AppViewModel::class.java]
-        addressBookViewModel = ViewModelProvider(requireActivity())[AddressBookViewModel::class.java]
-        addressBookViewModel.initialize()
+    override fun inflate(inflater: LayoutInflater, container: ViewGroup?) =
+        FragAddressBookBinding.inflate(inflater, container, false)
 
-        binding = FragAddressBookBinding.inflate(inflater, container, false)
-        return binding.root
-    }
+    override fun createViewModel() = ViewModelProvider(requireActivity())[AddressBookViewModel::class.java]
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        // Intercept user interactions while fragment transitions are running
-        binding.rootLayout.attachLock(addressBookViewModel.isInputLocked)
-
-        // Intercept back pressed events to allow fragment-specific behaviors
-        backPressedCallback = object: OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                val addSelectionsToBill = addressBookViewModel.handleOnBackPressed()
-                if(addSelectionsToBill != null) {
-                    closeFragment(addSelectionsToBill)
-                }
-            }
-        }
-        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, backPressedCallback)
-
-        binding.coveredFragment.setImageBitmap(MainActivity.storedViewBitmap)
 
         enterTransition = CircularRevealTransition(
                 binding.fadeView,
@@ -111,8 +80,8 @@ class AddressBookFragment: Fragment() {
                 args.originParams,
                 resources.getInteger(R.integer.frag_transition_duration).toLong(),
                 true).addListener(object : Transition.TransitionListener {
-            override fun onTransitionStart(transition: Transition) { addressBookViewModel.notifyTransitionStarted() }
-            override fun onTransitionEnd(transition: Transition) { addressBookViewModel.notifyTransitionFinished() }
+            override fun onTransitionStart(transition: Transition) { viewModel.notifyTransitionStarted() }
+            override fun onTransitionEnd(transition: Transition) { viewModel.notifyTransitionFinished() }
             override fun onTransitionCancel(transition: Transition) {}
             override fun onTransitionPause(transition: Transition) {}
             override fun onTransitionResume(transition: Transition) {}
@@ -126,8 +95,8 @@ class AddressBookFragment: Fragment() {
         ViewCompat.setOnApplyWindowInsetsListener(view) { _, insets ->
             // Close the SearchView if no search query exists when keyboard is dismissed except if
             // a voice search is running
-            if(!insets.isVisible(WindowInsetsCompat.Type.ime()) && addressBookViewModel.isSearchQueryBlank()) {
-                addressBookViewModel.stopSearch()
+            if(!insets.isVisible(WindowInsetsCompat.Type.ime()) && viewModel.isSearchQueryBlank()) {
+                viewModel.stopSearch()
             }
             insets
         }
@@ -136,10 +105,10 @@ class AddressBookFragment: Fragment() {
         permissionRequestLauncher = registerForActivityResult(ActivityResultContracts.RequestPermission()){
             if (it) {
                 // Permission granted so proceed with contacts refresh
-                addressBookViewModel.requestContactsRefresh()
+                viewModel.requestContactsRefresh()
             } else {
                 // Permission denied
-                addressBookViewModel.requestContactsRefresh(acquirePermissionsIfNeeded = false)
+                viewModel.requestContactsRefresh(acquirePermissionsIfNeeded = false)
                 Snackbar.make(binding.coordinatorLayout, R.string.addressbook_snackbar_no_read_contacts_permission, Snackbar.LENGTH_LONG).show()
             }
         }
@@ -150,21 +119,21 @@ class AddressBookFragment: Fragment() {
                 permissionRequestLauncher.launch(Manifest.permission.READ_CONTACTS)
             } else {
                 // User dismissed dialog so do not acquire permission
-                addressBookViewModel.requestContactsRefresh(acquirePermissionsIfNeeded = false)
+                viewModel.requestContactsRefresh(acquirePermissionsIfNeeded = false)
                 Snackbar.make(binding.coordinatorLayout, R.string.addressbook_snackbar_no_read_contacts_permission, Snackbar.LENGTH_LONG).show()
             }
         }
 
         setFragmentResultListener(RESET_HIDDEN_CONTACTS_KEY) { _, bundle ->
             if(bundle.getBoolean("resultKey")) {
-                addressBookViewModel.unhideHiddenContacts()
+                viewModel.unhideHiddenContacts()
                 Snackbar.make(binding.coordinatorLayout, R.string.addressbook_snackbar_unhide_all, Snackbar.LENGTH_SHORT).show()
             }
         }
 
         setFragmentResultListener(RESET_FAVORITE_CONTACTS_KEY) { _, bundle ->
             if(bundle.getBoolean("resultKey")) {
-                addressBookViewModel.unfavoriteFavoriteContacts()
+                viewModel.unfavoriteFavoriteContacts()
                 Snackbar.make(binding.coordinatorLayout, R.string.addressbook_snackbar_unfavorite_all, Snackbar.LENGTH_SHORT).show()
             }
         }
@@ -187,7 +156,9 @@ class AddressBookFragment: Fragment() {
         }
 
         binding.fab.setOnClickListener {
-            if(addressBookViewModel.selections.value.isNullOrEmpty()) {
+
+
+            if(viewModel.selections.value.isNullOrEmpty()) {
                 // Exit transition is needed to prevent next fragment from appearing immediately
                 exitTransition = Hold().apply {
                     duration = 0L
@@ -211,7 +182,7 @@ class AddressBookFragment: Fragment() {
                         binding.fab to binding.fab.transitionName
                     ))
             } else {
-                closeFragment(true)
+                viewModel.addSelectedContactsToBill()
             }
         }
     }
@@ -219,23 +190,9 @@ class AddressBookFragment: Fragment() {
     override fun onResume() {
         super.onResume()
         binding.fadeView.visibility = View.GONE
-
-        // Reset UI input/output locks leftover from aborted transitions/animations
-        addressBookViewModel.unFreezeOutput()
     }
 
-    private fun closeFragment(addSelectionsToBill: Boolean) {
-        // Prevent callback from intercepting back pressed events
-        backPressedCallback.isEnabled = false
-
-        // Freeze UI in place as the fragment closes
-        addressBookViewModel.freezeOutput()
-
-        // Add selected contacts to bill before closing fragment
-        if(addSelectionsToBill) {
-            addressBookViewModel.addSelectedContactsToBill()
-        }
-
+    override fun onFinish(output: Unit?) {
         // Closing animation shrinking fragment into the FAB of the previous fragment.
         // Transition is defined here to incorporate dynamic changes to window insets.
         returnTransition = CircularRevealTransition(
@@ -252,16 +209,16 @@ class AddressBookFragment: Fragment() {
     private fun setupToolbar() {
         binding.toolbar.inflateMenu(R.menu.toolbar_addressbook)
         binding.toolbar.setNavigationIcon(R.drawable.ic_arrow_back_light)
-        binding.toolbar.setNavigationOnClickListener { addressBookViewModel.handleOnBackPressed() }
+        binding.toolbar.setNavigationOnClickListener { viewModel.handleOnBackPressed() }
 
         binding.toolbar.setOnMenuItemClickListener { item ->
             when(item.itemId) {
                 R.id.action_refresh -> {
-                    addressBookViewModel.requestContactsRefresh()
+                    viewModel.requestContactsRefresh()
                     true
                 }
                 R.id.action_show_hidden -> {
-                    addressBookViewModel.toggleShowHiddenContacts()
+                    viewModel.toggleShowHiddenContacts()
                     true
                 }
                 R.id.action_reset_hidden -> {
@@ -273,28 +230,28 @@ class AddressBookFragment: Fragment() {
                     true
                 }
                 R.id.action_favorite -> {
-                    addressBookViewModel.favoriteSelectedContacts()?.apply {
+                    viewModel.favoriteSelectedContacts()?.apply {
                         Snackbar.make(binding.coordinatorLayout, R.string.addressbook_snackbar_favorited, Snackbar.LENGTH_SHORT)
                             .setAction(R.string.undo) { this() }.show()
                     }
                     true
                 }
                 R.id.action_unfavorite -> {
-                    addressBookViewModel.unfavoriteSelectedContacts()?.apply {
+                    viewModel.unfavoriteSelectedContacts()?.apply {
                         Snackbar.make(binding.coordinatorLayout, R.string.addressbook_snackbar_unfavorited, Snackbar.LENGTH_SHORT)
                             .setAction(R.string.undo) { this() }.show()
                     }
                     true
                 }
                 R.id.action_hide -> {
-                    addressBookViewModel.hideSelectedContacts()?.apply {
+                    viewModel.hideSelectedContacts()?.apply {
                         Snackbar.make(binding.coordinatorLayout, R.string.addressbook_snackbar_hidden, Snackbar.LENGTH_SHORT)
                             .setAction(R.string.undo) { this() }.show()
                     }
                     true
                 }
                 R.id.action_unhide -> {
-                    addressBookViewModel.unhideSelectedContacts()?.apply {
+                    viewModel.unhideSelectedContacts()?.apply {
                         Snackbar.make(binding.coordinatorLayout, R.string.addressbook_snackbar_unhidden, Snackbar.LENGTH_SHORT)
                             .setAction(R.string.undo) { this() }.show()
                     }
@@ -304,12 +261,14 @@ class AddressBookFragment: Fragment() {
             }
         }
 
-        val secondaryColor = TypedValue().also { requireContext().theme.resolveAttribute(R.attr.colorSecondary, it, true) }.data
-        val secondaryDarkColor = TypedValue().also { requireContext().theme.resolveAttribute(R.attr.colorSecondaryVariant, it, true) }.data
-        val tertiaryColor = TypedValue().also { requireContext().theme.resolveAttribute(R.attr.colorTertiary, it, true) }.data
-        val tertiaryDarkColor = TypedValue().also { requireContext().theme.resolveAttribute(R.attr.colorTertiaryVariant, it, true) }.data
+        setupToolbarSecondaryTertiaryAnimation(
+            requireContext(),
+            viewLifecycleOwner,
+            viewModel.toolBarInTertiaryState,
+            binding.toolbar,
+            binding.statusBarBackgroundView)
 
-        addressBookViewModel.toolBarState.observe(viewLifecycleOwner) { toolBarState ->
+        viewModel.toolBarState.observe(viewLifecycleOwner) { toolBarState ->
             binding.toolbar.title = toolBarState.title
 
             if(toolBarState.navIconAsClose == null) {
@@ -344,35 +303,9 @@ class AddressBookFragment: Fragment() {
             }
 
             binding.toolbar.menu.setGroupVisible(R.id.group_other, toolBarState.showOtherButtons)
-
-            if(toolBarState.tertiaryBackground != toolbarInTertiaryState) {
-                if(toolbarInTertiaryState) {
-                    ValueAnimator.ofObject(ArgbEvaluator(), tertiaryColor, secondaryColor).apply {
-                        duration = resources.getInteger(R.integer.viewprop_animation_duration).toLong()
-                        addUpdateListener { animator -> binding.toolbar.setBackgroundColor(animator.animatedValue as Int) }
-                    }.start()
-
-                    ValueAnimator.ofObject(ArgbEvaluator(), tertiaryDarkColor, secondaryDarkColor).apply {
-                        duration = resources.getInteger(R.integer.viewprop_animation_duration).toLong()
-                        addUpdateListener { animator -> binding.statusBarBackgroundView.setBackgroundColor(animator.animatedValue as Int) }
-                    }.start()
-                } else {
-                    ValueAnimator.ofObject(ArgbEvaluator(), secondaryColor, tertiaryColor).apply {
-                        duration = resources.getInteger(R.integer.viewprop_animation_duration).toLong()
-                        addUpdateListener { animator -> binding.toolbar.setBackgroundColor(animator.animatedValue as Int) }
-                    }.start()
-
-                    ValueAnimator.ofObject(ArgbEvaluator(), secondaryDarkColor, tertiaryDarkColor).apply {
-                        duration = resources.getInteger(R.integer.viewprop_animation_duration).toLong()
-                        addUpdateListener { animator -> binding.statusBarBackgroundView.setBackgroundColor(animator.animatedValue as Int) }
-                    }.start()
-                }
-
-                toolbarInTertiaryState = toolBarState.tertiaryBackground
-            }
         }
 
-        addressBookViewModel.showHiddenContacts.observe(viewLifecycleOwner, {
+        viewModel.showHiddenContacts.observe(viewLifecycleOwner, {
             binding.toolbar.menu.findItem(R.id.action_show_hidden).isChecked = it
         })
     }
@@ -384,17 +317,17 @@ class AddressBookFragment: Fragment() {
         searchView.maxWidth = Int.MAX_VALUE
         searchView.isIconified = true
 
-        searchView.setOnSearchClickListener { addressBookViewModel.startSearch() }
+        searchView.setOnSearchClickListener { viewModel.startSearch() }
 
         searchView.setOnCloseListener {
-            addressBookViewModel.stopSearch()
+            viewModel.stopSearch()
             false
         }
 
         searchView.setOnQueryTextListener(object: SearchView.OnQueryTextListener {
             override fun onQueryTextChange(string: String?): Boolean {
                 pendingRewind = true
-                addressBookViewModel.updateSearchQuery(string)
+                viewModel.updateSearchQuery(string)
                 return true
             }
 
@@ -402,12 +335,12 @@ class AddressBookFragment: Fragment() {
         })
 
         // For handling voice input
-        appViewModel.voiceInput.observe(viewLifecycleOwner, {
+        viewModel.voiceInput.observe(viewLifecycleOwner, {
             it.consume()?.apply {
                 // Update displayed text, but do not submit. The event cascades to a separate
                 // QueryTextListener, which is responsible for running the search.
-                addressBookViewModel.startSearch()
-                searchView.setQuery(this, false)
+                viewModel.startSearch()
+                searchView.setQuery(this.value, false)
             }
         })
     }
@@ -415,7 +348,7 @@ class AddressBookFragment: Fragment() {
     private fun setupContactList() {
         recyclerAdapter = AddressBookRecyclerViewAdapter(requireContext(), object :
             RecyclerViewListener {
-            override fun onClick(view: View) { addressBookViewModel.toggleContactSelection(view.tag as Contact) }
+            override fun onClick(view: View) { viewModel.toggleContactSelection(view.tag as Contact) }
 
             override fun onLongClick(view: View): Boolean { return false }
         })
@@ -435,7 +368,7 @@ class AddressBookFragment: Fragment() {
                         if (oldHolder === newHolder) {
                             val contact = (this as AddressBookRecyclerViewAdapter.ViewHolder).itemView.tag as Contact
 
-                            if (addressBookViewModel.isContactSelected(contact)) {
+                            if (viewModel.isContactSelected(contact)) {
                                 oldHolder.itemView.setBackgroundColor(TypedValue().also { context.theme.resolveAttribute(R.attr.colorSurfaceVariant, it, true) }.data)
                             } else {
                                 oldHolder.itemView.setBackgroundColor(TypedValue().also { context.theme.resolveAttribute(R.attr.colorSurface, it, true) }.data)
@@ -447,12 +380,12 @@ class AddressBookFragment: Fragment() {
                 }
             }
 
-            addressBookViewModel.animateListUpdates.observe(viewLifecycleOwner) {
+            viewModel.animateListUpdates.observe(viewLifecycleOwner) {
                 itemAnimator = if(it) defaultItemAnimator else null
             }
         }
 
-        addressBookViewModel.displayedContacts.observe(viewLifecycleOwner) {
+        viewModel.displayedContacts.observe(viewLifecycleOwner) {
             lifecycleScope.launch { recyclerAdapter.updateDataSet(contacts = it) }
                 .invokeOnCompletion {
                     Handler(Looper.getMainLooper()).post {
@@ -463,7 +396,7 @@ class AddressBookFragment: Fragment() {
                     }
                 }
         }
-        addressBookViewModel.selections.observe(viewLifecycleOwner) {
+        viewModel.selections.observe(viewLifecycleOwner) {
             lifecycleScope.launch { recyclerAdapter.updateDataSet(selections = it) }
                 .invokeOnCompletion {
                     Handler(Looper.getMainLooper()).post {
@@ -475,10 +408,10 @@ class AddressBookFragment: Fragment() {
                 }
         }
 
-        addressBookViewModel.showRefreshAnimation.observe(viewLifecycleOwner) { binding.swipeRefreshLayout.isRefreshing = it }
-        binding.swipeRefreshLayout.setOnRefreshListener { addressBookViewModel.requestContactsRefresh() } // TODO need to clear search in model?
+        viewModel.showRefreshAnimation.observe(viewLifecycleOwner) { binding.swipeRefreshLayout.isRefreshing = it }
+        binding.swipeRefreshLayout.setOnRefreshListener { viewModel.requestContactsRefresh() } // TODO need to clear search in model?
 
-        addressBookViewModel.fabExtended.observe(viewLifecycleOwner) {
+        viewModel.fabExtended.observe(viewLifecycleOwner) {
             when(it) {
                 null -> { binding.fab.hide() }
                 true -> {
@@ -492,7 +425,7 @@ class AddressBookFragment: Fragment() {
             }
         }
 
-        addressBookViewModel.acquireReadContactsPermissionEvent.observe(viewLifecycleOwner) {
+        viewModel.acquireReadContactsPermissionEvent.observe(viewLifecycleOwner) {
             // User permission needed to proceed with reading device contacts
             it.consume()?.apply {
                 if(shouldShowRequestPermissionRationale(Manifest.permission.READ_CONTACTS)) {

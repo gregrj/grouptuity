@@ -3,13 +3,14 @@ package com.grouptuity.grouptuity.ui.billsplit
 import android.app.Application
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.asLiveData
+import com.grouptuity.grouptuity.data.BaseUIViewModel
 import com.grouptuity.grouptuity.data.UIViewModel
-import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.map
 
 
-class TaxTipViewModel(app: Application): UIViewModel(app) {
+class TaxTipViewModel(app: Application): BaseUIViewModel(app) {
 
-    val hasNoDiscounts: LiveData<Boolean> = repository.discounts.mapLatest { it.isEmpty() }.asLiveData()
+    val hasNoDiscounts: LiveData<Boolean> = repository.discounts.map { it.isEmpty() }.asLiveData()
 
     val subtotal = repository.groupSubtotal.asLiveData()
     val discountAmount = repository.groupDiscountAmount.asLiveData()

@@ -6,25 +6,16 @@ import androidx.appcompat.app.AppCompatDelegate
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import com.grouptuity.grouptuity.data.Event
+import com.grouptuity.grouptuity.data.Repository
 
-
-class Event<out T>(private val content: T) {
-    @Volatile
-    private var unconsumed = true
-
-    fun consume(): T? {
-        if(unconsumed) {
-            unconsumed = false
-            return content
-        }
-        return null
-    }
-}
 
 /**
  *
  */
 class AppViewModel(app: Application): AndroidViewModel(app) {
+    private val repository = Repository.getInstance(app)
+
     private val _darkThemeActive = MutableLiveData<Boolean>()
     val darkThemeActive: LiveData<Boolean> = _darkThemeActive
 
@@ -33,9 +24,6 @@ class AppViewModel(app: Application): AndroidViewModel(app) {
 //
 //    private val _permissionReadContacts = MutableLiveData<Event<Boolean>>()
 //    val permissionReadContacts: LiveData<Event<Boolean>> = _permissionReadContacts
-
-    private val _voiceInputMutable = MutableLiveData<Event<String>>()
-    val voiceInput: LiveData<Event<String>> = _voiceInputMutable
 
     init {
         _darkThemeActive.value = app.resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
@@ -50,5 +38,5 @@ class AppViewModel(app: Application): AndroidViewModel(app) {
         _darkThemeActive.value = false
     }
 
-    fun receiveVoiceInput(input: String) { _voiceInputMutable.value = Event(input) }
+    fun receiveVoiceInput(input: String) { repository.voiceInputMutable.value = Event(input) }
 }

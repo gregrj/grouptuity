@@ -20,6 +20,7 @@ import androidx.preference.Preference
 import androidx.preference.PreferenceDataStore
 import androidx.preference.PreferenceFragmentCompat
 import com.google.android.material.transition.Hold
+import com.grouptuity.grouptuity.data.BaseUIViewModel
 import com.grouptuity.grouptuity.data.CalculationType
 import com.grouptuity.grouptuity.data.Repository
 import com.grouptuity.grouptuity.data.UIViewModel
@@ -31,7 +32,7 @@ import com.grouptuity.grouptuity.ui.util.views.setNullOnDestroy
 import java.text.NumberFormat
 
 
-class SettingsViewModel(app: Application): UIViewModel(app) {
+class SettingsViewModel(app: Application): BaseUIViewModel(app) {
     val preferenceDataStore = object: PreferenceDataStore() {
         override fun getBoolean(key: String?, defValue: Boolean) = repository.keyStoredPreferenceMap[key]?.value as? Boolean ?: defValue
         override fun getFloat(key: String?, defValue: Float) = repository.keyStoredPreferenceMap[key]?.value as? Float ?: defValue

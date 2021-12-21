@@ -104,6 +104,7 @@ class Repository(context: Context) {
         //TODO database.contactDao().save(Contact.self)
         Contact.self
     }.stateIn(CoroutineScope(Dispatchers.Unconfined), SharingStarted.Eagerly, Contact.self)
+    val voiceInputMutable = MutableLiveData<Event<String>>()
 
     // Private backing fields for bill-specific entity flows
     private var mBill = Bill("", "", 0L, 0.0, true, 0.0, tipAsPercent = true, isTaxTipped = false, discountsReduceTip = false)
@@ -605,7 +606,12 @@ class Repository(context: Context) {
     }
 
     // Debt Functions
-    fun addDebt(amount: Double, name: String, debtors: Collection<Diner>, creditors: Collection<Diner>) {
+    fun createNewDebt(
+        amount: Double,
+        name: String,
+        debtors: Collection<Diner>,
+        creditors: Collection<Diner>
+    ): Debt {
         val debt = Debt(newUUID(), mBill.id, ++maxDebtListIndex, amount, name)
 
         debtors.forEach { debtor ->
@@ -621,6 +627,8 @@ class Repository(context: Context) {
         commitBill()
 
         database.saveDebt(debt)
+
+        return debt
     }
     fun removeDebt(debt: Debt) {
         mDebts.remove(debt)
@@ -633,7 +641,15 @@ class Repository(context: Context) {
     }
 
     // Discount Functions
-    fun addDiscount(asPercent: Boolean, onItems: Boolean, value: Double, cost: Double?, items: List<Item>, recipients: List<Diner>, purchasers: List<Diner>) {
+    fun createNewDiscount(
+        asPercent: Boolean,
+        onItems: Boolean,
+        value: Double,
+        cost: Double?,
+        items: List<Item>,
+        recipients: List<Diner>,
+        purchasers: List<Diner>
+    ): Discount {
         val discount = Discount(newUUID(), mBill.id, ++maxDiscountListIndex, asPercent, onItems, value, cost)
 
         items.forEach { item ->
@@ -653,6 +669,8 @@ class Repository(context: Context) {
         commitBill()
 
         database.saveDiscount(discount)
+
+        return discount
     }
     fun editDiscount(editedDiscount: Discount, asPercent: Boolean, onItems: Boolean, value: Double, cost: Double?, items: List<Item>, recipients: List<Diner>, purchasers: List<Diner>) {
         // Remove discount from associated items, recipients, and purchasers

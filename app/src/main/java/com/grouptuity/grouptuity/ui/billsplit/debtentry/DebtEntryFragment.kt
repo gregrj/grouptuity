@@ -15,11 +15,9 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.ImageView
-import androidx.activity.OnBackPressedCallback
 import androidx.appcompat.widget.SearchView
 import androidx.core.animation.doOnStart
 import androidx.core.view.doOnPreDraw
-import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.navigation.fragment.findNavController
@@ -30,14 +28,13 @@ import androidx.transition.TransitionValues
 import com.google.android.material.bottomsheet.BottomSheetBehavior
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.transition.Hold
-import com.grouptuity.grouptuity.AppViewModel
 import com.grouptuity.grouptuity.MainActivity
 import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.Diner
 import com.grouptuity.grouptuity.databinding.FragDebtentryBinding
 import com.grouptuity.grouptuity.databinding.FragDebtentryListdinerBinding
+import com.grouptuity.grouptuity.ui.util.UIFragment
 import com.grouptuity.grouptuity.ui.util.transitions.CardViewExpandTransition
-import com.grouptuity.grouptuity.ui.util.views.setNullOnDestroy
 import com.grouptuity.grouptuity.ui.util.views.setupCalculatorDisplay
 import com.grouptuity.grouptuity.ui.util.views.setupCollapsibleNumberPad
 import com.grouptuity.grouptuity.ui.util.views.slideUp
@@ -50,43 +47,24 @@ import kotlinx.coroutines.withContext
 // TODO finish item name editor -> issues with back press and keyboard dismiss; block calculator inputs
 // TODO check for substantial edits and show alert on dismiss
 
-// Warn if launching diner not part of debt
+// TODO Warn if launching diner not part of debt
 
-class DebtEntryFragment: Fragment() {
-    private var binding by setNullOnDestroy<FragDebtentryBinding>()
+class DebtEntryFragment: UIFragment<FragDebtentryBinding, DebtEntryViewModel, Diner?, Boolean>() {
     private val args: DebtEntryFragmentArgs by navArgs()
-    private lateinit var appViewModel: AppViewModel
-    private lateinit var debtEntryViewModel: DebtEntryViewModel
     private lateinit var recyclerAdapter: DebtEntryDinerSelectionRecyclerViewAdapter
-    private lateinit var backPressedCallback: OnBackPressedCallback
     private var toolbarInTertiaryState = false
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        appViewModel = ViewModelProvider(requireActivity())[AppViewModel::class.java]
-        debtEntryViewModel = ViewModelProvider(requireActivity())[DebtEntryViewModel::class.java].also {
-            it.initializeForDiner(args.loadedDiner)
-        }
+    override fun inflate(inflater: LayoutInflater, container: ViewGroup?) =
+        FragDebtentryBinding.inflate(inflater, container, false)
 
-        binding = FragDebtentryBinding.inflate(inflater, container, false)
-        return binding.root
-    }
+    override fun createViewModel(): DebtEntryViewModel =
+        ViewModelProvider(requireActivity())[DebtEntryViewModel::class.java]
+
+    override fun getInitialInput(): Diner? = args.loadedDiner
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        // Intercept user interactions while fragment transitions are running
-        binding.rootLayout.attachLock(debtEntryViewModel.isInputLocked)
-
-        // Intercept back pressed events to allow fragment-specific behaviors
-        backPressedCallback = object: OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                if (debtEntryViewModel.handleOnBackPressed()) {
-                    closeFragment(false)
-                }
-            }
-        }
-        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, backPressedCallback)
 
         /* Need a way to discriminate between user dismissal of keyboard and system dismissal from starting voice search
         requireActivity().window.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_ADJUST_PAN)
@@ -106,14 +84,14 @@ class DebtEntryFragment: Fragment() {
 
         setupCollapsibleNumberPad(
             viewLifecycleOwner,
-            debtEntryViewModel.calculatorData,
+            viewModel.calculator,
             binding.numberPad,
             useValuePlaceholder = false,
             showBasisToggleButtons = false)
 
         setupCalculatorDisplay(
             viewLifecycleOwner,
-            debtEntryViewModel.calculatorData,
+            viewModel.calculator,
             binding.priceTextview,
             binding.buttonEdit,
             binding.buttonBackspace)
@@ -124,21 +102,21 @@ class DebtEntryFragment: Fragment() {
         setupDinerList()
 
         binding.fab.setOnClickListener {
-            if(debtEntryViewModel.areDebtInputsValid.value == true) {
-                if (debtEntryViewModel.isLaunchingDinerPresent) {
-                    closeFragment(true)
+            if(viewModel.areDebtInputsValid.value == true) {
+                if (viewModel.isLaunchingDinerPresent) {
+                    viewModel.addDebtToBill()
                 } else {
                     MaterialAlertDialogBuilder(requireContext(), R.style.AlertDialogPosSuggestionSecondary)
-                        .setTitle(resources.getString(R.string.debtentry_launching_diner_missing_alert, debtEntryViewModel.launchingDiner!!.name))
+                        .setTitle(resources.getString(R.string.debtentry_launching_diner_missing_alert, viewModel.launchingDiner!!.name))
                         .setCancelable(true)
                         .setNegativeButton(resources.getString(R.string.cancel)) { _, _ -> }
-                        .setPositiveButton(resources.getString(R.string.proceed)) { _, _ -> closeFragment(true) }
+                        .setPositiveButton(resources.getString(R.string.proceed)) { _, _ -> viewModel.addDebtToBill() }
                         .show()
                 }
             }
         }
 
-        debtEntryViewModel.areDebtInputsValid.observe(viewLifecycleOwner, {
+        viewModel.areDebtInputsValid.observe(viewLifecycleOwner, {
             if(it) {
                 binding.fab.show()
                 binding.fab.slideUp()
@@ -148,31 +126,14 @@ class DebtEntryFragment: Fragment() {
         })
     }
 
-    override fun onResume() {
-        super.onResume()
-
-        // Reset UI input/output locks leftover from aborted transitions/animations
-        debtEntryViewModel.unFreezeOutput()
-    }
-
-    private fun closeFragment(addItemToBill: Boolean) {
-        // Prevent callback from intercepting back pressed events
-        backPressedCallback.isEnabled = false
-
-        // Freeze UI in place as the fragment closes
-        debtEntryViewModel.freezeOutput()
-
-        // Add debt to bill
-        if(addItemToBill) {
-            debtEntryViewModel.addDebtToBill()
-        }
-
+    override fun onFinish(output: Boolean) {
         setupExitTransition()
 
         // Flag to indicate to DinerDetailsFragment that debt was created
         findNavController().previousBackStackEntry?.savedStateHandle?.set(
             "DebtEntryNavBack",
-            addItemToBill)
+            output
+        )
 
         // Close fragment using default onBackPressed behavior
         requireActivity().onBackPressed()
@@ -182,9 +143,9 @@ class DebtEntryFragment: Fragment() {
     private fun setupToolbar() {
         binding.toolbar.inflateMenu(R.menu.toolbar_debtentry)
         binding.toolbar.setNavigationIcon(R.drawable.ic_arrow_back_light)
-        binding.toolbar.setNavigationOnClickListener { debtEntryViewModel.handleOnBackPressed() }
+        binding.toolbar.setNavigationOnClickListener { viewModel.handleOnBackPressed() }
 
-        debtEntryViewModel.toolBarState.observe(viewLifecycleOwner) { toolBarState ->
+        viewModel.toolBarState.observe(viewLifecycleOwner) { toolBarState ->
             binding.toolbar.title = toolBarState.title
 
             if(toolBarState.navIconVisible) {
@@ -237,12 +198,15 @@ class DebtEntryFragment: Fragment() {
         searchView.findViewById<ImageView>(androidx.appcompat.R.id.search_go_btn)?.apply { this.setImageResource(R.drawable.ic_done) }
 
         searchView.setOnSearchClickListener {
-            searchView.setQuery(if(debtEntryViewModel.hasDebtNameInput) { debtEntryViewModel.debtName.value } else { "" }, false)
-            debtEntryViewModel.startNameEdit()
+            searchView.setQuery(
+                if(viewModel.hasDebtNameInput) { viewModel.debtName.value } else { "" },
+                false
+            )
+            viewModel.startNameEdit()
         }
 
         searchView.setOnCloseListener {
-            debtEntryViewModel.stopNameEdit()
+            viewModel.stopNameEdit()
             false
         }
 
@@ -252,7 +216,7 @@ class DebtEntryFragment: Fragment() {
                 if(string.isNullOrBlank()){
                     // function does not get called if string is blank
                 } else {
-                    debtEntryViewModel.acceptDebtNameInput(string.trim())
+                    viewModel.acceptDebtNameInput(string.trim())
                     closeSearchView()
                     requireActivity().invalidateOptionsMenu()
                 }
@@ -261,7 +225,7 @@ class DebtEntryFragment: Fragment() {
         })
 
         var activeAnimation: ValueAnimator? = null
-        debtEntryViewModel.editNameShimVisible.observe(viewLifecycleOwner) {
+        viewModel.editNameShimVisible.observe(viewLifecycleOwner) {
             if(it) {
                 binding.editNameScrim.setOnTouchListener { _, _ -> true }
             } else {
@@ -280,13 +244,13 @@ class DebtEntryFragment: Fragment() {
         }
 
         // For handling voice input
-        appViewModel.voiceInput.observe(viewLifecycleOwner, {
+        viewModel.voiceInput.observe(viewLifecycleOwner, {
             it.consume()?.apply {
                 // Update displayed text, but do not submit. Event will cascade to a separate
                 // QueryTextListener, which is responsible for running the search.
-                debtEntryViewModel.startNameEdit()
+                viewModel.startNameEdit()
                 searchView.isIconified = false
-                searchView.setQuery(this, false)
+                searchView.setQuery(this.value, false)
             }
         })
     }
@@ -296,11 +260,11 @@ class DebtEntryFragment: Fragment() {
             requireContext(),
             object: DebtEntryDinerSelectionRecyclerViewAdapter.DebtEntryDinerSelectionListener {
                 override fun toggleCreditor(diner: Diner) {
-                    debtEntryViewModel.toggleCreditorSelection(diner)
+                    viewModel.toggleCreditorSelection(diner)
                 }
 
                 override fun toggleDebtor(diner: Diner) {
-                    debtEntryViewModel.toggleDebtorSelection(diner)
+                    viewModel.toggleDebtorSelection(diner)
                 }
             }
         )
@@ -313,23 +277,25 @@ class DebtEntryFragment: Fragment() {
             addItemDecoration(DividerItemDecoration(context, LinearLayoutManager.VERTICAL))
         }
 
-        debtEntryViewModel.dinerData.observe(viewLifecycleOwner, { data -> lifecycleScope.launch { recyclerAdapter.updateDataSet(dinerData = data) } })
+        viewModel.dinerData.observe(viewLifecycleOwner, { data ->
+            lifecycleScope.launch { recyclerAdapter.updateDataSet(dinerData = data) }
+        })
 
         binding.selectAllCreditors.setOnClickListener {
             if (binding.selectAllCreditors.isChecked) {
-                debtEntryViewModel.selectAllCreditors()
+                viewModel.selectAllCreditors()
                 binding.fab.slideUp()  // Slide up FAB into view if it was hidden by scrolling
             } else {
-                debtEntryViewModel.clearCreditorSelections()
+                viewModel.clearCreditorSelections()
             }
         }
 
         binding.selectAllDebtors.setOnClickListener {
             if (binding.selectAllDebtors.isChecked) {
-                debtEntryViewModel.selectAllDebtors()
+                viewModel.selectAllDebtors()
                 binding.fab.slideUp()  // Slide up FAB into view if it was hidden by scrolling
             } else {
-                debtEntryViewModel.clearDebtorSelections()
+                viewModel.clearDebtorSelections()
             }
         }
     }
@@ -338,7 +304,7 @@ class DebtEntryFragment: Fragment() {
         val searchView = binding.toolbar.menu.findItem(R.id.edit_debt_name).actionView as SearchView
         searchView.setQuery("", false)
         searchView.isIconified = true
-        debtEntryViewModel.stopNameEdit()
+        viewModel.stopNameEdit()
     }
 
     private fun setupEnterTransition() {
@@ -406,8 +372,8 @@ class DebtEntryFragment: Fragment() {
                 }
             )
             .addListener(object : Transition.TransitionListener {
-                override fun onTransitionStart(transition: Transition) { debtEntryViewModel.notifyTransitionStarted() }
-                override fun onTransitionEnd(transition: Transition) { debtEntryViewModel.notifyTransitionFinished() }
+                override fun onTransitionStart(transition: Transition) { viewModel.notifyTransitionStarted() }
+                override fun onTransitionEnd(transition: Transition) { viewModel.notifyTransitionFinished() }
                 override fun onTransitionCancel(transition: Transition) {}
                 override fun onTransitionPause(transition: Transition) {}
                 override fun onTransitionResume(transition: Transition) {}
@@ -474,7 +440,7 @@ class DebtEntryFragment: Fragment() {
                     return animator
                 }
             }
-        ).setOnTransitionStartCallback { _, _, _, _ -> debtEntryViewModel.notifyTransitionStarted() }
+        ).setOnTransitionStartCallback { _, _, _, _ -> viewModel.notifyTransitionStarted() }
 
         // Return transition is needed to prevent next fragment from appearing immediately
         returnTransition = Hold().apply {

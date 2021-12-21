@@ -2,8 +2,10 @@ package com.grouptuity.grouptuity.ui.billsplit.qrcodescanner
 
 import android.Manifest
 import android.app.Activity
+import android.app.Application
 import android.app.Dialog
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.content.res.Configuration
 import android.graphics.*
 import android.os.*
@@ -135,7 +137,7 @@ class QRCodeScannerActivity: AppCompatActivity() {
         super.onResume()
         viewModel.clearBarcode()
 
-        if (!viewModel.isPermissionGranted(Manifest.permission.CAMERA)) {
+        if (checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
             viewModel.blockCameraUse()
             if (shouldShowRequestPermissionRationale(Manifest.permission.CAMERA)) {
                 RationaleDialogFragment(viewModel.getPaymentMethod()).show(supportFragmentManager, getString(R.string.rationale_key_camera))

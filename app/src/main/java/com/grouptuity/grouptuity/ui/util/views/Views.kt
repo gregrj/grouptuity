@@ -102,6 +102,7 @@ fun View.focusAndShowKeyboard() {
     }
 }
 
+
 fun View.clearFocusAndHideKeyboard() {
     if (isFocused) {
         clearFocus()
@@ -110,3 +111,4 @@ fun View.clearFocusAndHideKeyboard() {
             .hideSoftInputFromWindow(this.windowToken, 0)
     }
 }
+

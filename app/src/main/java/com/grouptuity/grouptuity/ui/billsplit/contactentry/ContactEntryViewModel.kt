@@ -2,18 +2,17 @@ package com.grouptuity.grouptuity.ui.billsplit.contactentry
 
 import android.app.Application
 import androidx.lifecycle.LiveData
-import androidx.lifecycle.asLiveData
 import com.grouptuity.grouptuity.data.Diner
 import com.grouptuity.grouptuity.data.PaymentMethod
 import com.grouptuity.grouptuity.data.UIViewModel
-import com.grouptuity.grouptuity.data.withOutputSwitch
+import com.grouptuity.grouptuity.data.asLiveData
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 
 
-class ContactEntryViewModel(app: Application): UIViewModel(app) {
+class ContactEntryViewModel(app: Application): UIViewModel<Unit?, Diner?>(app) {
 
     companion object {
         const val NONE = 0
@@ -45,14 +44,13 @@ class ContactEntryViewModel(app: Application): UIViewModel(app) {
             ALGORAND -> if (it[5] == null) CANCEL else FINISH
             else -> NONE
         }
-    }.withOutputSwitch(isOutputFlowing).asLiveData()
+    }.asLiveData(isOutputLocked)
 
     val enableCreateContact: LiveData<Boolean> = name.map {
         it != null
-    }.withOutputSwitch(isOutputFlowing).asLiveData()
+    }.asLiveData(isOutputLocked)
 
-    fun initialize() {
-        unFreezeOutput()
+    override fun onInitialize(input: Unit?) {
         activeField.value = NAME
         nameInput.value = null
         emailInput.value = null
@@ -95,7 +93,11 @@ class ContactEntryViewModel(app: Application): UIViewModel(app) {
         emailAddress: String?,
         venmoAddress: String?,
         cashAppAddress: String?,
-        algorandAddress: String?): Diner {
+        algorandAddress: String?) {
+
+        if (enableCreateContact.value != true) {
+            return
+        }
 
         val paymentAddresses = mutableMapOf<PaymentMethod, String>()
         if (emailAddress?.isNotBlank() == true) {
@@ -111,6 +113,8 @@ class ContactEntryViewModel(app: Application): UIViewModel(app) {
             paymentAddresses[PaymentMethod.ALGO] = algorandAddress
         }
 
-        return repository.createNewDiner(name, paymentAddresses)
+        finishFragment(repository.createNewDiner(name, paymentAddresses))
     }
+
+    override fun handleOnBackPressed() { finishFragment(null) }
 }

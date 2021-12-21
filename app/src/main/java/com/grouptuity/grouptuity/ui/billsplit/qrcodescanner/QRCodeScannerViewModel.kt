@@ -5,12 +5,12 @@ import android.content.Context
 import android.os.Parcelable
 import android.os.Vibrator
 import android.util.Log
+import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.asLiveData
 import com.google.mlkit.vision.barcode.Barcode
 import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.PaymentMethod
-import com.grouptuity.grouptuity.data.UIViewModel
 import com.grouptuity.grouptuity.ui.billsplit.payments.AlgorandAddressParser
 import com.grouptuity.grouptuity.ui.billsplit.payments.CashtagParser
 import com.grouptuity.grouptuity.ui.billsplit.payments.VenmoAddressParser
@@ -26,7 +26,10 @@ data class QRCodeDisplayResults(val title: String,
                                 val status: QRCodeParser.Status): Parcelable
 
 
-class QRCodeScannerViewModel(app: Application): UIViewModel(app) {
+class QRCodeScannerViewModel(app: Application): AndroidViewModel(app) {
+    protected val context: Context
+        get() = getApplication<Application>().applicationContext
+
     companion object {
         private val venmoDisplayTitle = mapOf(
             QRCodeParser.Status.INVALID_URL to R.string.qrcodescanner_title_invalid_url,

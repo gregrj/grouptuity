@@ -4,11 +4,10 @@ import android.app.Application
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.asLiveData
-import com.grouptuity.grouptuity.Event
 import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.*
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.mapLatest
+import kotlinx.coroutines.flow.map
 import java.text.NumberFormat
 
 data class PaymentData(val payment: Payment,
@@ -21,7 +20,8 @@ data class PaymentData(val payment: Payment,
                        val allowSurrogatePaymentMethods: Boolean,
                        val displayState: Int)
 
-class PaymentsViewModel(app: Application): UIViewModel(app) {
+
+class PaymentsViewModel(app: Application): BaseUIViewModel(app) {
 
     companion object {
         const val DEFAULT_STATE = 0
@@ -47,7 +47,7 @@ class PaymentsViewModel(app: Application): UIViewModel(app) {
     private var cachedPayeeAddress: String? = null
     private var cachedSurrogate: Diner? = null
     private var cachedSurrogateAddress: String? = null
-    private val paymentsWithStableIds = repository.payments.mapLatest { payments ->
+    private val paymentsWithStableIds = repository.payments.map { payments ->
         payments.map { Pair(it, repository.getPaymentStableId(it)) }
     }
 
@@ -244,6 +244,20 @@ class PaymentsViewModel(app: Application): UIViewModel(app) {
             }
         }.toSet()
 
+    override fun handleOnBackPressed() {
+        when {
+            repository.processingPayments.value -> {
+                repository.processingPayments.value = false
+            }
+            activePaymentAndMethod.value.first != null -> {
+                setActivePayment(null)
+            }
+            else -> {
+                finishFragment(null)
+            }
+        }
+    }
+
     fun setActivePayment(payment: Payment?) {
         cachedMethod = null
         cachedPayerAddress = null
@@ -415,20 +429,6 @@ class PaymentsViewModel(app: Application): UIViewModel(app) {
                     cachedSurrogateAddress)
                 setActivePayment(null)
             }
-        }
-    }
-
-    fun handleOnBackPressed(): Boolean {
-        return when {
-            repository.processingPayments.value -> {
-                repository.processingPayments.value = false
-                false
-            }
-            activePaymentAndMethod.value.first != null -> {
-                setActivePayment(null)
-                false
-            }
-            else -> { true }
         }
     }
 }

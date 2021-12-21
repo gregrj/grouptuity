@@ -4,15 +4,15 @@ import android.app.Application
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.asLiveData
 import com.grouptuity.grouptuity.R
+import com.grouptuity.grouptuity.data.BaseUIViewModel
 import com.grouptuity.grouptuity.data.Discount
-import com.grouptuity.grouptuity.data.UIViewModel
 import com.grouptuity.grouptuity.data.getDiscountCurrencyValue
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import java.text.NumberFormat
 
 
-class DiscountsViewModel(app: Application): UIViewModel(app) {
+class DiscountsViewModel(app: Application): BaseUIViewModel(app) {
     val discounts: StateFlow<List<Discount>> = repository.discounts
     val diners = repository.diners.asLiveData()
     val items = repository.items.asLiveData()
@@ -140,4 +140,6 @@ class DiscountsViewModel(app: Application): UIViewModel(app) {
     }.asLiveData()
 
     fun removeDiscount(discount: Discount) = repository.removeDiscount(discount)
+
+    override fun handleOnBackPressed() { finishFragment(null) }
 }
