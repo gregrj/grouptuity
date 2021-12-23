@@ -41,6 +41,7 @@ class PaymentsViewModel(app: Application): BaseUIViewModel(app) {
     private val showSetAddressDialogEventMutable = MutableLiveData<Event<Triple<Int, Diner, PaymentMethod>>>()
     val showSetAddressDialogEvent: LiveData<Event<Triple<Int, Diner, PaymentMethod>>> = showSetAddressDialogEventMutable
 
+    var paymentInProcessing: Payment? = null
     private val activePaymentAndMethod = repository.activePaymentAndMethod
     private var cachedMethod: PaymentMethod? = null
     private var cachedPayerAddress: String? = null
@@ -209,8 +210,8 @@ class PaymentsViewModel(app: Application): BaseUIViewModel(app) {
                     },
                     NumberFormat.getCurrencyInstance().format(payment.amount),
                     payment.payer.asContact(),
-                    isPaymentIconClickable = displayState != PROCESSING_STATE,
-                    allowSurrogatePaymentMethods = !actingAsSurrogate && (eligibleSurrogates - payment.payer).isNotEmpty(),
+                    isPaymentIconClickable = !payment.committed && displayState != PROCESSING_STATE,
+                    allowSurrogatePaymentMethods = !payment.committed && !actingAsSurrogate && (eligibleSurrogates - payment.payer).isNotEmpty(),
                     displayState
                 )
             }
@@ -225,8 +226,8 @@ class PaymentsViewModel(app: Application): BaseUIViewModel(app) {
                     ),
                     NumberFormat.getCurrencyInstance().format(payment.amount),
                     payment.payer.asContact(),
-                    isPaymentIconClickable = displayState != PROCESSING_STATE,
-                    allowSurrogatePaymentMethods = true,
+                    isPaymentIconClickable = !payment.committed && displayState != PROCESSING_STATE,
+                    allowSurrogatePaymentMethods = !payment.committed,
                     displayState
                 )
             }
@@ -255,6 +256,13 @@ class PaymentsViewModel(app: Application): BaseUIViewModel(app) {
             else -> {
                 finishFragment(null)
             }
+        }
+    }
+
+    fun commitPayment() {
+        paymentInProcessing?.apply {
+            repository.commitPayment(this)
+            paymentInProcessing = null
         }
     }
 
@@ -359,7 +367,10 @@ class PaymentsViewModel(app: Application): BaseUIViewModel(app) {
 
     fun setPayerAddress(payerAddress: String) {
         cachedPayerAddress = payerAddress
+
         activePaymentAndMethod.value.first?.apply {
+            repository.savePaymentAddressForDiner(payer, cachedMethod!!, payerAddress)
+
             when {
                 payee.isRestaurant() -> {
                     if (cachedMethod!!.acceptedByRestaurant) {
@@ -387,6 +398,11 @@ class PaymentsViewModel(app: Application): BaseUIViewModel(app) {
 
     fun setPayeeAddress(payeeAddress: String) {
         cachedPayeeAddress = payeeAddress
+
+        activePaymentAndMethod.value.first?.apply {
+            repository.savePaymentAddressForDiner(payee, cachedMethod!!, payeeAddress)
+        }
+
         commitPaymentTemplate()
     }
 
@@ -413,6 +429,7 @@ class PaymentsViewModel(app: Application): BaseUIViewModel(app) {
 
     fun setSurrogateAddress(surrogateAddress: String) {
         cachedSurrogateAddress = surrogateAddress
+        repository.savePaymentAddressForDiner(cachedSurrogate!!, cachedMethod!!, surrogateAddress)
         commitPaymentTemplate()
     }
 

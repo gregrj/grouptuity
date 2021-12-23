@@ -20,10 +20,7 @@ import androidx.preference.Preference
 import androidx.preference.PreferenceDataStore
 import androidx.preference.PreferenceFragmentCompat
 import com.google.android.material.transition.Hold
-import com.grouptuity.grouptuity.data.BaseUIViewModel
-import com.grouptuity.grouptuity.data.CalculationType
-import com.grouptuity.grouptuity.data.Repository
-import com.grouptuity.grouptuity.data.UIViewModel
+import com.grouptuity.grouptuity.data.*
 import com.grouptuity.grouptuity.databinding.ActivityMainBinding
 import com.grouptuity.grouptuity.databinding.FragSettingsHolderBinding
 import com.grouptuity.grouptuity.ui.calculator.CALCULATOR_RETURN_KEY
@@ -31,8 +28,10 @@ import com.grouptuity.grouptuity.ui.util.CustomNavigator
 import com.grouptuity.grouptuity.ui.util.views.setNullOnDestroy
 import java.text.NumberFormat
 
+// TODO add PtP addresses
 
 class SettingsViewModel(app: Application): BaseUIViewModel(app) {
+    @Suppress("UNCHECKED_CAST")
     val preferenceDataStore = object: PreferenceDataStore() {
         override fun getBoolean(key: String?, defValue: Boolean) = repository.keyStoredPreferenceMap[key]?.value as? Boolean ?: defValue
         override fun getFloat(key: String?, defValue: Float) = repository.keyStoredPreferenceMap[key]?.value as? Float ?: defValue
@@ -40,11 +39,11 @@ class SettingsViewModel(app: Application): BaseUIViewModel(app) {
         override fun getLong(key: String?, defValue: Long) = repository.keyStoredPreferenceMap[key]?.value as? Long ?: defValue
         override fun getString(key: String?, defValue: String?) = repository.keyStoredPreferenceMap[key]?.value as? String ?: defValue
 
-        override fun putBoolean(key: String?, value: Boolean) { (repository.keyStoredPreferenceMap[key] as? Repository.StoredPreference<Boolean>)?.value = value }
-        override fun putFloat(key: String?, value: Float) { (repository.keyStoredPreferenceMap[key] as? Repository.StoredPreference<Float>)?.value = value }
-        override fun putInt(key: String?, value: Int) { (repository.keyStoredPreferenceMap[key] as? Repository.StoredPreference<Int>)?.value = value }
-        override fun putLong(key: String?, value: Long) { (repository.keyStoredPreferenceMap[key] as? Repository.StoredPreference<Long>)?.value = value }
-        override fun putString(key: String?, value: String?) { (repository.keyStoredPreferenceMap[key] as? Repository.StoredPreference<String>)?.value = value!! }
+        override fun putBoolean(key: String?, value: Boolean) { (repository.keyStoredPreferenceMap[key] as? StoredPreference<Boolean>)?.value = value }
+        override fun putFloat(key: String?, value: Float) { (repository.keyStoredPreferenceMap[key] as? StoredPreference<Float>)?.value = value }
+        override fun putInt(key: String?, value: Int) { (repository.keyStoredPreferenceMap[key] as? StoredPreference<Int>)?.value = value }
+        override fun putLong(key: String?, value: Long) { (repository.keyStoredPreferenceMap[key] as? StoredPreference<Long>)?.value = value }
+        override fun putString(key: String?, value: String?) { (repository.keyStoredPreferenceMap[key] as? StoredPreference<String>)?.value = value!! }
     }
 
     val defaultTaxPercent = repository.prefDefaultTaxPercent.stateFlow.asLiveData()
@@ -168,7 +167,7 @@ class SettingsFragment: PreferenceFragmentCompat() {
         preferenceManager.preferenceDataStore = viewModel.preferenceDataStore
         setPreferencesFromResource(R.xml.preferences, rootKey)
 
-        (findPreference<Preference>(requireContext().getString(R.string.preference_key_user_email)) as EditTextPreference)?.apply {
+        (findPreference<Preference>(requireContext().getString(R.string.preference_key_user_email)) as EditTextPreference).apply {
             setOnBindEditTextListener {
                 it.hint = requireContext().getString(R.string.settings_account_email_hint)
             }

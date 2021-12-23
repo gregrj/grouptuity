@@ -164,28 +164,33 @@ class Contact(@PrimaryKey val lookupKey: String,
         VISIBLE,
         defaults.toMutableMap())
 
+    // Function used to get a self Contact object with updated name bypassing the preference store
+    fun withName(newName: String) = Contact(lookupKey, newName, visibility, paymentAddressDefaults).also {
+        it.photoUri = photoUri
+    }
+
     fun getInitials() = nameToInitials(name)
+
+    fun setDefaultAddressForMethod(method: PaymentMethod, alias: String?) {
+        if (alias == null) {
+            paymentAddressDefaults.remove(method)
+        } else {
+            paymentAddressDefaults[method] = alias
+        }
+    }
 
     companion object {
         const val VISIBLE = 0
         const val FAVORITE = 1
         const val HIDDEN = 2
         const val GROUPTUITY_LOOKUPKEY_PREFIX = "grouptuity_lookupkey_"
+        const val GROUPTUITY_CASH_POOL_LOOKUPKEY = "grouptuity_cash_pool_contact_lookupKey"
+        const val GROUPTUITY_RESTAURANT_LOOKUPKEY = "grouptuity_restaurant_contact_lookupKey"
+        const val GROUPTUITY_SELF_CONTACT_LOOKUPKEY = "grouptuity_self_contact_lookupKey"
 
-        private var selfName: String = "You" // Value overwritten from xml during database creation
-        private var selfPhotoUri: String? = null
-
-        fun updateSelfContactData(name: String, photoUri: String?) {
-            selfName = name
-            selfPhotoUri = photoUri
-        }
-
-        val dummy = Contact("grouptuity_dummy_contact_lookupKey", "", VISIBLE)
-        val cashPool = Contact("grouptuity_cash_pool_contact_lookupKey", "cash pool", VISIBLE)
-        val restaurant = Contact("grouptuity_restaurant_contact_lookupKey", "restaurant",VISIBLE)
-        val self: Contact get() = Contact("grouptuity_self_contact_lookupKey", selfName, VISIBLE).also {
-            it.photoUri = selfPhotoUri
-        }
+        val cashPool = Contact(GROUPTUITY_CASH_POOL_LOOKUPKEY, "cash pool", VISIBLE)
+        val restaurant = Contact(GROUPTUITY_RESTAURANT_LOOKUPKEY, "restaurant",VISIBLE)
+        var self = Contact(GROUPTUITY_SELF_CONTACT_LOOKUPKEY, "You", VISIBLE)
 
         @JvmField val CREATOR = object: Parcelable.Creator<Contact> {
             override fun createFromParcel(parcel: Parcel) = Contact(
@@ -309,9 +314,9 @@ class Diner(@PrimaryKey val id: String,
     @Ignore val paymentsSent: List<Payment> = paymentsSentMutable
     @Ignore val paymentsReceived: List<Payment> = paymentsReceivedMutable
 
-    fun isCashPool() = lookupKey == Contact.cashPool.lookupKey
-    fun isRestaurant() = lookupKey == Contact.restaurant.lookupKey
-    fun isSelf() = lookupKey == Contact.self.lookupKey
+    fun isCashPool() = lookupKey == Contact.GROUPTUITY_CASH_POOL_LOOKUPKEY
+    fun isRestaurant() = lookupKey == Contact.GROUPTUITY_RESTAURANT_LOOKUPKEY
+    fun isSelf() = lookupKey == Contact.GROUPTUITY_SELF_CONTACT_LOOKUPKEY
 
     fun getDefaultAddressForMethod(method: PaymentMethod) = paymentAddressDefaults[method]
 
@@ -742,6 +747,21 @@ class Payment(@PrimaryKey val id: String,
         payer = dinerMap[payerId]!!
         payee = dinerMap[payeeId]!!
         surrogate = dinerMap[surrogateId]!!
+    }
+
+    fun asCommitted() = Payment(
+        id,
+        billId,
+        amount,
+        method,
+        true,
+        payerId,
+        payeeId,
+        surrogateId
+    ).also {
+        it.payer = payer
+        it.payee = payee
+        it.surrogate = surrogate
     }
 }
 

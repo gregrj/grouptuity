@@ -90,7 +90,7 @@ class BillCalculation(private val bill: Bill,
                       private val items: Collection<Item>,
                       private val debts: Collection<Debt>,
                       private val discounts: Collection<Discount>,
-                      private val oldPayments: Collection<Payment>) {
+                      oldPayments: Collection<Payment>) {
 
     private val allParticipants = diners.plus(cashPool).plus(restaurant)
 
@@ -148,6 +148,8 @@ class BillCalculation(private val bill: Bill,
         committedPayments.map { payment ->
             netTransactionMap.addTransaction(payment.payee, payment.payer, payment.amount)
         }
+
+        netTransactionMap.consolidate()
 
         newPaymentsMap = generateNewPayments(netTransactionMap)
 

@@ -1,8 +1,8 @@
 package com.grouptuity.grouptuity.data
 
-import android.util.Log
 import androidx.room.*
 import kotlinx.coroutines.flow.Flow
+
 
 abstract class BaseDao<T> {
     @Insert(onConflict = OnConflictStrategy.IGNORE)

@@ -381,6 +381,13 @@
     <string name="payment_method_cash_app_toast_request">Request %1$s from %2$s</string>
 
     <string name="venmo_note">Settling the bill with Grouptuity</string>
+    <string name="venmo_unparseable_response">Venmo payment completed, but details cannot be verified</string>
+    <string name="venmo_unsuccessful">Venmo payment did not complete successfully</string>
+    <string name="venmo_wrong_amount">Venmo payment completed, but amount was %1$s instead of %2$s</string>
+    <string name="venmo_wrong_receiver">Venmo payment completed, but recipient was %1$s instead of %2$s</string>
+    <string name="venmo_wrong_sender">Venmo payment completed, but sender was %1$s instead of %2$s</string>
+    <string name="venmo_canceled">Cancelled Venmo payment</string>
+    <string name="venmo_successful">Venmo payment successful</string>
 
     <string name="settings_toolbar_title">Settings</string>
     <string name="settings_account_category">User Account</string>

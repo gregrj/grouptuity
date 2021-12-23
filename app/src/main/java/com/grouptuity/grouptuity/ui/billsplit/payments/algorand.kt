@@ -17,7 +17,7 @@ class AlgorandAddressParser(context: Context): QRCodeParser() {
         const val DOMAIN = "https://cash.app/"
 
         fun isValidAddress(address: String) {
-            true // TODO
+            true // TODO 58 characters long, letters and numbers, handle checksum?
         }
     }
 
@@ -40,6 +40,8 @@ fun startAlgorandTransaction(frag: Fragment, appLauncher: ActivityResultLauncher
         isController = true)
 
     WalletConnectClient.initialize(initializeParams)
+
+
 
     val pairParams = ClientTypes.PairParams("wc:...")
     val pairListener = WalletConnectClientListeners.Pairing { sessionProposal -> /* handle session proposal */ }

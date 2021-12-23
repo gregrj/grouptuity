@@ -8,7 +8,7 @@ import android.util.Log
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.asLiveData
-import com.google.mlkit.vision.barcode.Barcode
+import com.google.mlkit.vision.barcode.common.Barcode
 import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.PaymentMethod
 import com.grouptuity.grouptuity.ui.billsplit.payments.AlgorandAddressParser

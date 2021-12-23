@@ -1,8 +1,6 @@
 package com.grouptuity.grouptuity.data
 
-import android.app.Application
 import android.content.Context
-import android.content.pm.PackageManager
 import android.database.Cursor
 import android.net.Uri
 import android.provider.ContactsContract
@@ -34,6 +32,61 @@ fun newUUID(): String = UUID.randomUUID().toString()
 val Context.preferenceDataStore: DataStore<Preferences> by preferencesDataStore(name = "grouptuity_preferences")
 
 
+sealed class StoredPreference<T> {
+    companion object {
+        lateinit var preferenceDataStore: DataStore<Preferences>
+        lateinit var keyStoredPreferenceMap: MutableMap<String, StoredPreference<*>>
+    }
+
+    var isSet: Boolean? = null
+        protected set
+
+    abstract var value: T
+
+    class NonNullable<T>(private val key: Preferences.Key<T>, private val defaultValue: T): StoredPreference<T>() {
+        val stateFlow = preferenceDataStore.data.map { preferences ->
+            preferences[key].also { isSet = true } ?: defaultValue.also { isSet = false }
+        }.stateIn(CoroutineScope(Dispatchers.IO), SharingStarted.Eagerly, defaultValue)
+
+        init {
+            keyStoredPreferenceMap[key.name] = this
+        }
+
+        override var value: T
+            get() = runBlocking { preferenceDataStore.data.map { it[key] ?: defaultValue }.first() }
+            set(newValue) {
+                CoroutineScope(Dispatchers.IO).launch {
+                    preferenceDataStore.edit { preferences -> preferences[key] = newValue }
+                }
+            }
+    }
+
+    class Nullable<T>(private val key: Preferences.Key<T>, private val defaultValue: T? = null): StoredPreference<T?>() {
+        val stateFlow = preferenceDataStore.data.map { preferences ->
+            preferences[key].also { isSet = true } ?: defaultValue.also { isSet = false }
+        }.stateIn(CoroutineScope(Dispatchers.IO), SharingStarted.Eagerly, defaultValue)
+
+        init {
+            keyStoredPreferenceMap[key.name] = this
+        }
+
+        override var value: T?
+            get() = runBlocking { preferenceDataStore.data.map { it[key] ?: defaultValue }.first() }
+            set(newValue) {
+                CoroutineScope(Dispatchers.IO).launch {
+                    preferenceDataStore.edit { preferences ->
+                        if (newValue == null) {
+                            preferences.remove(key)
+                        } else {
+                            preferences[key] = newValue
+                        }
+                    }
+                }
+            }
+    }
+}
+
+
 class Repository(context: Context) {
     companion object {
         @Volatile
@@ -48,43 +101,30 @@ class Repository(context: Context) {
         }
     }
 
-    inner class StoredPreference<T>(private val key: Preferences.Key<T>, private val defaultValue: T) {
-        var isSet: Boolean? = null
-            private set
-
-        val stateFlow = preferenceDataStore.data.mapLatest { preferences ->
-            preferences[key].also { isSet = true } ?: defaultValue.also { isSet = false }
-        }.stateIn(CoroutineScope(Dispatchers.IO), SharingStarted.Eagerly, defaultValue)
-
-        init {
-            keyStoredPreferenceMap[key.name] = this
-        }
-
-        var value: T
-            get() = runBlocking { preferenceDataStore.data.map { it[key] ?: defaultValue }.first() }
-            set(newValue) {
-                CoroutineScope(Dispatchers.IO).launch {
-                    preferenceDataStore.edit { preferences -> preferences[key] = newValue }
-                }
-            }
-    }
-
     private val database = AppDatabase.getDatabase(context)
-    private val preferenceDataStore = context.preferenceDataStore
-    val keyStoredPreferenceMap = mutableMapOf<String, StoredPreference<*>>()
+    val keyStoredPreferenceMap = mutableMapOf<String, StoredPreference<*>>().also {
+        StoredPreference.preferenceDataStore = context.preferenceDataStore
+        StoredPreference.keyStoredPreferenceMap = it
+    }
+    val addressBook = AddressBook(context, database)
 
     // Preferences
-    val prefAppVersion = StoredPreference(stringPreferencesKey(context.getString(R.string.preference_key_app_version)), BuildConfig.VERSION_NAME)
-    val prefLoadedBillId = StoredPreference(stringPreferencesKey(context.getString(R.string.preference_key_loaded_bill_id)), "uninitialized")
-    val prefUserName = StoredPreference(stringPreferencesKey(context.getString(R.string.preference_key_user_name)), context.getString(R.string.default_user_name))
-    val prefUserEmail = StoredPreference(stringPreferencesKey(context.getString(R.string.preference_key_user_email)), "")
-    val prefUserPhotoUri = StoredPreference(stringPreferencesKey(context.getString(R.string.preference_key_user_photo_uri)), "")
-    val prefDefaultTaxPercent = StoredPreference(stringPreferencesKey(context.getString(R.string.preference_key_default_tax_percent)), context.getString(R.string.default_default_tax_percent))
-    val prefDefaultTipPercent = StoredPreference(stringPreferencesKey(context.getString(R.string.preference_key_default_tip_percent)), context.getString(R.string.default_default_tip_percent))
-    val prefTaxIsTipped = StoredPreference(booleanPreferencesKey(context.getString(R.string.preference_key_tax_is_tipped)), context.resources.getBoolean(R.bool.default_tax_is_tipped))
-    val prefDiscountsReduceTip = StoredPreference(booleanPreferencesKey(context.getString(R.string.preference_key_discounts_reduce_tip)), context.resources.getBoolean(R.bool.default_discounts_reduce_tip))
-    val prefAutoAddSelf = StoredPreference(booleanPreferencesKey(context.getString(R.string.preference_key_auto_add_self)), context.resources.getBoolean(R.bool.default_auto_add_self))
-    val prefSearchWithTypoAssist = StoredPreference(booleanPreferencesKey(context.getString(R.string.preference_key_contact_search_typo_assist)), context.resources.getBoolean(R.bool.default_contact_search_typo_assist))
+    val prefAppVersion = StoredPreference.NonNullable(stringPreferencesKey(context.getString(R.string.preference_key_app_version)), BuildConfig.VERSION_NAME)
+    val prefLoadedBillId = StoredPreference.NonNullable(stringPreferencesKey(context.getString(R.string.preference_key_loaded_bill_id)), "uninitialized")
+    val prefUserName = StoredPreference.NonNullable(
+        stringPreferencesKey(context.getString(R.string.preference_key_user_name)),
+        context.getString(R.string.default_user_name))
+    val prefUserPhotoUri = StoredPreference.Nullable(stringPreferencesKey(context.getString(R.string.preference_key_user_photo_uri)))
+    val prefUserEmail = StoredPreference.Nullable(stringPreferencesKey(context.getString(R.string.preference_key_user_email)))
+    val prefUserVenmoAddress = StoredPreference.Nullable(stringPreferencesKey(context.getString(R.string.preference_key_user_venmo)))
+    val prefUserCashtag = StoredPreference.Nullable(stringPreferencesKey(context.getString(R.string.preference_key_user_cashtag)))
+    val prefUserAlgorandAddress = StoredPreference.Nullable(stringPreferencesKey(context.getString(R.string.preference_key_user_algorand)))
+    val prefDefaultTaxPercent = StoredPreference.NonNullable(stringPreferencesKey(context.getString(R.string.preference_key_default_tax_percent)), context.getString(R.string.default_default_tax_percent))
+    val prefDefaultTipPercent = StoredPreference.NonNullable(stringPreferencesKey(context.getString(R.string.preference_key_default_tip_percent)), context.getString(R.string.default_default_tip_percent))
+    val prefTaxIsTipped = StoredPreference.NonNullable(booleanPreferencesKey(context.getString(R.string.preference_key_tax_is_tipped)), context.resources.getBoolean(R.bool.default_tax_is_tipped))
+    val prefDiscountsReduceTip = StoredPreference.NonNullable(booleanPreferencesKey(context.getString(R.string.preference_key_discounts_reduce_tip)), context.resources.getBoolean(R.bool.default_discounts_reduce_tip))
+    val prefAutoAddSelf = StoredPreference.NonNullable(booleanPreferencesKey(context.getString(R.string.preference_key_auto_add_self)), context.resources.getBoolean(R.bool.default_auto_add_self))
+    val prefSearchWithTypoAssist = StoredPreference.NonNullable(booleanPreferencesKey(context.getString(R.string.preference_key_contact_search_typo_assist)), context.resources.getBoolean(R.bool.default_contact_search_typo_assist))
 
     // App-level data
     val loadInProgress = MutableStateFlow(true)
@@ -99,11 +139,6 @@ class Repository(context: Context) {
         }.launchIn(CoroutineScope(Dispatchers.Unconfined))
     }
     val bills = database.getSavedBills()
-    val selfContact = combine(prefUserName.stateFlow, prefUserPhotoUri.stateFlow) { userName, userPhotoUri ->
-        Contact.updateSelfContactData(userName, userPhotoUri)
-        //TODO database.contactDao().save(Contact.self)
-        Contact.self
-    }.stateIn(CoroutineScope(Dispatchers.Unconfined), SharingStarted.Eagerly, Contact.self)
     val voiceInputMutable = MutableLiveData<Event<String>>()
 
     // Private backing fields for bill-specific entity flows
@@ -117,9 +152,6 @@ class Repository(context: Context) {
     private var mDiscounts = mutableListOf<Discount>()
     private var mPayments = mutableListOf<Payment>()
     private val _bill = MutableStateFlow(mBill)
-    private val _cashPool = MutableStateFlow(mCashPool)
-    private val _restaurant = MutableStateFlow(mRestaurant)
-    private val _selfDiner = MutableStateFlow(mSelfDiner)
     private val _diners: MutableStateFlow<List<Diner>> = MutableStateFlow(mDiners)
     private val _items: MutableStateFlow<List<Item>> = MutableStateFlow(mItems)
     private val _debts: MutableStateFlow<List<Debt>> = MutableStateFlow(mDebts)
@@ -134,9 +166,6 @@ class Repository(context: Context) {
 
     // Bill entities
     val bill: StateFlow<Bill> = _bill
-    val cashPool: StateFlow<Diner> = _cashPool
-    val restaurant: StateFlow<Diner> = _restaurant
-    val selfDiner: StateFlow<Diner?> = _selfDiner
     val diners: StateFlow<List<Diner>> = _diners
     val items: StateFlow<List<Item>> = _items
     val debts: StateFlow<List<Debt>> = _debts
@@ -162,8 +191,8 @@ class Repository(context: Context) {
     val tipPercent: Flow<Double> = _tipPercent
     val groupTipAmount: Flow<Double> = _groupTipAmount
     val groupTotal: Flow<Double> = _groupTotal
-    val taxIsTipped: Flow<Boolean> = bill.mapLatest { it.isTaxTipped }
-    val discountsReduceTip: Flow<Boolean> = bill.mapLatest { it.discountsReduceTip }
+    val taxIsTipped: Flow<Boolean> = bill.map { it.isTaxTipped }
+    val discountsReduceTip: Flow<Boolean> = bill.map { it.discountsReduceTip }
 
     // Individual bill calculation results
     private val _individualSubtotals = MutableStateFlow(emptyMap<Diner, Double>())
@@ -198,10 +227,10 @@ class Repository(context: Context) {
     // Other calculation results
     private val _discountValues = MutableStateFlow(emptyMap<Discount, Double>())
     val discountValues: StateFlow<Map<Discount, Double>> = _discountValues
-    val numberOfDiners = diners.mapLatest { it.size }.stateIn(CoroutineScope(Dispatchers.Unconfined), SharingStarted.Eagerly, 0)
-    val numberOfItems = items.mapLatest { it.size }.stateIn(CoroutineScope(Dispatchers.Unconfined), SharingStarted.Eagerly, 0)
-    val billIncludesSelf = diners.mapLatest { it.any { diner -> diner.isSelf() } }.stateIn(CoroutineScope(Dispatchers.Unconfined), SharingStarted.Eagerly, false)
-    val hasUnprocessedPayments = payments.mapLatest { paymentsList -> paymentsList.any { it.unprocessed()} }
+    val numberOfDiners = diners.map { it.size }.stateIn(CoroutineScope(Dispatchers.Unconfined), SharingStarted.Eagerly, 0)
+    val numberOfItems = items.map { it.size }.stateIn(CoroutineScope(Dispatchers.Unconfined), SharingStarted.Eagerly, 0)
+    val billIncludesSelf = diners.map { it.any { diner -> diner.isSelf() } }.stateIn(CoroutineScope(Dispatchers.Unconfined), SharingStarted.Eagerly, false)
+    val hasUnprocessedPayments = payments.map { paymentsList -> paymentsList.any { it.unprocessed()} }
 
     private fun commitBill() = CoroutineScope(Dispatchers.Default).launch {
 
@@ -225,9 +254,6 @@ class Repository(context: Context) {
         }
 
         _bill.value = mBill
-        _cashPool.value = mCashPool
-        _restaurant.value = mRestaurant
-        _selfDiner.value = mSelfDiner
         _diners.value = mDiners.toList()
         _items.value = mItems.toList()
         _debts.value = mDebts.toList()
@@ -310,11 +336,11 @@ class Repository(context: Context) {
 
         // Write updates to the database
         database.saveBill(newBill).invokeOnCompletion {
-            prefLoadedBillId.value = newBill.id
-
             database.saveDiner(mCashPool)
             database.saveDiner(mRestaurant)
             mSelfDiner?.also { database.saveDiner(it) }
+
+            prefLoadedBillId.value = newBill.id
         }
     }
     fun loadSavedBill(context: Context, billId: String) = CoroutineScope(Dispatchers.IO).launch {
@@ -323,6 +349,7 @@ class Repository(context: Context) {
         val payload = database.loadBill(context, billId)
         if (payload == null) {
             createAndLoadNewBill()
+            // TODO notify of failure?
         } else {
             withContext(Dispatchers.Main) {
                 mBill = payload.bill
@@ -425,12 +452,14 @@ class Repository(context: Context) {
         }
 
         // Save new name to Contact.self before instantiating the self Diner
-        if (name != null) {
-            Contact.updateSelfContactData(name, Contact.self.photoUri)
-            //TODO database.contactDao().save(Contact.self)
-        }
+        val selfDiner = if (name != null) {
+            prefUserName.value = name
 
-        val selfDiner = Diner(newUUID(), mBill.id, ++maxDinerListIndex, Contact.self)
+            // Manually set name because Contact.self updates asynchronously
+            Diner(newUUID(), mBill.id, ++maxDinerListIndex, Contact.self.withName(name))
+        } else {
+            Diner(newUUID(), mBill.id, ++maxDinerListIndex, Contact.self)
+        }
 
         if (includeWithEveryone) {
             // TODO
@@ -447,7 +476,6 @@ class Repository(context: Context) {
     }
     fun createNewDiner(name: String,
                        paymentAddresses: Map<PaymentMethod, String>,
-                       saveContact: Boolean = false,
                        includeWithEveryone: Boolean = true): Diner {
 
         val newContact = Contact(name, paymentAddresses)
@@ -462,12 +490,9 @@ class Repository(context: Context) {
 
         commitBill()
 
-        if (saveContact) {
-            database.saveContact(newContact)
-        }
-
+        database.saveContact(newContact)
         database.saveDiner(newDiner)
-        //TODO commit updates for other entities affected by includeWithEveryone
+        // TODO commit updates for other entities affected by includeWithEveryone
 
         return newDiner
     }
@@ -536,6 +561,22 @@ class Repository(context: Context) {
         database.deleteDiners(oldDiners)
 
         // TODO warn if any entities are without items
+    }
+    fun savePaymentAddressForDiner(diner: Diner, method: PaymentMethod, address: String?) {
+        diner.setDefaultAddressForMethod(method, address)
+        database.saveDiner(diner)
+
+        if (diner.isSelf()) {
+            when (method) {
+                PaymentMethod.PAYBACK_LATER -> prefUserEmail.value = address
+                PaymentMethod.VENMO -> prefUserVenmoAddress.value = address
+                PaymentMethod.CASH_APP -> prefUserCashtag.value = address
+                PaymentMethod.ALGO -> prefUserAlgorandAddress.value = address
+                else -> { }
+            }
+        } else {
+            addressBook.savePaymentAddressForContact(diner.lookupKey, method, address)
+        }
     }
 
     // Item Functions
@@ -672,7 +713,16 @@ class Repository(context: Context) {
 
         return discount
     }
-    fun editDiscount(editedDiscount: Discount, asPercent: Boolean, onItems: Boolean, value: Double, cost: Double?, items: List<Item>, recipients: List<Diner>, purchasers: List<Diner>) {
+    fun editDiscount(
+        editedDiscount: Discount,
+        asPercent: Boolean,
+        onItems: Boolean,
+        value: Double,
+        cost: Double?,
+        items: List<Item>,
+        recipients: List<Diner>,
+        purchasers: List<Diner>
+    ) {
         // Remove discount from associated items, recipients, and purchasers
         editedDiscount.items.forEach { it.removeDiscount(editedDiscount) }
         editedDiscount.recipients.forEach { it.removeReceivedDiscount(editedDiscount) }
@@ -735,8 +785,8 @@ class Repository(context: Context) {
         surrogate: Diner? = null,
         payerAddress: String? = null,
         payeeAddress: String? = null,
-        surrogateAddress: String? = null) {
-
+        surrogateAddress: String? = null
+    ) {
         val newTemplate = PaymentTemplate(
             method,
             payer.id,
@@ -748,20 +798,6 @@ class Repository(context: Context) {
 
         payer.setPaymentTemplate(newTemplate)
 
-        if (payerAddress != null && payer.getDefaultAddressForMethod(method) == null) {
-            payer.setDefaultAddressForMethod(method, payerAddress)
-        }
-
-        if (payeeAddress != null && payee.getDefaultAddressForMethod(method) == null) {
-            payee.setDefaultAddressForMethod(method, payeeAddress)
-            database.saveDiner(payee)
-        }
-
-        if (surrogateAddress != null && surrogate!!.getDefaultAddressForMethod(method) == null) {
-            surrogate.setDefaultAddressForMethod(method, surrogateAddress)
-            database.saveDiner(surrogate)
-        }
-
         commitBill()
 
         database.saveDiner(payer)
@@ -769,9 +805,15 @@ class Repository(context: Context) {
     fun resetAllPaymentTemplates() {
         // TODO
     }
+    fun commitPayment(payment: Payment) {
+        val committedPayment = payment.asCommitted()
+        mPayments.add(committedPayment)
+        commitBill()
+        database.savePayment(committedPayment)
+    }
 
     init {
-        ProcessLifecycleOwner.get().lifecycleScope.launchWhenResumed {
+        ProcessLifecycleOwner.get().lifecycleScope.launchWhenStarted {
             when(val billId = prefLoadedBillId.value) {
                 "uninitialized" -> createAndLoadNewBill()
                 mBill.id -> { /* Correct bill already loaded */ }
@@ -780,24 +822,42 @@ class Repository(context: Context) {
                     loadSavedBill(context, billId)
                 }
             }
+
+            combine(
+                prefUserName.stateFlow,
+                prefUserPhotoUri.stateFlow,
+                prefUserEmail.stateFlow,
+                prefUserVenmoAddress.stateFlow,
+                prefUserCashtag.stateFlow,
+                prefUserAlgorandAddress.stateFlow
+            ) {
+                val defaultPaymentAddresses = mutableMapOf<PaymentMethod, String>()
+                it[2]?.apply { defaultPaymentAddresses[PaymentMethod.PAYBACK_LATER] = this }
+                it[3]?.apply { defaultPaymentAddresses[PaymentMethod.VENMO] = this }
+                it[4]?.apply { defaultPaymentAddresses[PaymentMethod.CASH_APP] = this }
+                it[5]?.apply { defaultPaymentAddresses[PaymentMethod.ALGO] = this }
+
+                Contact(
+                    Contact.GROUPTUITY_SELF_CONTACT_LOOKUPKEY,
+                    it[0]!!,
+                    Contact.VISIBLE,
+                    defaultPaymentAddresses).also { self ->
+                        it[1]?.apply { self.photoUri = this }
+                }
+            }.collect {
+                Contact.self = it
+
+                CoroutineScope(Dispatchers.IO).launch {
+                    database.contactDao().update(Contact.self)
+                }
+            }
         }
     }
 }
 
 
-class AddressBook(context: Context) {
+class AddressBook(context: Context, private val database: AppDatabase) {
     companion object {
-        @Volatile
-        private var INSTANCE: AddressBook? = null
-
-        fun getInstance(context: Context): AddressBook {
-            return INSTANCE ?: synchronized(this) {
-                val instance = AddressBook(context)
-                INSTANCE = instance
-                instance
-            }
-        }
-
         data class ContactInfo(val name: String, val photoUri: String?, val emailAddresses: List<String>)
 
         private fun getEmailAddressesForContactId(context: Context, contactId: String): List<String> {
@@ -827,7 +887,7 @@ class AddressBook(context: Context) {
 
         fun getContactData(context: Context, lookupKey: String): ContactInfo? {
             when {
-                lookupKey == Contact.self.lookupKey -> {
+                lookupKey == Contact.GROUPTUITY_SELF_CONTACT_LOOKUPKEY -> {
                     // TODO pull data for self
                     return null
                 }
@@ -875,8 +935,6 @@ class AddressBook(context: Context) {
         }
     }
 
-    private val database = AppDatabase.getDatabase(context)
-
     private val excludedNames = context.resources.getStringArray(R.array.addressbook_excluded_names)
 
     private val _refreshingDeviceContacts = MutableStateFlow(false)
@@ -900,6 +958,9 @@ class AddressBook(context: Context) {
         emit(fromDevice.toMutableMap().apply {
             fromApp.forEach { (lookupKey, contact) ->
                 this.merge(lookupKey, contact) { deviceContact, appContact ->
+                    // Cache contact so it can be saved in the database after updating
+                    updatedAppContacts.add(appContact)
+
                     appContact.also {
                         it.name = deviceContact.name
                         it.photoUri = deviceContact.photoUri
@@ -919,19 +980,18 @@ class AddressBook(context: Context) {
         }
     }
 
-    fun saveContact(contact: Contact) = database.saveContact(contact)
-    fun removeContact(contact: Contact) = database.removeContact(contact)
+    fun favoriteContacts(lookupKeys: Collection<String>) = database.favoriteContacts(lookupKeys)
+    fun unfavoriteContacts(lookupKeys: Collection<String>) = database.resetContactVisibilities(lookupKeys)
+    fun unfavoriteFavoriteContacts() = database.unfavoriteFavoriteContacts()
+    fun hideContacts(lookupKeys: Collection<String>) = database.hideContacts(lookupKeys)
+    fun unhideContacts(lookupKeys: Collection<String>) = database.resetContactVisibilities(lookupKeys)
+    fun unhideHiddenContacts() = database.unhideHiddenContacts()
 
-    fun favoriteContact(lookupKey: String) = CoroutineScope(Dispatchers.IO).launch { database.favoriteContact(lookupKey) }
-    fun favoriteContacts(lookupKeys: Collection<String>) = CoroutineScope(Dispatchers.IO).launch { database.favoriteContacts(lookupKeys) }
-    fun unfavoriteContact(lookupKey: String) = CoroutineScope(Dispatchers.IO).launch { database.resetContactVisibility(lookupKey) }
-    fun unfavoriteContacts(lookupKeys: Collection<String>) = CoroutineScope(Dispatchers.IO).launch { database.resetContactVisibilities(lookupKeys) }
-    fun unfavoriteFavoriteContacts() = CoroutineScope(Dispatchers.IO).launch { database.unfavoriteFavoriteContacts() }
-    fun hideContact(lookupKey: String) = CoroutineScope(Dispatchers.IO).launch { database.hideContact(lookupKey) }
-    fun hideContacts(lookupKeys: Collection<String>) = CoroutineScope(Dispatchers.IO).launch { database.hideContacts(lookupKeys) }
-    fun unhideContact(lookupKey: String) = CoroutineScope(Dispatchers.IO).launch { database.resetContactVisibility(lookupKey) }
-    fun unhideContacts(lookupKeys: Collection<String>) = CoroutineScope(Dispatchers.IO).launch { database.resetContactVisibilities(lookupKeys) }
-    fun unhideHiddenContacts() = CoroutineScope(Dispatchers.IO).launch { database.unhideHiddenContacts() }
+    fun savePaymentAddressForContact(lookupKey: String, method: PaymentMethod, address: String?) =
+        appContacts.value[lookupKey]?.apply {
+            this.setDefaultAddressForMethod(method, address)
+            database.saveContact(this)
+        }
 
     fun refreshDeviceContacts(context: Context) = CoroutineScope(Dispatchers.IO).launch {
         _refreshingDeviceContacts.value = true
@@ -1021,14 +1081,12 @@ abstract class AppDatabase: RoomDatabase() {
     fun saveContact(contact: Contact) = CoroutineScope(Dispatchers.IO).launch { contactDao().upsert(contact) }
     fun saveContacts(contacts: List<Contact>) = CoroutineScope(Dispatchers.IO).launch { contactDao().upsert(contacts) }
     fun removeContact(contact: Contact) = CoroutineScope(Dispatchers.IO).launch { contactDao().delete(contact) }
-    suspend fun resetContactVisibility(lookupKey: String) = contactDao().resetVisibility(lookupKey)
-    suspend fun resetContactVisibilities(lookupKeys: Collection<String>) = contactDao().resetVisibility(lookupKeys)
-    suspend fun favoriteContact(lookupKey: String) = contactDao().favorite(lookupKey)
-    suspend fun favoriteContacts(lookupKeys: Collection<String>) = contactDao().favorite(lookupKeys)
-    suspend fun unfavoriteFavoriteContacts() = contactDao().unfavoriteAllFavorites()
-    suspend fun hideContact(lookupKey: String) = contactDao().hide(lookupKey)
-    suspend fun hideContacts(lookupKeys: Collection<String>) = contactDao().hide(lookupKeys)
-    suspend fun unhideHiddenContacts() = contactDao().unhideAllHidden()
+
+    fun resetContactVisibilities(lookupKeys: Collection<String>) = CoroutineScope(Dispatchers.IO).launch { contactDao().resetVisibility(lookupKeys) }
+    fun favoriteContacts(lookupKeys: Collection<String>) = CoroutineScope(Dispatchers.IO).launch { contactDao().favorite(lookupKeys) }
+    fun unfavoriteFavoriteContacts() = CoroutineScope(Dispatchers.IO).launch { contactDao().unfavoriteAllFavorites() }
+    fun hideContacts(lookupKeys: Collection<String>) = CoroutineScope(Dispatchers.IO).launch { contactDao().hide(lookupKeys) }
+    fun unhideHiddenContacts() = CoroutineScope(Dispatchers.IO).launch { contactDao().unhideAllHidden() }
 
     fun deleteBill(bill: Bill) = CoroutineScope(Dispatchers.IO).launch { billDao().delete(bill) }
     fun deleteDiner(diner: Diner) = CoroutineScope(Dispatchers.IO).launch { dinerDao().delete(diner) }
@@ -1080,7 +1138,13 @@ abstract class AppDatabase: RoomDatabase() {
         itemMap.forEach { (_, item) -> item.populateEntityLists(dinerMap, discountMap) }
         debtMap.forEach { (_, debt) -> debt.populateEntityLists(dinerMap) }
         discountMap.forEach { (_, discount) -> discount.populateEntityLists(dinerMap, itemMap) }
-        paymentMap.forEach { (_, payment) -> payment.populateEntities(dinerMap) }
+        paymentMap.forEach { (_, payment) ->
+            payment.populateEntities(
+                dinerMap.plus(
+                    mapOf(cashPool.id to cashPool, restaurant.id to restaurant)
+                )
+            )
+        }
 
         return LoadBillPayload(
             bill,

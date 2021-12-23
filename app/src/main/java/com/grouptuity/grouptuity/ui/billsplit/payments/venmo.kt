@@ -11,12 +11,12 @@ import android.net.Uri
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
+import android.util.Base64
 import android.util.Log
 import android.view.View
 import android.webkit.*
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.ActivityResultLauncher
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.appcompat.app.AppCompatActivity
 import androidx.coordinatorlayout.widget.CoordinatorLayout
 import androidx.fragment.app.Fragment
@@ -24,16 +24,20 @@ import com.android.volley.Request
 import com.android.volley.toolbox.HurlStack
 import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
+import com.google.gson.JsonParser
 import com.grouptuity.grouptuity.BuildConfig
 import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.Payment
 import com.grouptuity.grouptuity.databinding.VenmoWebviewBinding
 import com.grouptuity.grouptuity.ui.billsplit.qrcodescanner.QRCodeParser
 import java.io.UnsupportedEncodingException
+import java.lang.Exception
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
 import java.text.NumberFormat
+import javax.crypto.Mac
+import javax.crypto.spec.SecretKeySpec
 
 
 class VenmoAddressParser(context: Context): QRCodeParser() {
@@ -111,7 +115,7 @@ class VenmoWebViewActivity: AppCompatActivity() {
         setContentView(binding.root)
 
         val url = intent.extras!!.getString("url")!!
-        Log.e("url", url.toString())
+        Log.e("url", url)
 
         val oldWebView = lastNonConfigurationInstance as WebView?
         if (oldWebView == null) {
@@ -232,54 +236,7 @@ private fun createVenmoAppIntent(sending: Boolean, counterpartyAddress: String, 
     return Intent(Intent.ACTION_VIEW, Uri.parse(venmoURI))
 }
 
-
-fun createVenmoWebViewIntent(context: Context, sending: Boolean, counterpartyAddress: String, amount: String) =
-    Intent(context, VenmoWebViewActivity::class.java).also {
-
-        var venmoURI = "https://venmo.com/u/${counterpartyAddress}?txn=" + if(sending) "pay" else "charge"
-
-        try {
-            venmoURI += "&amount=" + URLEncoder.encode(amount, "UTF-8") }
-        catch (e: UnsupportedEncodingException) {
-            Log.e("venmo", "cannot encode amount $amount")
-        }
-
-        try {
-            venmoURI += "&note=" + URLEncoder.encode(context.getString(R.string.venmo_note), "UTF-8")
-        } catch (e: UnsupportedEncodingException) {
-            Log.e("venmo", "cannot encode note")
-        }
-
-        try {
-            venmoURI += "&app_id=" + URLEncoder.encode(BuildConfig.VENMO_APP_ID.toString(), "UTF-8")
-        } catch (e: UnsupportedEncodingException) {
-            Log.e("venmo", "cannot encode app ID")
-        }
-
-        try {
-            venmoURI += "&app_name=" + URLEncoder.encode(context.getString(R.string.app_name), "UTF-8")
-        } catch (e: UnsupportedEncodingException) {
-            Log.e("venmo", "cannot encode app name Grouptuity")
-        }
-
-        try {
-            venmoURI += "&app_local_id=" + URLEncoder.encode("abcd", "UTF-8")
-        } catch (e: UnsupportedEncodingException) {
-            Log.e("venmo", "cannot encode app local id")
-        }
-
-        try {
-            venmoURI += "&client=" + URLEncoder.encode("android", "UTF-8")
-        } catch (e: UnsupportedEncodingException) {
-            Log.e("venmo", "cannot encode client=android")
-        }
-
-        it.putExtra("url", venmoURI.replace("\\+".toRegex(), "%20"))
-    }
-
-
 fun sendVenmoRequest(frag: Fragment, appLauncher: ActivityResultLauncher<Intent>, installLauncher: ActivityResultLauncher<Intent>?, payment: Payment) {
-
     val peerToPeerData = extractPeerToPeerData(payment) ?: return
 
     val numberFormat = NumberFormat.getNumberInstance()
@@ -337,3 +294,99 @@ fun sendVenmoRequest(frag: Fragment, appLauncher: ActivityResultLauncher<Intent>
         }
     }
 }
+
+fun parseVenmoResponse(context: Context, result: ActivityResult, referencePayment: Payment): Pair<Boolean, String> {
+    if (result.resultCode == Activity.RESULT_OK) {
+        result.data?.getStringExtra("signedrequest")?.apply {
+            try {
+                val encodedStringArray = this.split(".")
+                val encodedSignature = encodedStringArray[0]
+                val encodedPayload = encodedStringArray[1]
+
+                val decodedSignature: String = base64UrlDecode(encodedSignature)
+                val expectedSignature = hashHmac(encodedPayload)
+                if (decodedSignature != expectedSignature) {
+                    return Pair(true, context.getString(R.string.venmo_unparseable_response))
+                }
+
+                val obj = JsonParser.parseString(base64UrlDecode(encodedPayload)).asJsonArray[0].asJsonObject
+
+                val success = obj["success"].asString
+                if (success == "0") {
+                    // Only fail to confirm transaction if response is explicitly not
+                    // successful in case the response format changes in the future.
+                    return Pair(true, context.getString(R.string.venmo_unsuccessful))
+                }
+
+                val amount = obj["amount"].asString
+                // TODO where to locate this?
+                val peerToPeerData = extractPeerToPeerData(referencePayment)!!
+                val numberFormat = NumberFormat.getNumberInstance()
+                numberFormat.minimumFractionDigits = 2
+                numberFormat.maximumFractionDigits = 2
+                numberFormat.isGroupingUsed = false
+                val targetAmount = numberFormat.format(referencePayment.amount)
+                if (amount != targetAmount) {
+                    val currencyAmount = NumberFormat.getCurrencyInstance().format(amount)
+                    val currencyTargetAmount = NumberFormat.getCurrencyInstance().format(targetAmount)
+                    return Pair(true, context.getString(R.string.venmo_wrong_amount, currencyAmount, currencyTargetAmount))
+                }
+
+                when (obj["action"].asString) {
+                    "pay" -> {
+                        val receiverAddress = obj["target"].asJsonObject["user"].asJsonObject["username"].asString
+                        if (receiverAddress != peerToPeerData.receiverAddress) {
+                            return Pair(true, context.getString(R.string.venmo_wrong_receiver, receiverAddress, peerToPeerData.receiverAddress))
+                        }
+                        val senderAddress = obj["actor"].asJsonObject["username"].asString
+                        if (senderAddress != peerToPeerData.senderAddress) {
+                            return Pair(true, context.getString(R.string.venmo_wrong_sender, senderAddress, peerToPeerData.senderAddress))
+                        }
+                    }
+                    "charge" -> {
+                        val senderAddress = obj["target"].asJsonObject["user"].asJsonObject["username"].asString
+                        if (senderAddress != peerToPeerData.senderAddress) {
+                            return Pair(true, context.getString(R.string.venmo_wrong_sender, senderAddress, peerToPeerData.senderAddress))
+                        }
+                        val receiverAddress = obj["actor"].asJsonObject["username"].asString
+                        if (receiverAddress != peerToPeerData.receiverAddress) {
+                            return Pair(true, context.getString(R.string.venmo_wrong_receiver, receiverAddress, peerToPeerData.receiverAddress))
+                        }
+                    }
+                    else -> {
+                        return Pair(true, context.getString(R.string.venmo_unparseable_response))
+                    }
+                }
+
+                // All validations passed
+                return Pair(true, context.getString(R.string.venmo_successful))
+            } catch(e: Exception){
+                e.printStackTrace()
+                return Pair(true, context.getString(R.string.venmo_unparseable_response))
+            }
+        }
+    }
+
+    return Pair(false, context.getString(R.string.venmo_canceled))
+}
+
+private fun hashHmac(payload: String): String? {
+    return try {
+        val mac: Mac = Mac.getInstance("HmacSHA256")
+        mac.init(SecretKeySpec(BuildConfig.VENMO_SECRET.toByteArray(), "HmacSHA256"))
+        String(mac.doFinal(payload.toByteArray()))
+    } catch (e: Exception) {
+        Log.d("VenmoSDK Error Message Caught", e.message!!)
+        ""
+    }
+}
+
+private fun base64UrlDecode(payload: String) =
+    String(
+        Base64.decode(
+            payload.replace('-', '+').replace('_', '/').trim {
+                it <= ' '
+            },
+            Base64.DEFAULT
+        )
+    )

@@ -15,7 +15,7 @@ class AddressBookViewModel(app: Application): BaseUIViewModel(app) {
 
     // TODO selected contact subsequently hidden. Need to discard selection
 
-    private val addressBook = AddressBook.getInstance(app)
+    private val addressBook = repository.addressBook
 
     private val _showHiddenContacts = MutableStateFlow(false)
 

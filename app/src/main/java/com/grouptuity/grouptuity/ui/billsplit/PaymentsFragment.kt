@@ -33,6 +33,7 @@ import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import androidx.recyclerview.widget.RecyclerView.NO_ID
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
+import com.google.android.material.snackbar.Snackbar
 import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.Diner
 import com.grouptuity.grouptuity.data.Payment
@@ -45,10 +46,7 @@ import com.grouptuity.grouptuity.ui.billsplit.PaymentsViewModel.Companion.INELIG
 import com.grouptuity.grouptuity.ui.billsplit.PaymentsViewModel.Companion.PROCESSING_STATE
 import com.grouptuity.grouptuity.ui.billsplit.PaymentsViewModel.Companion.SELECTING_METHOD_STATE
 import com.grouptuity.grouptuity.ui.billsplit.PaymentsViewModel.Companion.SHOWING_INSTRUCTIONS_STATE
-import com.grouptuity.grouptuity.ui.billsplit.payments.sendCashAppRequest
-import com.grouptuity.grouptuity.ui.billsplit.payments.sendPaybackLaterEmail
-import com.grouptuity.grouptuity.ui.billsplit.payments.sendVenmoRequest
-import com.grouptuity.grouptuity.ui.billsplit.payments.startAlgorandTransaction
+import com.grouptuity.grouptuity.ui.billsplit.payments.*
 import com.grouptuity.grouptuity.ui.billsplit.qrcodescanner.QRCodeScannerActivity
 import com.grouptuity.grouptuity.ui.util.BaseUIFragment
 import com.grouptuity.grouptuity.ui.util.views.RecyclerViewBottomOffset
@@ -66,8 +64,6 @@ class PaymentsFragment: BaseUIFragment<FragPaymentsBinding, PaymentsViewModel>()
         @JvmStatic
         fun newInstance() = PaymentsFragment()
     }
-
-    private var paymentInProcessing: Payment? = null
 
     // Activity result launchers for QR code scanning, processing payments, and installing PtP apps
     private lateinit var qrCodeScannerLauncher: ActivityResultLauncher<Intent>
@@ -168,16 +164,19 @@ class PaymentsFragment: BaseUIFragment<FragPaymentsBinding, PaymentsViewModel>()
             }
 
         venmoLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
-            if (result.resultCode == Activity.RESULT_OK) {
-                Log.e("ok venmo", result.toString())
-            } else {
-                Log.e("false venmo", result.toString())
+            viewModel.paymentInProcessing?.apply {
+                val (valid, message) = parseVenmoResponse(requireContext(), result, this)
+
+                if (valid) {
+                    viewModel.commitPayment()
+                }
+
+                Snackbar.make(binding.list, message, Snackbar.LENGTH_LONG).show()
             }
-            paymentInProcessing = null
         }
 
         venmoInstallerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-            paymentInProcessing?.also { sendVenmoRequest(this, venmoLauncher, null, it) }
+            viewModel.paymentInProcessing?.also { sendVenmoRequest(this, venmoLauncher, null, it) }
         }
 
         cashAppLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
@@ -186,11 +185,20 @@ class PaymentsFragment: BaseUIFragment<FragPaymentsBinding, PaymentsViewModel>()
             } else {
                 Log.e("false cash app", result.toString())
             }
-            paymentInProcessing = null
+            viewModel.paymentInProcessing = null
         }
 
         cashAppInstallerLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) {
-            paymentInProcessing?.also { sendVenmoRequest(this, cashAppLauncher, null, it) }
+            viewModel.paymentInProcessing?.also { sendVenmoRequest(this, cashAppLauncher, null, it) }
+        }
+
+        algorandLauncher = registerForActivityResult(ActivityResultContracts.StartActivityForResult()) { result: ActivityResult ->
+            if (result.resultCode == Activity.RESULT_OK) {
+                Log.e("ok algo", result.toString())
+            } else {
+                Log.e("false algo", result.toString())
+            }
+            viewModel.paymentInProcessing = null
         }
     }
 
@@ -202,15 +210,15 @@ class PaymentsFragment: BaseUIFragment<FragPaymentsBinding, PaymentsViewModel>()
         when (payment.method) {
             PaymentMethod.PAYBACK_LATER -> { sendPaybackLaterEmail(requireActivity(), emailLauncher, payment) }
             PaymentMethod.VENMO -> {
-                paymentInProcessing = payment
+                viewModel.paymentInProcessing = payment
                 sendVenmoRequest(this, venmoLauncher, venmoInstallerLauncher, payment)
             }
             PaymentMethod.CASH_APP -> {
-                paymentInProcessing = payment
+                viewModel.paymentInProcessing = payment
                 sendCashAppRequest(this, cashAppLauncher, cashAppInstallerLauncher, payment)
             }
             PaymentMethod.ALGO -> {
-                paymentInProcessing = payment
+                viewModel.paymentInProcessing = payment
                 startAlgorandTransaction(this, algorandLauncher, payment)
             }
             else -> {
@@ -442,10 +450,6 @@ class PaymentsFragment: BaseUIFragment<FragPaymentsBinding, PaymentsViewModel>()
 
         inner class ViewHolder(val viewBinding: FragPaymentsListitemBinding) :
             RecyclerView.ViewHolder(viewBinding.root) {
-            val paymentMethodButtonsAcceptedByPeers = mutableListOf<Triple<Int, Int, Int>>()
-            val paymentMethodButtonsNotAcceptedByPeers = mutableListOf<Triple<Int, Int, Int>>()
-            val paymentMethodButtonsAcceptedByRestaurant = mutableListOf<Triple<Int, Int, Int>>()
-            val paymentMethodButtonsNeedsSurrogate = mutableListOf<Triple<Int, Int, Int>>()
             var viewHolderPaymentStableId: Long? = null
             var viewHolderState: Int = DEFAULT_STATE
             var viewHolderAnimationStartTime = 0L
