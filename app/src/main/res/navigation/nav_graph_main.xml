@@ -13,16 +13,16 @@
         tools:layout="@layout/frag_bill_split">
 
         <argument
-            android:name="new_diner"
+            android:name="new_diner_id"
             app:nullable="true"
             android:defaultValue="@null"
-            app:argType="com.grouptuity.grouptuity.data.Diner"/>
+            app:argType="string"/>
 
         <argument
-            android:name="new_item"
+            android:name="new_item_id"
             app:nullable="true"
             android:defaultValue="@null"
-            app:argType="com.grouptuity.grouptuity.data.Item"/>
+            app:argType="string"/>
 
         <action android:id="@+id/switch_to_basic_tip_calc" app:destination="@id/basicTipCalcFragment" />
         <action android:id="@+id/open_addressbook" app:destination="@id/addressBookFragment" />
@@ -71,8 +71,8 @@
         android:label="DinerDetailsFragment"
         tools:layout="@layout/frag_diner_details">
         <argument
-            android:name="diner"
-            app:argType="com.grouptuity.grouptuity.data.Diner"/>
+            android:name="diner_id"
+            app:argType="string"/>
         <action
             android:id="@+id/popUpToBillSplit"
             app:destination="@id/billSplitFragment"
@@ -89,9 +89,9 @@
         android:label="@string/app_name"
         tools:layout="@layout/frag_itementry">
         <argument
-            android:name="edited_item"
+            android:name="edited_item_id"
             app:nullable="true"
-            app:argType="com.grouptuity.grouptuity.data.Item"/>
+            app:argType="string"/>
         <argument
             android:name="origin_params"
             app:nullable="true"
@@ -110,9 +110,9 @@
         android:label="DiscountsFragment"
         tools:layout="@layout/frag_discounts">
         <argument
-            android:name="newDiscount"
+            android:name="new_discount_id"
             app:nullable="true"
-            app:argType="com.grouptuity.grouptuity.data.Discount"/>
+            app:argType="string"/>
 
         <action android:id="@+id/edit_discount" app:destination="@id/discountEntryFragment"/>
     </nav_fragment>
@@ -123,9 +123,9 @@
         android:label="DiscountEntryFragment"
         tools:layout="@layout/frag_discount_entry">
         <argument
-            android:name="edited_discount"
+            android:name="edited_discount_id"
             app:nullable="true"
-            app:argType="com.grouptuity.grouptuity.data.Discount"/>
+            app:argType="string"/>
         <argument
             android:name="origin_params"
             app:nullable="true"
@@ -153,8 +153,8 @@
         android:label="@string/app_name"
         tools:layout="@layout/frag_debtentry">
         <argument
-            android:name="loaded_diner"
+            android:name="loaded_diner_id"
             app:nullable="true"
-            app:argType="com.grouptuity.grouptuity.data.Diner"/>
+            app:argType="string"/>
     </nav_fragment>
 </navigation>

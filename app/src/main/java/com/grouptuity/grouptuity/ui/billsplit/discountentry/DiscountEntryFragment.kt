@@ -30,6 +30,7 @@ import com.google.android.material.tabs.TabLayout
 import com.google.android.material.transition.Hold
 import com.grouptuity.grouptuity.MainActivity
 import com.grouptuity.grouptuity.R
+import com.grouptuity.grouptuity.data.entities.Discount
 import com.grouptuity.grouptuity.databinding.*
 import com.grouptuity.grouptuity.ui.custom.transitions.*
 import com.grouptuity.grouptuity.ui.custom.views.TabLayoutMediator
@@ -40,8 +41,10 @@ import java.text.NumberFormat
 // TODO handle inset changes
 // TODO handle screen orientation change (also on other fragments)
 
+// TODO number pad equals button is still active and enters zero
 
-class DiscountEntryFragment: Fragment() {
+
+class DiscountEntryFragment: UIFragment<FragDiscountEntryBinding, DiscountEntryViewModel, String?, Discount?>() {
     private val args: DiscountEntryFragmentArgs by navArgs()
     private var binding by setNullOnDestroy<FragDiscountEntryBinding>()
     private lateinit var discountEntryViewModel: DiscountEntryViewModel
@@ -49,13 +52,12 @@ class DiscountEntryFragment: Fragment() {
     private lateinit var backPressedCallback: OnBackPressedCallback
     private var toolbarInTertiaryState = false
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        discountEntryViewModel = ViewModelProvider(requireActivity()).get(DiscountEntryViewModel::class.java).also {
-            it.initializeForDiscount(args.editedDiscount)
-        }
-        binding = FragDiscountEntryBinding.inflate(inflater, container, false)
-        return binding.root
-    }
+    override fun inflate(inflater: LayoutInflater, container: ViewGroup?) =
+        FragDiscountEntryBinding.inflate(inflater, container, false)
+
+    override fun createViewModel() = ViewModelProvider(requireActivity())[DiscountEntryViewModel::class.java]
+
+    override fun getInitialInput(): String? = args.editedDiscountId
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -77,7 +79,7 @@ class DiscountEntryFragment: Fragment() {
         discountEntryViewModel.startTransitionEvent.observe(viewLifecycleOwner) {
             it.consume()?.also { requireView().doOnPreDraw { startPostponedEnterTransition() } }
         }
-        if(args.editedDiscount == null) {
+        if(args.editedDiscountId == null) {
             if(args.originParams == null) {
                 // New discount entry starting from tax & tip fragment
                 setupEnterTransitionNewFromTaxTip()
@@ -152,15 +154,9 @@ class DiscountEntryFragment: Fragment() {
         }
     }
 
-    private fun closeFragment(discountSaved: Boolean) {
-        // Prevent callback from intercepting back pressed events
-        backPressedCallback.isEnabled = false
-
-        // Prevent live updates to UI during return transition
-        discountEntryViewModel.freezeOutput()
-
-        if (args.editedDiscount == null) {
-            // Not editing an existing discount
+    override fun onFinish(output: Discount?) {
+        if (args.editedDiscountId == null) {
+            // Creating a new discount
             if (args.originParams == null) {
                 // Fragment was opened from TaxTipFragment so return to TaxTipFragment
                 setupReturnTransitionToTaxTip(requireView(), discountSaved)

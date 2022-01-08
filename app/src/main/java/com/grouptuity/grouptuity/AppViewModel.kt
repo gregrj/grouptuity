@@ -1,6 +1,5 @@
 package com.grouptuity.grouptuity
 
-import android.app.Application
 import android.content.res.Configuration
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.lifecycle.AndroidViewModel
@@ -24,7 +23,9 @@ class Event<out T>(private val content: T) {
 /**
  *
  */
-class AppViewModel(app: Application): AndroidViewModel(app) {
+class AppViewModel(app: GrouptuityApplication): AndroidViewModel(app) {
+    private val repository = Repository.getInstance(app)
+
     private val _darkThemeActive = MutableLiveData<Boolean>()
     val darkThemeActive: LiveData<Boolean> = _darkThemeActive
 

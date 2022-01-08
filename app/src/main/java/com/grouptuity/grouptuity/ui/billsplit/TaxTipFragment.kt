@@ -15,7 +15,8 @@ import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.CalculationType
 import com.grouptuity.grouptuity.databinding.FragTaxTipBinding
 import com.grouptuity.grouptuity.ui.calculator.CALCULATOR_RETURN_KEY
-import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
+import com.grouptuity.grouptuity.ui.util.views.setNullOnDestroy
+import java.math.BigDecimal
 import java.text.NumberFormat
 
 
@@ -32,7 +33,7 @@ class TaxTipFragment: Fragment() {
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
 
-        findNavController().currentBackStackEntry?.savedStateHandle?.getLiveData<Pair<CalculationType, Double>>(
+        findNavController().currentBackStackEntry?.savedStateHandle?.getLiveData<Pair<CalculationType, BigDecimal>>(
             CALCULATOR_RETURN_KEY)?.observe(viewLifecycleOwner) { pair ->
                 when(pair.first) {
                     CalculationType.TAX_PERCENT -> { taxTipViewModel.setTaxPercent(pair.second) }
@@ -47,23 +48,15 @@ class TaxTipFragment: Fragment() {
         percentFormatter.minimumFractionDigits = 0
         percentFormatter.maximumFractionDigits = 3
 
-        taxTipViewModel.subtotal.observe(viewLifecycleOwner, { value: Double -> binding.subtotal.text = NumberFormat.getCurrencyInstance().format(value) })
-
-        taxTipViewModel.discountAmount.observe(viewLifecycleOwner, { value: Double -> binding.discountAmount.text = NumberFormat.getCurrencyInstance().format(value) })
-
-        taxTipViewModel.subtotalWithDiscounts.observe(viewLifecycleOwner, { value: Double -> binding.afterDiscountAmount.text = NumberFormat.getCurrencyInstance().format(value) })
-
-        taxTipViewModel.taxPercent.observe(viewLifecycleOwner, { value: Double -> binding.taxPercent.setText(percentFormatter.format(value / 100.0)) })
-
-        taxTipViewModel.taxAmount.observe(viewLifecycleOwner, { value: Double -> binding.taxAmount.setText(NumberFormat.getCurrencyInstance().format(value)) })
-
-        taxTipViewModel.subtotalWithDiscountsAndTax.observe(viewLifecycleOwner, { value: Double -> binding.afterTaxAmount.text = NumberFormat.getCurrencyInstance().format(value) })
-
-        taxTipViewModel.tipPercent.observe(viewLifecycleOwner, { value: Double -> binding.tipPercent.setText(percentFormatter.format(value / 100.0)) })
-
-        taxTipViewModel.tipAmount.observe(viewLifecycleOwner, { value: Double -> binding.tipAmount.setText(NumberFormat.getCurrencyInstance().format(value)) })
-
-        taxTipViewModel.total.observe(viewLifecycleOwner, { value: Double -> binding.total.text = NumberFormat.getCurrencyInstance().format(value) })
+        taxTipViewModel.subtotal.observe(viewLifecycleOwner) { binding.subtotal.text = it }
+        taxTipViewModel.discountAmount.observe(viewLifecycleOwner) { binding.discountAmount.text = it }
+        taxTipViewModel.subtotalWithDiscounts.observe(viewLifecycleOwner) { binding.afterDiscountAmount.text = it }
+        taxTipViewModel.taxPercent.observe(viewLifecycleOwner) { binding.taxPercent.setText(it) }
+        taxTipViewModel.taxAmount.observe(viewLifecycleOwner) { binding.taxAmount.setText(it) }
+        taxTipViewModel.subtotalWithDiscountsAndTax.observe(viewLifecycleOwner) { binding.afterTaxAmount.text = it }
+        taxTipViewModel.tipPercent.observe(viewLifecycleOwner) { binding.tipPercent.setText(it) }
+        taxTipViewModel.tipAmount.observe(viewLifecycleOwner) { binding.tipAmount.setText(it) }
+        taxTipViewModel.total.observe(viewLifecycleOwner) { binding.total.text = it }
 
         val cardMargin = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_DIP, 32f, resources.displayMetrics).toInt()
         binding.nestedScrollView.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ ->
@@ -167,7 +160,7 @@ class TaxTipFragment: Fragment() {
 
             (requireActivity() as MainActivity).storeViewAsBitmap(requireParentFragment().requireView())
 
-            findNavController().navigate(BillSplitFragmentDirections.createFirstDiscount(editedDiscount = null, originParams = null),
+            findNavController().navigate(BillSplitFragmentDirections.createFirstDiscount(editedDiscountId = null, originParams = null),
                 FragmentNavigatorExtras(
                     binding.addDiscountsContainer to binding.addDiscountsContainer.transitionName,
                     binding.addDiscountButton to binding.addDiscountButton.transitionName

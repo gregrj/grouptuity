@@ -20,7 +20,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.android.material.transition.Hold
 import com.grouptuity.grouptuity.MainActivity
 import com.grouptuity.grouptuity.R
-import com.grouptuity.grouptuity.data.Diner
+import com.grouptuity.grouptuity.data.entities.Diner
 import com.grouptuity.grouptuity.databinding.FragDinersBinding
 import com.grouptuity.grouptuity.databinding.FragDinersListitemBinding
 import com.grouptuity.grouptuity.ui.custom.views.RecyclerViewBottomOffset
@@ -70,7 +70,7 @@ class DinersFragment: Fragment() {
                 (requireActivity() as MainActivity).storeViewAsBitmap(requireParentFragment().requireView())
 
                 findNavController().navigate(
-                    BillSplitFragmentDirections.viewDinerDetails(view.tag as Diner),
+                    BillSplitFragmentDirections.viewDinerDetails((view.tag as Diner).id),
                     FragmentNavigatorExtras(
                         viewBinding.cardBackground to viewBinding.cardBackground.transitionName,
                         viewBinding.contactIcon.image to viewBinding.contactIcon.image.transitionName
@@ -223,13 +223,13 @@ class DinersFragment: Fragment() {
                     //TODO handle orphan items / discounts from removed diner
                 }
 
-                if(newDiner.itemIds.isEmpty()) {
+                if(newDiner.items.value.isEmpty()) {
                     viewBinding.message.text = context.resources.getString(R.string.diners_zero_items)
                 } else {
                     viewBinding.message.text = context.resources.getQuantityString(
                         R.plurals.diners_num_items_with_subtotal,
-                        newDiner.itemIds.size,
-                        newDiner.itemIds.size,
+                        newDiner.items.value.size,
+                        newDiner.items.value.size,
                         dinerSubtotal)
                 }
 
@@ -272,7 +272,7 @@ class DinersFragment: Fragment() {
                     return newDiner.id == oldDiner.id &&
                             newDiner.name == oldDiner.name &&
                             newDiner.photoUri == oldDiner.photoUri &&
-                            newDiner.itemIds.size == oldDiner.itemIds.size &&
+                            newDiner.items.value.size == oldDiner.items.value.size &&
                             newDataSet[newPosition].second == mDataSet[oldPosition].second
                 }
             })

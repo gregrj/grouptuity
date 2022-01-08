@@ -3,19 +3,18 @@ package com.grouptuity.grouptuity.ui.billsplit.discountentry
 import android.app.Application
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.asLiveData
-import com.grouptuity.grouptuity.Event
+import com.grouptuity.grouptuity.GrouptuityApplication
 import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.*
+import com.grouptuity.grouptuity.data.entities.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
+import java.math.BigDecimal
 import java.text.NumberFormat
-import kotlin.math.abs
-import kotlin.math.max
 
 
-class DiscountEntryViewModel(app: Application): UIViewModel(app) {
+class DiscountEntryViewModel(app: GrouptuityApplication): UIViewModel<String?, Discount?>(app) {
     companion object {
         const val DISCOUNT_SAVED = 0
         const val INVALID_PRICE = 1
@@ -44,6 +43,8 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
     val loadReimbursementFragmentEvent: LiveData<Event<Boolean>> = loadReimbursementFragmentEventMutable
 
     private val priceCalcData = CalculatorData(CalculationType.ITEMIZED_DISCOUNT_AMOUNT)
+    val priceCalculator = CalculatorImpl(this, priceCalcData)
+
     private val costCalcData = CalculatorData(CalculationType.REIMBURSEMENT_AMOUNT)
 
     private val _isHandlingReimbursements = MutableStateFlow(false)
@@ -59,7 +60,6 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
     private val _reimburseeSelections = MutableStateFlow(reimburseeSelectionSet.toSet())
 
     // Edit tracking (null == not set, false == prior value unchanged, true == new value set)
-    private val editedPrice: Boolean? get() = priceCalcData.editedValue
     private val editedCost: Boolean? get() = costCalcData.editedValue
     private var editedRecipientSelections: Boolean? = null
     private var editedReimbursementSelections: Boolean? = null
@@ -74,19 +74,19 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
 
         it[0]?.run {
             val discount = this as Discount
-            val price = it[1] as Double?
-            val cost = it[2] as Double?
+            val price = it[1] as BigDecimal
+            val cost = it[2] as BigDecimal
             val inPercent = it[3] as Boolean
             val items = it[4] as Set<Item>
             val diners = it[5] as Set<Diner>
             val reimbursees = it[6] as Set<Diner>
 
-            discount.value != price ||
-            discount.cost != cost ||
-            discount.asPercent != inPercent ||
-            discount.itemIds.toSet() != items ||
-            discount.recipientIds.toSet() != diners ||
-            discount.purchaserIds.toSet() != reimbursees
+            discount.amount.value.compareTo(price) != 0 ||
+            discount.cost.value.compareTo(cost) != 0 ||
+            discount.asPercentInput != inPercent ||
+            discount.items.value != items ||
+            discount.recipients.value != diners ||
+            discount.purchasers.value != reimbursees
         } ?: false
     }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, false)
 
@@ -97,38 +97,37 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
         repository.items) { onItems, dinerSelections, itemSelections, _ ->
 
         if(onItems) {
-            itemSelections.flatMap { it.diners }.toSet()
+            itemSelections.flatMap { it.diners.value }.toSet()
         } else {
             dinerSelections
         }
     }
-    private val currencyValue: Flow<Double?> = combine(
+    private val currencyValue: Flow<BigDecimal> = combine(
         _isDiscountOnItems,
         priceCalcData.isInPercent,
         priceCalcData.numericalValue,
         _itemSelections,
         _dinerSelections,
-        repository.individualSubtotals) {
+        repository.individualSubtotals
+    ) {
         val onItems = it[0] as Boolean
         val asPercent  = it[1] as Boolean
-        val rawValue = it[2] as Double?
+        val numericalValue = it[2] as BigDecimal
         val items = it[3] as Set<Item>
         val recipients = it[4] as Set<Diner>
-        val subtotals = it[5] as Map<Diner, Double>
+        val subtotals = it[5] as Map<Diner, BigDecimal>
 
-        if(rawValue == null) {
-            null
-        } else if(asPercent) {
+        if(asPercent) {
             if(onItems) {
-                getDiscountCurrencyOnItemsPercent(rawValue, items)
+                getDiscountCurrencyOnItemsPercent(numericalValue, items)
             } else {
-                getDiscountCurrencyOnDinersPercent(rawValue, recipients, subtotals)
+                getDiscountCurrencyOnDinersPercent(numericalValue, recipients, subtotals)
             }
         } else {
-            rawValue
+            numericalValue
         }
     }
-    private val recipientShares: Flow<Map<Diner, Double>> = combine(
+    private val recipientShares: Flow<Map<Diner, BigDecimal>> = combine(
         _isDiscountOnItems,
         priceCalcData.isInPercent,
         priceCalcData.numericalValue,
@@ -139,12 +138,12 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
 
         val onItems = it[0] as Boolean
         val asPercent = it[1] as Boolean
-        val value = it[2] as Double?
+        val value = it[2] as BigDecimal
         val itemSelections = it[3] as Set<Item>
         val recipients = it[5] as Set<Diner>
-        val subtotals = it[6] as Map<Diner, Double>
+        val subtotals = it[6] as Map<Diner, BigDecimal>
 
-        if(value != null && value > 0.0) {
+        if(value > BigDecimal.ZERO) {
             if(onItems) {
                 if(asPercent) {
                     getDiscountRecipientSharesOnItemsPercent(value, itemSelections)
@@ -163,7 +162,7 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
         }
     }
     private val discountedSubtotals = combine(repository.individualSubtotals, recipientShares) { subtotals, shares ->
-        shares.mapValues { subtotals.getOrDefault(it.key, 0.0) - it.value }
+        shares.mapValues { subtotals.getOrDefault(it.key, BigDecimal.ZERO) - it.value }
     }
 
     private val calculatorToolBarTitle: Flow<String> = combine(_isHandlingReimbursements, priceCalcData.isInPercent) { handlingReimbursements, inPercent ->
@@ -278,14 +277,14 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
         repository.items,
         _itemSelections,
         _isDiscountOnItems,
-        priceCalcData.numericalValue.filterNotNull(),
+        priceCalcData.numericalValue,
         priceCalcData.isInPercent) {
 
         val diners = it[0] as List<Diner>
         val items = it[1] as List<Item>
         val itemSelections = it[2] as Set<Item>
         val onItems = it[3] as Boolean
-        val discountValue = it[4] as Double
+        val discountValue = it[4] as BigDecimal
         val asPercent = it[5] as Boolean
 
         val currencyFormatter = NumberFormat.getCurrencyInstance()
@@ -299,7 +298,7 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
                 Triple(
                     currencyFormatter.format(item.price),
                     discountedPrices[item]?.let { price -> currencyFormatter.format(price) },
-                    when(item.dinerIds.size) {
+                    when(item.diners.value.size) {
                         0 -> {
                             getApplication<Application>().resources.getString(R.string.discountentry_foritems_no_diners_warning)
                         }
@@ -323,37 +322,38 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
         val currencyFormatter = NumberFormat.getCurrencyInstance()
 
         diners.map { diner ->
+            val dinerItems = diner.items.value
             Triple(diner, dinerSelections.contains(diner), if(dinerSelections.contains(diner)) {
                 when {
-                    diner.itemIds.isEmpty() -> {
+                    dinerItems.isEmpty() -> {
                         getApplication<Application>().resources.getString(
                             R.string.discountentry_fordiners_unused,
-                            currencyFormatter.format(recipientShares.getOrDefault(diner, 0.0)))
+                            currencyFormatter.format(recipientShares.getOrDefault(diner, BigDecimal.ZERO)))
                     }
-                    discountedSubtotals.getOrDefault(diner, 0.0) >= 0.0 ||
-                            currencyFormatter.format(-discountedSubtotals.getOrDefault(diner, 0.0)) == currencyFormatter.format(0.0) -> {
+                    discountedSubtotals.getOrDefault(diner, BigDecimal.ZERO) >= BigDecimal.ZERO ||
+                            currencyFormatter.format(-discountedSubtotals.getOrDefault(diner, BigDecimal.ZERO)) == currencyFormatter.format(0.0) -> {
                         getApplication<Application>().resources.getString(
                             R.string.discountentry_fordiners_fullyused,
-                            currencyFormatter.format(max(0.0, discountedSubtotals.getOrDefault(diner, 0.0))),
-                            currencyFormatter.format(recipientShares.getOrDefault(diner, 0.0)))
+                            currencyFormatter.format(BigDecimal.ZERO.max(discountedSubtotals.getOrDefault(diner, BigDecimal.ZERO))),
+                            currencyFormatter.format(recipientShares.getOrDefault(diner, BigDecimal.ZERO)))
                     }
                     else -> {
                         getApplication<Application>().resources.getString(
                             R.string.discountentry_fordiners_partiallyused,
-                            currencyFormatter.format(max(0.0, discountedSubtotals.getOrDefault(diner, 0.0))),
-                            currencyFormatter.format(recipientShares.getOrDefault(diner, 0.0)))
+                            currencyFormatter.format(BigDecimal.ZERO.max(discountedSubtotals.getOrDefault(diner, BigDecimal.ZERO))),
+                            currencyFormatter.format(recipientShares.getOrDefault(diner, BigDecimal.ZERO)))
                     }
                 }
             } else {
-                when(diner.itemIds.size) {
+                when(dinerItems.size) {
                     0 -> {
                         getApplication<Application>().resources.getString(R.string.discountentry_fordiners_zeroitems)
                     }
                     else -> {
                         getApplication<Application>().resources.getQuantityString(
                             R.plurals.discountentry_fordiners_items_with_subtotal,
-                            diner.itemIds.size,
-                            diner.itemIds.size,
+                            dinerItems.size,
+                            dinerItems.size,
                             currencyFormatter.format(individualSubtotals.getOrDefault(diner, 0.0)))
                     }
                 }
@@ -368,17 +368,17 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
         currencyValue,
         costCalcData.numericalValue) { diners, selections, recipientShares, value, cost ->
 
-        val debts = if(cost != null && value != null && value > 0.0) {
+        val debts = if(cost > BigDecimal.ZERO && value > BigDecimal.ZERO) {
             getDiscountReimbursementDebts(cost, value, recipientShares)
         }
         else {
             emptyMap()
         }
 
-        val credits = if(cost == null) {
-            emptyMap()
-        } else {
+        val credits = if(cost > BigDecimal.ZERO) {
             getDiscountReimbursementCredits(cost, selections)
+        } else {
+            emptyMap()
         }
 
         val currencyFormatter = NumberFormat.getCurrencyInstance()
@@ -387,7 +387,7 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
             val message = if (diner in credits) {
                 if(diner in debts) {
                     val netReimbursementNumerical = credits[diner]!! - debts[diner]!!
-                    val netReimbursementString = currencyFormatter.format(abs(netReimbursementNumerical))
+                    val netReimbursementString = currencyFormatter.format(netReimbursementNumerical.abs())
 
                     if(netReimbursementString == currencyFormatter.format(0.0)) {
                         getApplication<Application>().resources.getString(R.string.discountentry_reimbursement_neutral)
@@ -395,7 +395,7 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
                         val fullDebtString = currencyFormatter.format(debts[diner])
                         val fullCreditString = currencyFormatter.format(credits[diner])
 
-                        if (netReimbursementNumerical > 0.0) {
+                        if (netReimbursementNumerical > BigDecimal.ZERO) {
                             getApplication<Application>().resources.getString(
                                 R.string.discountentry_reimbursement_receive_reduced,
                                 netReimbursementString,
@@ -531,9 +531,7 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
 
     fun startTransition() { startTransitionEventMutable.value = Event(true) }
 
-    fun initializeForDiscount(discount: Discount?) {
-        unFreezeOutput()
-
+    override fun onInitialize(input: String?) {
         // Invalidate any unconsumed events
         startTransitionEventMutable.value?.consume()
         loadDinerListFragmentEventMutable.value?.consume()
@@ -552,6 +550,8 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
 
         _isHandlingReimbursements.value = false
 
+        val discount = input?.let { repository.getDiscount(input) }
+
         if(discount == null) {
             // Creating new discount
             loadedDiscount.value = null
@@ -569,24 +569,28 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
             loadedDiscount.value = discount
 
             priceCalcData.reset(
-                if (discount.asPercent) CalculationType.ITEMIZED_DISCOUNT_PERCENT else CalculationType.ITEMIZED_DISCOUNT_AMOUNT,
-                discount.value,
+                if (discount.asPercentInput) {
+                    CalculationType.ITEMIZED_DISCOUNT_PERCENT
+                } else {
+                    CalculationType.ITEMIZED_DISCOUNT_AMOUNT
+                },
+                discount.amountInput,
                 false
             )
-            costCalcData.reset(CalculationType.REIMBURSEMENT_AMOUNT, discount.cost, false)
+            costCalcData.reset(CalculationType.REIMBURSEMENT_AMOUNT, discount.costInput, false)
 
-            _isDiscountOnItems.value = if(discount.onItems) {
-                itemSelectionSet.addAll(discount.items)
+            _isDiscountOnItems.value = if (discount.onItemsInput) {
+                itemSelectionSet.addAll(discount.items.value)
                 editedRecipientSelections = if(itemSelectionSet.isNotEmpty()) false else null
                 loadItemListFragmentEventMutable.value = Event(true)
                 true
             } else {
-                dinerSelectionSet.addAll(discount.recipients)
+                dinerSelectionSet.addAll(discount.recipients.value)
                 editedRecipientSelections = if(dinerSelectionSet.isNotEmpty()) false else null
                 loadDinerListFragmentEventMutable.value = Event(true)
                 false
             }
-            reimburseeSelectionSet.addAll(discount.purchasers)
+            reimburseeSelectionSet.addAll(discount.purchasers.value)
             editedReimbursementSelections = if(reimburseeSelectionSet.isNotEmpty()) false else null
         }
 
@@ -829,15 +833,46 @@ class DiscountEntryViewModel(app: Application): UIViewModel(app) {
         val purchasers = reimburseeSelectionSet.toList()
 
         when {
-            price == null || price == 0.0 -> { return INVALID_PRICE }
+            price <= BigDecimal.ZERO -> { return INVALID_PRICE }
             onItems && items.isEmpty() -> { return MISSING_ITEMS }
             !onItems && recipients.isEmpty() -> { return MISSING_RECIPIENTS }
-            (cost != null && cost > 0.0) && purchasers.isEmpty() -> { return MISSING_PURCHASERS }
-            purchasers.isNotEmpty() && (cost == null || cost == 0.0) -> { return INVALID_COST }
+            cost > BigDecimal.ZERO && purchasers.isEmpty() -> { return MISSING_PURCHASERS }
+            purchasers.isNotEmpty() && cost > BigDecimal.ZERO -> { return INVALID_COST }
             else -> {
-                loadedDiscount.value.apply {
-                    if (this == null) {
-                        repository.addDiscount(asPercent, onItems, price, cost, items, recipients, purchasers)
+                val editedDiscount = loadedDiscount.value
+                finishFragment(
+                    if (editedDiscount == null) {
+                        // Creating a new discount
+                        when {
+                            asPercent && onItems -> {
+                                repository.createNewDiscountForItemsByPercent(
+                                    price,
+                                    cost,
+                                    items,
+                                    purchasers)
+                            }
+                            asPercent && !onItems -> {
+                                repository.createNewDiscountForDinersByPercent(
+                                    price,
+                                    cost,
+                                    recipients,
+                                    purchasers)
+                            }
+                            !asPercent && onItems -> {
+                                repository.createNewDiscountForItemsByValue(
+                                    price,
+                                    cost,
+                                    items,
+                                    purchasers)
+                            }
+                            else -> {
+                                repository.createNewDiscountForDinersByValue(
+                                    price,
+                                    cost,
+                                    recipients,
+                                    purchasers)
+                            }
+                        }
                     } else {
                         repository.editDiscount(
                             this,

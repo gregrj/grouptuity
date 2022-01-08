@@ -5,6 +5,6 @@
     <string name="default_default_tip_percent">15.0</string>
     <bool name="default_tax_is_tipped">false</bool>
     <bool name="default_discounts_reduce_tip">false</bool>
-    <bool name="default_auto_add_self">true</bool>
+    <bool name="default_auto_add_user">true</bool>
     <bool name="default_contact_search_typo_assist">true</bool>
 </resources>

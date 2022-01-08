@@ -17,7 +17,9 @@ import kotlin.math.max
 
 // TODO residual issues with unusual discount/tax/tip input with bill amount as total
 
-class BasicTipCalcViewModel(app: Application): UIViewModel(app) {
+// TODO convert to big decimal
+
+class BasicTipCalcViewModel(app: Application): UIViewModel<Unit?, Unit?>(app) {
     private val currencyFormatter: NumberFormat = NumberFormat.getCurrencyInstance()
     private val percentFormatter: NumberFormat = NumberFormat.getPercentInstance().apply {
         this.minimumFractionDigits = 0

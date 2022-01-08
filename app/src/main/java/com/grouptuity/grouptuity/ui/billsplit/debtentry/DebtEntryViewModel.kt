@@ -9,6 +9,7 @@ import com.grouptuity.grouptuity.data.*
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
+import java.math.BigDecimal
 import java.text.NumberFormat
 
 
@@ -46,10 +47,9 @@ class DebtEntryViewModel(app: Application): UIViewModel(app) {
     val isLaunchingDinerPresent: Boolean get() = launchingDiner == null || creditorSelectionSet.contains(launchingDiner) || debtorSelectionSet.contains(launchingDiner)
 
     // Live Data Output
-    val dinerData: LiveData<List<DinerDatapoint>> = combine(repository.diners, _creditorSelections, _debtorSelections, calculator.numericalValue) { diners, creditors, debtors, value ->
-        val amount = value ?: 0.0
-        val debtShare = amount / debtors.size
-        val creditShare = amount / creditors.size
+    val dinerData: LiveData<List<DinerDatapoint>> = combine(repository.diners, _creditorSelections, _debtorSelections, calcData.numericalValue) { diners, creditors, debtors, amount ->
+        val debtShare = amount.divide(BigDecimal(debtors.size))
+        val creditShare = amount.divide(BigDecimal(creditors.size))
 
         diners.map { diner ->
             val isCreditor = creditors.contains(diner)
@@ -83,12 +83,18 @@ class DebtEntryViewModel(app: Application): UIViewModel(app) {
     }.withOutputSwitch(isOutputFlowing).asLiveData()
     val debtName: LiveData<String> = repository.debts.combine(debtNameInput) { debts, nameInput ->
         nameInput ?: getApplication<Application>().resources.getString(R.string.debtentry_toolbar_debt_number) + (debts.size + 1)
-    }.withOutputSwitch(isOutputFlowing).asLiveData()
-    val areDebtInputsValid: LiveData<Boolean> = combine(calculator.numericalValue, creditorSelectionCount, debtorSelectionCount) { debtValue, creditorCount, debtorCount ->
-        debtValue != null && creditorCount > 0 && debtorCount > 0
-    }.withOutputSwitch(isOutputFlowing).asLiveData()
+    }.asLiveData(isOutputLocked)
+    val areDebtInputsValid: LiveData<Boolean> = combine(creditorSelectionCount, debtorSelectionCount) { creditorCount, debtorCount ->
+        creditorCount > 0 && debtorCount > 0
+    }.asLiveData(isOutputLocked)
 
-    val toolBarState: LiveData<ToolBarState> = combine(calculator.isNumberPadVisible, editingName, debtName.asFlow(), debtorSelectionCount, creditorSelectionCount) { calcVisible, editing, name, debtorCount, creditorCount ->
+    val toolBarState: LiveData<ToolBarState> = combine(
+        calcData.isNumberPadVisible,
+        editingName,
+        debtName.asFlow(),
+        debtorSelectionCount,
+        creditorSelectionCount
+    ) { calcVisible, editing, name, debtorCount, creditorCount ->
         when {
             calcVisible -> {
                 ToolBarState(
@@ -173,14 +179,14 @@ class DebtEntryViewModel(app: Application): UIViewModel(app) {
         creditorSelectionSet.clear()
         debtorSelectionSet.clear()
 
-        if(diner != null) {
-            creditorSelectionSet.add(diner)
+        if(input != null) {
+            debtorSelectionSet.add(input)
         }
 
         editingName.value = false
         hasEditedCreditorSelections = false
         hasEditedDebtorSelections = false
-        lastEditWasCreditor = true
+        lastEditWasCreditor = false
 
         calculator.reset(CalculationType.ITEM_PRICE, null, showNumberPad = true)
         debtNameInput.value = null
@@ -315,8 +321,8 @@ class DebtEntryViewModel(app: Application): UIViewModel(app) {
     }
 
     fun addDebtToBill() {
-        repository.addDebt(
-            calculator.numericalValue.value ?: 0.0,
+        repository.createNewDebt(
+            calcData.numericalValue.value.toString(),
             debtName.value ?: "Debt",
             debtorSelectionSet,
             creditorSelectionSet)

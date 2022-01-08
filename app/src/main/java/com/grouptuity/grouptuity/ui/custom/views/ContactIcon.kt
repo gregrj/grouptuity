@@ -22,7 +22,7 @@ import com.bumptech.glide.load.engine.GlideException
 import com.bumptech.glide.request.RequestListener
 import com.bumptech.glide.request.target.Target
 import com.grouptuity.grouptuity.R
-import com.grouptuity.grouptuity.data.Contact
+import com.grouptuity.grouptuity.data.entities.Contact
 import com.grouptuity.grouptuity.databinding.ContactIconBinding
 import kotlin.math.roundToInt
 

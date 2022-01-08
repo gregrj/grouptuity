@@ -1,5 +1,17 @@
 package com.grouptuity.grouptuity.ui.billsplit.payments
 
+<<<<<<< Updated upstream
+=======
+import android.content.ActivityNotFoundException
+import android.content.ComponentName
+import android.content.Intent
+import android.net.Uri
+import android.widget.Toast
+import androidx.activity.result.ActivityResultLauncher
+import androidx.fragment.app.Fragment
+import com.grouptuity.grouptuity.R
+import com.grouptuity.grouptuity.data.entities.Payment
+>>>>>>> Stashed changes
 import com.grouptuity.grouptuity.ui.billsplit.qrcodescanner.QRCodeParser
 
 fun cashAppAddressToCashtag(address: String) = address

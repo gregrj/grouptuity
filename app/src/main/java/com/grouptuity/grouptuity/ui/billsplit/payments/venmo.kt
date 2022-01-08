@@ -14,6 +14,8 @@ import com.android.volley.toolbox.StringRequest
 import com.android.volley.toolbox.Volley
 import com.grouptuity.grouptuity.BuildConfig
 import com.grouptuity.grouptuity.R
+import com.grouptuity.grouptuity.data.entities.Payment
+import com.grouptuity.grouptuity.databinding.VenmoWebviewBinding
 import com.grouptuity.grouptuity.ui.billsplit.qrcodescanner.QRCodeParser
 import java.io.UnsupportedEncodingException
 import java.net.HttpURLConnection

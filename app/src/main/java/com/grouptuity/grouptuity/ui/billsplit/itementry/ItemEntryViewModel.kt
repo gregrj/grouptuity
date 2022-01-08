@@ -3,9 +3,11 @@ package com.grouptuity.grouptuity.ui.billsplit.itementry
 import android.app.Application
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.asFlow
-import androidx.lifecycle.asLiveData
+import com.grouptuity.grouptuity.GrouptuityApplication
 import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.*
+import com.grouptuity.grouptuity.data.entities.Diner
+import com.grouptuity.grouptuity.data.entities.Item
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
@@ -16,6 +18,7 @@ class ItemEntryViewModel(app: Application): UIViewModel(app) {
         data class ToolBarState(val title: String, val navIconVisible: Boolean, val nameEditVisible: Boolean, val tertiaryBackground: Boolean)
     }
 
+class ItemEntryViewModel(app: GrouptuityApplication): UIViewModel<String?, Item?>(app) {
     private val formatter = NumberFormat.getCurrencyInstance()
     private val calculator = CalculatorData(CalculationType.ITEM_PRICE, acceptValueCallback = {
         hasUntouchedPriorSelections = false
@@ -90,11 +93,11 @@ class ItemEntryViewModel(app: Application): UIViewModel(app) {
         }
     }
 
-    fun initializeForItem(item: Item?) {
-        unFreezeOutput()
-
+    override fun onInitialize(input: String?) {
         selectionSet.clear()
         editingName.value = false
+
+        val item = input?.let { repository.getItem(input) }
 
         if(item == null) {
             // New item
@@ -106,9 +109,9 @@ class ItemEntryViewModel(app: Application): UIViewModel(app) {
             // Editing existing item
             loadedItem.value = item
             pauseDinerRefresh.value = false
-            calculator.reset(CalculationType.ITEM_PRICE, item.price, showNumberPad = false)
+            calculatorData.reset(CalculationType.ITEM_PRICE, item.priceInput, showNumberPad = false)
             itemNameInput.value = item.name
-            selectionSet.addAll(item.diners)
+            selectionSet.addAll(item.diners.value)
             hasUntouchedPriorSelections = selectionSet.isNotEmpty()
         }
 
@@ -178,22 +181,37 @@ class ItemEntryViewModel(app: Application): UIViewModel(app) {
         _selections.value = selectionSet.toSet()
     }
 
-    fun addNewItemToBill(): Item? = selections.value?.let {
-        repository.createNewItem(
-            calculator.numericalValue.value ?: 0.0,
-            itemName.value ?: "Item",
-            diners.value.filter { diner -> it.contains(diner) })
+    fun promptToApplyEntireBillDiscounts() {
+        //TODO
     }
 
-    fun saveItemEdits() {
-        loadedItem.value.also { editedItem ->
-            selections.value?.apply {
-                repository.editItem(
-                    editedItem!!,
-                    calculator.numericalValue.value ?: 0.0,
-                    itemName.value ?: "Item",
-                    diners.value.filter { diner -> this.contains(diner) })
-            }
+    fun trySavingItem(applyEntireBillDiscounts: Boolean) {
+        val dinerSelections = _selections.value
+
+        if (dinerSelections.isNullOrEmpty()) {
+            /* No diner selections so cannot proceed */
+        } else {
+            val editedItem = loadedItem.value
+            finishFragment(
+                if (editedItem == null) {
+                    // Creating a new item
+                    repository.createNewItem(
+                        calculatorData.numericalValue.value.toString(),
+                        itemName.value ?: "Item",
+                        dinerSelections,
+                        applyEntireBillDiscounts
+                    )
+                } else {
+                    // Editing an existing item
+                    repository.editItem(
+                        editedItem,
+                        itemName.value ?: editedItem.name,
+                        calculatorData.numericalValue.value.toString(),
+                        dinerSelections)
+
+                    editedItem
+                }
+            )
         }
     }
 }

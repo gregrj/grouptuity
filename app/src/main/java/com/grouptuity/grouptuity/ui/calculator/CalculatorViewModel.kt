@@ -1,37 +1,38 @@
 package com.grouptuity.grouptuity.ui.calculator
 
-import android.app.Application
 import androidx.lifecycle.LiveData
-import androidx.lifecycle.asLiveData
-import com.grouptuity.grouptuity.Event
+import androidx.lifecycle.viewModelScope
+import com.grouptuity.grouptuity.GrouptuityApplication
 import com.grouptuity.grouptuity.data.*
 import kotlinx.coroutines.flow.*
 
 
-class CalculatorViewModel(app: Application): UIViewModel(app) {
+class CalculatorViewModel(app: GrouptuityApplication): UIViewModel<CalculationType, Pair<Double, String>?>(app) {
 
-    private val calcData = CalculatorData(CalculationType.TIP_PERCENT, autoHideNumberPad = false)
+    private val calcData = CalculatorData(CalculationType.TIP_PERCENT, autoHideNumberPad = false) {
+        // Freeze UI for number pad will update before exit transition starts
+        notifyTransitionStarted()
+    }
+    val calculator = CalculatorImpl(this, calcData)
 
-    val unfrozenFormattedValue: StateFlow<String> = calcData.displayValue
-    val formattedValue: LiveData<String> = calcData.displayValue.withOutputSwitch(isOutputFlowing).asLiveData()
-    val backspaceButtonVisible: LiveData<Boolean> = calcData.backspaceButtonVisible.withOutputSwitch(isOutputFlowing).asLiveData()
-    val zeroButtonEnabled: LiveData<Boolean> = calcData.zeroButtonEnabled.withOutputSwitch(isOutputFlowing).asLiveData()
-    val nonZeroButtonsEnabled: LiveData<Boolean> = calcData.nonZeroButtonsEnabled.withOutputSwitch(isOutputFlowing).asLiveData()
-    val decimalButtonEnabled: LiveData<Boolean> = calcData.decimalButtonEnabled.withOutputSwitch(isOutputFlowing).asLiveData()
-    val acceptButtonEnabled: LiveData<Boolean> = calcData.acceptButtonEnabled.withOutputSwitch(isOutputFlowing).asLiveData()
+    val toolBarInTertiaryState: LiveData<Boolean> = calculator.acceptButtonEnabled
 
-    val acceptEvents: LiveData<Event<Triple<Double, String, String>>> = calcData.acceptEvents.transformLatest {
-        it.consume()?.apply {
-            emit(Event(Triple(
-                this.toDouble(),
-                CalculatorData.formatRawValue(
-                    true,
-                    this,
-                    calcData.isInPercent.value),
-                CalculatorData.formatRawValue(
-                    false,
-                    this,
-                    calcData.isInPercent.value))))
+    init {
+        viewModelScope.launch {
+            calcData.acceptEvents.collect {
+                it.consume()?.apply {
+                    finishFragment(
+                        Pair(
+                            this.value.toDouble(),
+                            CalculatorData.formatRawValue(
+                                false,
+                                this.value,
+                                calcData.isInPercent.value
+                            )
+                        )
+                    )
+                }
+            }
         }
     }.asLiveData()
 

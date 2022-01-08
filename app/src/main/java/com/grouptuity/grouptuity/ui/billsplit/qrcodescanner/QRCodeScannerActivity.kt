@@ -28,11 +28,10 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.google.mlkit.vision.barcode.BarcodeScanning
 import com.google.mlkit.vision.common.InputImage
 import com.grouptuity.grouptuity.R
-import com.grouptuity.grouptuity.data.PaymentMethod
+import com.grouptuity.grouptuity.data.entities.PaymentMethod
 import com.grouptuity.grouptuity.databinding.ActivityCameraBinding
 import java.util.concurrent.Executors
 import kotlin.math.min
-
 
 
 class QRCodeScannerActivity: AppCompatActivity() {

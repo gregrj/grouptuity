@@ -4,15 +4,17 @@ import android.app.Application
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.asLiveData
-import com.grouptuity.grouptuity.Event
+import com.grouptuity.grouptuity.GrouptuityApplication
 import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.*
+import com.grouptuity.grouptuity.data.entities.Contact
+import com.grouptuity.grouptuity.data.entities.Diner
+import com.grouptuity.grouptuity.data.entities.Payment
+import com.grouptuity.grouptuity.data.entities.PaymentMethod
 import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.mapLatest
 import java.text.NumberFormat
 
 data class PaymentData(val payment: Payment,
-                       val stableId: Long?,
                        val payerString: String,
                        val payInstructionsString: String,
                        val amountString: String,
@@ -21,7 +23,8 @@ data class PaymentData(val payment: Payment,
                        val allowSurrogatePaymentMethods: Boolean,
                        val displayState: Int)
 
-class PaymentsViewModel(app: Application): UIViewModel(app) {
+
+class PaymentsViewModel(app: GrouptuityApplication): BaseUIViewModel(app) {
 
     companion object {
         const val DEFAULT_STATE = 0
@@ -48,50 +51,73 @@ class PaymentsViewModel(app: Application): UIViewModel(app) {
     private var cachedPayeeAddress: String? = null
     private var cachedSurrogate: Diner? = null
     private var cachedSurrogateAddress: String? = null
-    private val paymentsWithStableIds = repository.payments.mapLatest { payments ->
-        payments.map { Pair(it, repository.getPaymentStableId(it)) }
-    }
 
     val diners = repository.diners.asLiveData()
     val paymentsData: LiveData<Pair<List<PaymentData>, Pair<Long?, Int>>> =
-        combine(paymentsWithStableIds, activePaymentAndMethod) { paymentsAndStableIds, active ->
-            val surrogates = paymentsAndStableIds.mapNotNull { (payment, _) ->
-                if (payment.payee.isRestaurant() && payment.surrogate?.isCashPool() == false) {
+        combine(
+            repository.payments,
+            activePaymentAndMethod,
+            repository.processingPayments
+        ) { payments, active, processing ->
+            val surrogates = payments.mapNotNull { payment ->
+                if (payment.payee.isRestaurant && payment.surrogate?.isCashPool == false) {
                     payment.surrogate
                 } else {
                     null
                 }
             }.toSet()
 
-            if (active.first == null) {
-                // All items in default state
-                Pair(
-                    paymentsAndStableIds.mapNotNull {
-                        if (it.first.amount > PRECISION) {
-                            createPaymentData(
-                                it.first,
-                                it.second,
-                                surrogates.contains(it.first.payer),
-                                DEFAULT_STATE
-                            )
-                        } else {
-                            null
-                        }
-                    },
-                    INITIAL_STABLE_ID_AND_STATE
-                )
+            val eligibleSurrogates = getEligibleSurrogates(payments)
+
+            val activePayment = active.first
+
+            if (activePayment == null) {
+                if (processing) {
+                    // Only display unprocessed payments that are handled through the app
+                    Pair(
+                        payments.mapNotNull { payment ->
+                            if (payment.hasNonZeroAmount && payment.isUnprocessed) {
+                                createPaymentData(
+                                    payment,
+                                    surrogates.contains(payment.payer),
+                                    PROCESSING_STATE,
+                                    eligibleSurrogates
+                                )
+                            } else {
+                                null
+                            }
+                        },
+                        Pair(null, PROCESSING_STATE)
+                    )
+                } else {
+                    // All items in default state
+                    Pair(
+                        payments.mapNotNull { payment ->
+                            if (payment.hasNonZeroAmount) {
+                                createPaymentData(
+                                    payment,
+                                    surrogates.contains(payment.payer),
+                                    DEFAULT_STATE,
+                                    eligibleSurrogates
+                                )
+                            } else {
+                                null
+                            }
+                        },
+                        INITIAL_STABLE_ID_AND_STATE
+                    )
+                }
             } else {
-                val activePaymentStableId = repository.getPaymentStableId(active.first)
+                val activePaymentStableId = activePayment.stableId
                 if (active.second == null) {
                     // Selecting payment method on one of the items
                     Pair(
-                        paymentsAndStableIds.mapNotNull {
-                            if (it.first.amount > PRECISION) {
+                        payments.mapNotNull { payment ->
+                            if (payment.hasNonZeroAmount) {
                                 createPaymentData(
-                                    it.first,
-                                    it.second,
-                                    surrogates.contains(it.first.payer),
-                                    if (it.second == activePaymentStableId) {
+                                    payment,
+                                    surrogates.contains(payment.payer),
+                                    if (payment.stableId == activePaymentStableId) {
                                         SELECTING_METHOD_STATE
                                     } else {
                                         DEFAULT_STATE
@@ -104,43 +130,35 @@ class PaymentsViewModel(app: Application): UIViewModel(app) {
                         Pair(activePaymentStableId, SELECTING_METHOD_STATE)
                     )
                 } else {
-                    val ineligibleSurrogates = paymentsAndStableIds.mapNotNull { (payment, _) ->
-                        if (payment.payee.isRestaurant() && payment.surrogate?.isCashPool() == false) {
-                            payment.payer
-                        } else {
-                            null
-                        }
-                    }.toSet()
+                    val ineligibleSurrogates = getIneligibleSurrogates(payments)
 
                     Pair(
-                        paymentsAndStableIds.map {
+                        payments.map { payment ->
                             createPaymentData(
-                                it.first,
-                                it.second,
-                                surrogates.contains(it.first.payer),
+                                payment,
+                                surrogates.contains(payment.payer),
                                 when {
-                                    (it.second == activePaymentStableId) -> {
+                                    (payment.stableId == activePaymentStableId) -> {
                                         SHOWING_INSTRUCTIONS_STATE
                                     }
-                                    ineligibleSurrogates.contains(it.first.payer) -> {
+                                    ineligibleSurrogates.contains(payment.payer) -> {
                                         INELIGIBLE_STATE
                                     }
                                     else -> { CANDIDATE_STATE }
                                 }
                             )
-                        }.filter { it.payment.payee.isRestaurant() },
+                        }.filter { it.payment.payee.isRestaurant },
                         Pair(activePaymentStableId, SHOWING_INSTRUCTIONS_STATE)
                     )
                 }
             }
         }.asLiveData()
 
-    private fun createPaymentData(payment: Payment, stableId: Long?, actingAsSurrogate: Boolean, displayState: Int) =
+    private fun createPaymentData(payment: Payment, actingAsSurrogate: Boolean, displayState: Int, eligibleSurrogates: Set<Diner>) =
         when {
-            payment.payer.isCashPool() -> {
+            payment.payer.isCashPool -> {
                 PaymentData(
                     payment,
-                    stableId,
                     payment.payee.name,
                     getApplication<Application>().resources.getString(R.string.payments_instruction_from_cash_pool),
                     NumberFormat.getCurrencyInstance().format(payment.amount),
@@ -150,10 +168,9 @@ class PaymentsViewModel(app: Application): UIViewModel(app) {
                     displayState
                 )
             }
-            payment.payee.isCashPool() -> {
+            payment.payee.isCashPool -> {
                 PaymentData(
                     payment,
-                    stableId,
                     payment.payer.name,
                     getApplication<Application>().resources.getString(R.string.payments_instruction_into_cash_pool),
                     NumberFormat.getCurrencyInstance().format(payment.amount),
@@ -163,12 +180,11 @@ class PaymentsViewModel(app: Application): UIViewModel(app) {
                     displayState
                 )
             }
-            payment.payee.isRestaurant() -> {
+            payment.payee.isRestaurant -> {
                 val surrogate = payment.surrogate
 
                 PaymentData(
                     payment,
-                    stableId,
                     payment.payer.name,
                     when {
                         surrogate == null -> {
@@ -179,7 +195,7 @@ class PaymentsViewModel(app: Application): UIViewModel(app) {
                                 )
                             )
                         }
-                        surrogate.isCashPool() -> {
+                        surrogate.isCashPool -> {
                             getApplication<Application>().resources.getString(R.string.payments_instruction_into_cash_pool)
                         }
                         else -> {
@@ -199,7 +215,6 @@ class PaymentsViewModel(app: Application): UIViewModel(app) {
             else -> {
                 PaymentData(
                     payment,
-                    stableId,
                     payment.payer.name,
                     getApplication<Application>().resources.getString(payment.method.paymentInstructionStringId, payment.payee.name),
                     NumberFormat.getCurrencyInstance().format(payment.amount),
@@ -210,6 +225,39 @@ class PaymentsViewModel(app: Application): UIViewModel(app) {
                 )
             }
         }
+
+    private fun getEligibleSurrogates(payments: List<Payment>): Set<Diner> =
+        repository.diners.value.toSet() - getIneligibleSurrogates(payments)
+
+    private fun getIneligibleSurrogates(payments: List<Payment>): Set<Diner> =
+        payments.mapNotNull { payment ->
+            if (payment.payee.isRestaurant && payment.surrogate?.isCashPool == false) {
+                payment.payer
+            } else {
+                null
+            }
+        }.toSet()
+
+    override fun handleOnBackPressed() {
+        when {
+            repository.processingPayments.value -> {
+                repository.processingPayments.value = false
+            }
+            activePaymentAndMethod.value.first != null -> {
+                setActivePayment(null)
+            }
+            else -> {
+                finishFragment(null)
+            }
+        }
+    }
+
+    fun commitPayment() {
+        paymentInProcessing?.apply {
+            repository.commitPayment(this)
+            paymentInProcessing = null
+        }
+    }
 
     fun setActivePayment(payment: Payment?) {
         cachedMethod = null
@@ -224,7 +272,7 @@ class PaymentsViewModel(app: Application): UIViewModel(app) {
         cachedMethod = method
         activePaymentAndMethod.value.first?.apply {
             when {
-                payee.isRestaurant() -> {
+                payee.isRestaurant -> {
                     if (method.acceptedByRestaurant) {
                         // Payment will be made directly to the restaurant
                         if (method.processedWithinApp) {
@@ -233,7 +281,7 @@ class PaymentsViewModel(app: Application): UIViewModel(app) {
                                 // Existing template has same method so no further action required
                                 setActivePayment(null)
                             } else {
-                                cachedPayerAddress = payer.getDefaultAddressForMethod(method)
+                                cachedPayerAddress = payer.getAddressForMethod(method)
                                 if (cachedPayerAddress == null) {
                                     // Need to input payer alias before setting payment method
                                     showSetAddressDialogEventMutable.value = Event(Triple(
@@ -255,7 +303,7 @@ class PaymentsViewModel(app: Application): UIViewModel(app) {
                                 cachedPayerAddress = template.payerAddress
                                 activePaymentAndMethod.value = Pair(this, method)
                             } else {
-                                cachedPayerAddress = payer.getDefaultAddressForMethod(method)
+                                cachedPayerAddress = payer.getAddressForMethod(method)
                                 if (cachedPayerAddress == null) {
                                     // Need payer alias before setting payment method
                                     showSetAddressDialogEventMutable.value = Event(Triple(
@@ -272,7 +320,7 @@ class PaymentsViewModel(app: Application): UIViewModel(app) {
                         }
                     }
                 }
-                payee.isCashPool() || payer.isCashPool() -> {
+                payee.isCashPool || payer.isCashPool -> {
                     /* These transactions represent payments to/from the cash pool due to a credit card
                        split being under/over the splitting diner's payment due to the restaurant. The
                        user cannot change the payment method. */
@@ -285,13 +333,13 @@ class PaymentsViewModel(app: Application): UIViewModel(app) {
                             // Existing template has same method so no further action required
                             setActivePayment(null)
                         } else {
-                            val payerAddress = payer.getDefaultAddressForMethod(method)
-                            if (payerAddress == null) {
+                            cachedPayerAddress = payer.getAddressForMethod(method)
+                            if (cachedPayerAddress == null) {
                                 // Need payer alias before setting payment method
                                 showSetAddressDialogEventMutable.value = Event(Triple(
                                     SELECTING_PAYER_ALIAS, payer, method))
                             } else {
-                                cachedPayeeAddress = payee.getDefaultAddressForMethod(method)
+                                cachedPayeeAddress = payee.getAddressForMethod(method)
                                 if (cachedPayeeAddress == null) {
                                     // Need payee alias before setting payment method
                                     showSetAddressDialogEventMutable.value = Event(Triple(
@@ -314,8 +362,10 @@ class PaymentsViewModel(app: Application): UIViewModel(app) {
     fun setPayerAddress(payerAddress: String) {
         cachedPayerAddress = payerAddress
         activePaymentAndMethod.value.first?.apply {
+            repository.saveAddressForDiner(payer, cachedMethod!!, payerAddress)
+
             when {
-                payee.isRestaurant() -> {
+                payee.isRestaurant -> {
                     if (cachedMethod!!.acceptedByRestaurant) {
                         commitPaymentTemplate()
                     } else {
@@ -325,7 +375,7 @@ class PaymentsViewModel(app: Application): UIViewModel(app) {
                 }
                 else -> {
                     // Peer-to-peer transaction also requires a payeeAddress
-                    cachedPayeeAddress = payee.getDefaultAddressForMethod(cachedMethod!!)
+                    cachedPayeeAddress = payee.getAddressForMethod(cachedMethod!!)
                     if (cachedPayeeAddress == null) {
                         // Need payee alias before setting payment method
                         showSetAddressDialogEventMutable.value = Event(Triple(
@@ -341,6 +391,11 @@ class PaymentsViewModel(app: Application): UIViewModel(app) {
 
     fun setPayeeAddress(payeeAddress: String) {
         cachedPayeeAddress = payeeAddress
+
+        activePaymentAndMethod.value.first?.apply {
+            repository.saveAddressForDiner(payee, cachedMethod!!, payeeAddress)
+        }
+
         commitPaymentTemplate()
     }
 
@@ -352,7 +407,7 @@ class PaymentsViewModel(app: Application): UIViewModel(app) {
                 // Existing template has same method and surrogate so no further action required
                 setActivePayment(null)
             } else {
-                cachedSurrogateAddress = surrogate.getDefaultAddressForMethod(cachedMethod!!)
+                cachedSurrogateAddress = surrogate.getAddressForMethod(cachedMethod!!)
                 if (cachedSurrogateAddress == null) {
                     // Need surrogate alias before committing
                     showSetAddressDialogEventMutable.value = Event(Triple(
@@ -367,6 +422,7 @@ class PaymentsViewModel(app: Application): UIViewModel(app) {
 
     fun setSurrogateAddress(surrogateAddress: String) {
         cachedSurrogateAddress = surrogateAddress
+        repository.saveAddressForDiner(cachedSurrogate!!, cachedMethod!!, surrogateAddress)
         commitPaymentTemplate()
     }
 

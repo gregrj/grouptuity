@@ -20,7 +20,7 @@ import androidx.recyclerview.widget.SimpleItemAnimator
 import com.google.android.material.transition.Hold
 import com.grouptuity.grouptuity.MainActivity
 import com.grouptuity.grouptuity.R
-import com.grouptuity.grouptuity.data.Item
+import com.grouptuity.grouptuity.data.entities.Item
 import com.grouptuity.grouptuity.databinding.FragItemsBinding
 import com.grouptuity.grouptuity.databinding.FragItemsListitemBinding
 import com.grouptuity.grouptuity.ui.custom.views.RecyclerViewBottomOffset
@@ -75,7 +75,7 @@ class ItemsFragment: Fragment() {
                 (requireActivity() as MainActivity).storeViewAsBitmap(requireParentFragment().requireView())
 
                 findNavController().navigate(
-                    BillSplitFragmentDirections.createNewItem(view.tag as Item, null),
+                    BillSplitFragmentDirections.createNewItem((view.tag as Item).id, null),
                     FragmentNavigatorExtras(
                         viewBinding.cardBackground to viewBinding.cardBackground.transitionName,
                     )
@@ -183,7 +183,7 @@ class ItemsFragment: Fragment() {
 
                 viewBinding.dinerIcons.removeAllViews()
 
-                when(newItem.diners.size) {
+                when(newItem.diners.value.size) {
                     0 -> {
                         viewBinding.dinerSummary.setText(R.string.items_no_diners_warning)
                         viewBinding.dinerSummary.setTextColor(errorTextColor)
@@ -194,7 +194,7 @@ class ItemsFragment: Fragment() {
                     }
                     else -> {
                         viewBinding.dinerSummary.text = ""
-                        newItem.diners.forEach { diner ->
+                        newItem.diners.value.forEach { diner ->
                             val icon = ContactIcon(context)
                             icon.setSelectable(false)
 
@@ -254,7 +254,7 @@ class ItemsFragment: Fragment() {
                     return newItem.id == oldItem.id &&
                             newItem.name == oldItem.name &&
                             newItem.price == oldItem.price &&
-                            newItem.dinerIds == oldItem.dinerIds
+                            newItem.diners.value.map { it.id } == oldItem.diners.value.map { it.id }
                 }
             })
 

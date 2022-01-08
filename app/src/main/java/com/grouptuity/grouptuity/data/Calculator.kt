@@ -5,6 +5,7 @@ import com.grouptuity.grouptuity.Event
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
+import java.math.BigDecimal
 import java.text.DecimalFormat
 import java.text.NumberFormat
 
@@ -57,16 +58,17 @@ class CalculatorData(initialCalculationType: CalculationType, val autoHideNumber
 
     var editedValue: Boolean? = null // null == not set, false == prior value unchanged, true == new value set
         private set
-    val rawInputIsBlank: StateFlow<Boolean> = rawInputValue.mapLatest { it == null }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, true)
-    val numericalValue: StateFlow<Double?> = rawInputValue.mapLatest {
-        when(it) {
-            null, "." -> { null }
-            else -> { it.toDouble() }
-        }
-    }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, null)
-    val displayValue: StateFlow<String> = combine(isNumberPadVisible, rawInputValue, isInPercent) { numberPadVisible, rawValue, inPercent ->
+    val rawInputIsBlank: StateFlow<Boolean> = rawInputValue.map { it == null }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, true)
+    val displayValue = combine(_isNumberPadVisible, rawInputValue, isInPercent) { numberPadVisible, rawValue, inPercent ->
         formatRawValue(numberPadVisible, rawValue, inPercent)
-    }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, "")
+    }
+    val numericalValue: StateFlow<BigDecimal> = rawInputValue.map {
+        when(it) {
+            null, "." -> { BigDecimal("0") }
+            else -> { BigDecimal(it) }
+        }
+    }.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, BigDecimal("0"))
+
 
     val editButtonVisible: Flow<Boolean> = isNumberPadVisible.mapLatest { !it }
     val backspaceButtonVisible: Flow<Boolean> = combine(isNumberPadVisible, rawInputValue) { visible, rawValue -> visible && rawValue != null }
@@ -99,7 +101,7 @@ class CalculatorData(initialCalculationType: CalculationType, val autoHideNumber
     private val _acceptEvents = MutableStateFlow<Event<String>?>(null)
     val acceptEvents: Flow<Event<String>> = _acceptEvents.filterNotNull()
 
-    fun reset(type: CalculationType, newRawInputValue: Double?, showNumberPad: Boolean = false) {
+    fun reset(type: CalculationType, newRawInputValue: String?, showNumberPad: Boolean = false) {
         // Invalidate any unconsumed events
         _acceptEvents.value?.consume()
 
@@ -111,8 +113,8 @@ class CalculatorData(initialCalculationType: CalculationType, val autoHideNumber
             rawInputValue.value = null
         } else {
             editedValue = false
-            _lastCompletedRawValue.value = newRawInputValue.toString()
-            rawInputValue.value = newRawInputValue.toString()
+            _lastCompletedRawValue.value = newRawInputValue
+            rawInputValue.value = newRawInputValue
         }
 
         isNumberPadVisible.value = showNumberPad

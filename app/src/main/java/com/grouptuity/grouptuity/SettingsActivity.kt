@@ -1,6 +1,5 @@
 package com.grouptuity.grouptuity
 
-import android.app.Application
 import android.os.Bundle
 import android.util.Log
 import android.util.TypedValue
@@ -20,9 +19,9 @@ import androidx.preference.Preference
 import androidx.preference.PreferenceDataStore
 import androidx.preference.PreferenceFragmentCompat
 import com.google.android.material.transition.Hold
+import com.grouptuity.grouptuity.data.BaseUIViewModel
 import com.grouptuity.grouptuity.data.CalculationType
-import com.grouptuity.grouptuity.data.Repository
-import com.grouptuity.grouptuity.data.UIViewModel
+import com.grouptuity.grouptuity.data.StoredPreference
 import com.grouptuity.grouptuity.databinding.ActivityMainBinding
 import com.grouptuity.grouptuity.databinding.FragSettingsHolderBinding
 import com.grouptuity.grouptuity.ui.calculator.CALCULATOR_RETURN_KEY
@@ -31,26 +30,27 @@ import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
 import java.text.NumberFormat
 
 
-class SettingsViewModel(app: Application): UIViewModel(app) {
+class SettingsViewModel(app: GrouptuityApplication): BaseUIViewModel(app) {
+    @Suppress("UNCHECKED_CAST")
     val preferenceDataStore = object: PreferenceDataStore() {
-        override fun getBoolean(key: String?, defValue: Boolean) = repository.keyStoredPreferenceMap[key]?.value as? Boolean ?: defValue
-        override fun getFloat(key: String?, defValue: Float) = repository.keyStoredPreferenceMap[key]?.value as? Float ?: defValue
-        override fun getInt(key: String?, defValue: Int) = repository.keyStoredPreferenceMap[key]?.value as? Int ?: defValue
-        override fun getLong(key: String?, defValue: Long) = repository.keyStoredPreferenceMap[key]?.value as? Long ?: defValue
-        override fun getString(key: String?, defValue: String?) = repository.keyStoredPreferenceMap[key]?.value as? String ?: defValue
+        override fun getBoolean(key: String?, defValue: Boolean) = StoredPreference.keyStoredPreferenceMap[key]?.value as? Boolean ?: defValue
+        override fun getFloat(key: String?, defValue: Float) = StoredPreference.keyStoredPreferenceMap[key]?.value as? Float ?: defValue
+        override fun getInt(key: String?, defValue: Int) = StoredPreference.keyStoredPreferenceMap[key]?.value as? Int ?: defValue
+        override fun getLong(key: String?, defValue: Long) = StoredPreference.keyStoredPreferenceMap[key]?.value as? Long ?: defValue
+        override fun getString(key: String?, defValue: String?) = StoredPreference.keyStoredPreferenceMap[key]?.value as? String ?: defValue
 
-        override fun putBoolean(key: String?, value: Boolean) { (repository.keyStoredPreferenceMap[key] as? Repository.StoredPreference<Boolean>)?.value = value }
-        override fun putFloat(key: String?, value: Float) { (repository.keyStoredPreferenceMap[key] as? Repository.StoredPreference<Float>)?.value = value }
-        override fun putInt(key: String?, value: Int) { (repository.keyStoredPreferenceMap[key] as? Repository.StoredPreference<Int>)?.value = value }
-        override fun putLong(key: String?, value: Long) { (repository.keyStoredPreferenceMap[key] as? Repository.StoredPreference<Long>)?.value = value }
-        override fun putString(key: String?, value: String?) { (repository.keyStoredPreferenceMap[key] as? Repository.StoredPreference<String>)?.value = value!! }
+        override fun putBoolean(key: String?, value: Boolean) { (StoredPreference.keyStoredPreferenceMap[key] as? StoredPreference<Boolean>)?.value = value }
+        override fun putFloat(key: String?, value: Float) { (StoredPreference.keyStoredPreferenceMap[key] as? StoredPreference<Float>)?.value = value }
+        override fun putInt(key: String?, value: Int) { (StoredPreference.keyStoredPreferenceMap[key] as? StoredPreference<Int>)?.value = value }
+        override fun putLong(key: String?, value: Long) { (StoredPreference.keyStoredPreferenceMap[key] as? StoredPreference<Long>)?.value = value }
+        override fun putString(key: String?, value: String?) { (StoredPreference.keyStoredPreferenceMap[key] as? StoredPreference<String>)?.value = value!! }
     }
 
-    val defaultTaxPercent = repository.defaultTaxPercent.stateFlow.asLiveData()
-    val defaultTipPercent = repository.defaultTipPercent.stateFlow.asLiveData()
+    val defaultTaxPercent = StoredPreference.defaultTaxPercent.stateFlow.asLiveData()
+    val defaultTipPercent = StoredPreference.defaultTipPercent.stateFlow.asLiveData()
 
-    fun setDefaultTaxPercent(value: String) { repository.defaultTaxPercent.value = value }
-    fun setDefaultTipPercent(value: String) { repository.defaultTipPercent.value = value }
+    fun setDefaultTaxPercent(value: String) { StoredPreference.defaultTaxPercent.value = value }
+    fun setDefaultTipPercent(value: String) { StoredPreference.defaultTipPercent.value = value }
 }
 
 

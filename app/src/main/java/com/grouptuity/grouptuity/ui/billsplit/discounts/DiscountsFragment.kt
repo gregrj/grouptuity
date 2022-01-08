@@ -27,7 +27,7 @@ import androidx.transition.TransitionValues
 import com.google.android.material.transition.Hold
 import com.grouptuity.grouptuity.MainActivity
 import com.grouptuity.grouptuity.R
-import com.grouptuity.grouptuity.data.Discount
+import com.grouptuity.grouptuity.data.entities.Discount
 import com.grouptuity.grouptuity.databinding.FragDiscountsBinding
 import com.grouptuity.grouptuity.databinding.FragDiscountsListitemBinding
 import com.grouptuity.grouptuity.ui.custom.transitions.CardViewExpandTransition
@@ -80,7 +80,7 @@ class DiscountsFragment: Fragment() {
 
             findNavController().navigate(
                 DiscountsFragmentDirections.editDiscount(
-                    editedDiscount = null,
+                    editedDiscountId = null,
                     CircularRevealTransition.OriginParams(binding.fab)
                 )
             )
@@ -109,7 +109,11 @@ class DiscountsFragment: Fragment() {
 
                     val viewBinding = FragDiscountsListitemBinding.bind(view)
 
-                    (requireActivity() as MainActivity).storeViewAsBitmap(requireView())
+                findNavController().navigate(
+                    DiscountsFragmentDirections.editDiscount((view.tag as Discount).id, null),
+                    FragmentNavigatorExtras(viewBinding.cardBackground to viewBinding.cardBackground.transitionName)
+                )
+            }
 
                     discountsViewModel.notifyTransitionStarted()
 

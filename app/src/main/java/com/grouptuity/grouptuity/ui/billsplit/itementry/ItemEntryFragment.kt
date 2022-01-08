@@ -30,7 +30,8 @@ import com.google.android.material.transition.Hold
 import com.grouptuity.grouptuity.AppViewModel
 import com.grouptuity.grouptuity.MainActivity
 import com.grouptuity.grouptuity.R
-import com.grouptuity.grouptuity.data.Diner
+import com.grouptuity.grouptuity.data.entities.Diner
+import com.grouptuity.grouptuity.data.entities.Item
 import com.grouptuity.grouptuity.databinding.FragItementryBinding
 import com.grouptuity.grouptuity.databinding.ListDinerBinding
 import com.grouptuity.grouptuity.ui.billsplit.contactentry.ContactEntryFragmentDirections
@@ -49,23 +50,19 @@ import kotlinx.coroutines.withContext
 // TODO check for substantial edits and show alert on dismiss
 
 
-
-class ItemEntryFragment: Fragment() {
-    private var binding by setNullOnDestroy<FragItementryBinding>()
+class ItemEntryFragment: UIFragment<FragItementryBinding, ItemEntryViewModel, String?, Item?>() {
     private val args: ItemEntryFragmentArgs by navArgs()
     private lateinit var appViewModel: AppViewModel
     private lateinit var itemEntryViewModel: ItemEntryViewModel
     private lateinit var recyclerAdapter: ItemEntryDinerSelectionRecyclerViewAdapter
-    private lateinit var backPressedCallback: OnBackPressedCallback
-    private var toolbarInTertiaryState = false
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        appViewModel = ViewModelProvider(requireActivity())[AppViewModel::class.java]
-        itemEntryViewModel = ViewModelProvider(requireActivity())[ItemEntryViewModel::class.java]
-        itemEntryViewModel.initializeForItem(args.editedItem)
-        binding = FragItementryBinding.inflate(inflater, container, false)
-        return binding.root
-    }
+    override fun inflate(inflater: LayoutInflater, container: ViewGroup?) =
+        FragItementryBinding.inflate(inflater, container, false)
+
+    override fun createViewModel(): ItemEntryViewModel =
+        ViewModelProvider(requireActivity())[ItemEntryViewModel::class.java]
+
+    override fun getInitialInput(): String? = args.editedItemId
 
     @SuppressLint("ClickableViewAccessibility")
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
@@ -118,7 +115,7 @@ class ItemEntryFragment: Fragment() {
         })
 
         //Reset state and setup transitions
-        if(args.editedItem == null) {
+        if(args.editedItemId == null) {
             // New item
             binding.innerCoveredFragment.setImageBitmap(MainActivity.storedViewBitmap)
 
@@ -158,11 +155,10 @@ class ItemEntryFragment: Fragment() {
         setupDinerList()
 
         binding.fab.setOnClickListener {
-            itemEntryViewModel.selections.value?.apply {
-                if(this.isNotEmpty()) {
-                    closeFragment(true)
-                } //TODO move logic
-            }
+
+            // TODO query for boolean value
+
+            viewModel.trySavingItem(false)
         }
     }
 
@@ -174,37 +170,12 @@ class ItemEntryFragment: Fragment() {
         itemEntryViewModel.unFreezeOutput()
     }
 
-    private fun closeFragment(addItemToBill: Boolean) {
-        // Prevent callback from intercepting back pressed events
-        backPressedCallback.isEnabled = false
-
-        // Freeze UI in place as the fragment closes
-        itemEntryViewModel.freezeOutput()
-
-        if (args.editedItem == null) {
-            // Working with new item
-            if (addItemToBill) {
-                itemEntryViewModel.addNewItemToBill()?.also { newItem ->
-
-                    binding.itemEntryContainer.transitionName = "new_item" + newItem.id
-
-                    // Exit transition is needed to prevent next fragment from appearing immediately
-                    exitTransition = Hold().apply {
-                        duration = 0L
-                        addTarget(requireView())
-                    }
-
-                    // Close fragment by popping up to the BillSplitFragment
-                    findNavController().navigate(
-                        ItemEntryFragmentDirections.itemEntryToBillSplit(newItem = newItem),
-                        FragmentNavigatorExtras(
-                            binding.itemEntryContainer to binding.itemEntryContainer.transitionName
-                        )
-                    )
-                }
-            } else {
-                // Closing animation shrinking fragment into the FAB of the previous fragment.
-                // Transition is defined here to incorporate dynamic changes to window insets.
+    override fun onFinish(output: Item?) {
+        if (args.editedItemId == null) {
+            if (output == null) {
+                /* Close fragment without creating a new item. Animate fragment shrinking into the
+                   FAB of the previous fragment. Transition is defined here to incorporate dynamic
+                   changes to window insets. */
                 returnTransition = CircularRevealTransition(
                     binding.fadeView,
                     binding.revealedLayout,
@@ -214,6 +185,23 @@ class ItemEntryFragment: Fragment() {
 
                 // Close fragment using default onBackPressed behavior
                 requireActivity().onBackPressed()
+            } else {
+                /* New item was created. Navigate forward to the BillSplitFragment so a collapse
+                   animation can be run into the card view for the new item. */
+                binding.itemEntryContainer.transitionName = "new_item" + output.id
+
+                // Exit transition is needed to prevent next fragment from appearing immediately
+                exitTransition = Hold().apply {
+                    duration = 0L
+                    addTarget(requireView())
+                }
+
+                findNavController().navigate(
+                    ItemEntryFragmentDirections.itemEntryToBillSplit(newDinerId = output.id),
+                    FragmentNavigatorExtras(
+                        binding.itemEntryContainer to binding.itemEntryContainer.transitionName
+                    )
+                )
             }
         } else {
             // Working with existing item
@@ -458,7 +446,7 @@ class ItemEntryFragment: Fragment() {
     }
 
     private fun setupEnterTransition() {
-        binding.itemEntryContainer.transitionName = "container" + args.editedItem!!.id
+        binding.itemEntryContainer.transitionName = "container" + args.editedItemId!!
 
         val PROP_PRICE_HEIGHT = "com.grouptuity.grouptuity:CardViewExpandTransition:price_height"
         val PROP_PRICE_WIDTH = "com.grouptuity.grouptuity:CardViewExpandTransition:price_width"
@@ -487,7 +475,7 @@ class ItemEntryFragment: Fragment() {
     private fun setupExitTransition() {
         binding.coveredFragment.setImageBitmap(MainActivity.storedViewBitmap)
 
-        binding.itemEntryContainer.transitionName = "container" + args.editedItem!!.id
+        binding.itemEntryContainer.transitionName = "container" + args.editedItemId!!
 
         val PROP_PRICE_HEIGHT = "com.grouptuity.grouptuity:CardViewExpandTransition:price_height"
         val PROP_PRICE_WIDTH = "com.grouptuity.grouptuity:CardViewExpandTransition:price_width"
@@ -543,13 +531,13 @@ private class ItemEntryDinerSelectionRecyclerViewAdapter(val context: Context, v
 
             itemView.setBackgroundColor(if(isSelected) backgroundColorVariant else backgroundColor)
 
-            if(newDiner.itemIds.isEmpty()) {
+            if(newDiner.items.value.isEmpty()) {
                 viewBinding.message.text = context.resources.getString(R.string.itementry_zero_items)
             } else {
                 viewBinding.message.text = context.resources.getQuantityString(
                     R.plurals.itementry_num_items_with_subtotal,
-                    newDiner.itemIds.size,
-                    newDiner.itemIds.size,
+                    newDiner.items.value.size,
+                    newDiner.items.value.size,
                     dinerSubtotal)
             }
         }

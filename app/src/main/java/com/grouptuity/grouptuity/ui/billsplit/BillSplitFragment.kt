@@ -24,6 +24,8 @@ import com.google.android.material.tabs.TabLayoutMediator
 import com.grouptuity.grouptuity.MainActivity
 import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.*
+import com.grouptuity.grouptuity.data.entities.Diner
+import com.grouptuity.grouptuity.data.entities.Item
 import com.grouptuity.grouptuity.databinding.FragBillSplitBinding
 import com.grouptuity.grouptuity.databinding.FragDinersListitemBinding
 import com.grouptuity.grouptuity.databinding.FragItemsListitemBinding
@@ -54,15 +56,15 @@ class BillSplitFragment: Fragment() {
         super.onViewCreated(view, savedInstanceState)
 
         arguments?.also { args ->
-            val newDiner = args.getParcelable<Diner>("new_diner")
-            if (newDiner != null) {
+            val newDinerId = args.getString("new_diner_id")
+            if (newDinerId != null) {
                 postponeEnterTransition()
-                newDinerIdForTransition = newDiner.id
+                newDinerIdForTransition = newDinerId
             } else {
-                val newItem = args.getParcelable<Item>("new_item")
-                if (newItem != null) {
+                val newItemId = args.getString("new_item_id")
+                if (newItemId != null) {
                     postponeEnterTransition()
-                    newItemIdForTransition = newItem.id
+                    newItemIdForTransition = newItemId
                 }
             }
             args.clear()
@@ -182,7 +184,13 @@ class BillSplitFragment: Fragment() {
                 FRAG_ITEMS -> {
                     // Show fragment for item entry
                     (requireActivity() as MainActivity).storeViewAsBitmap(requireView())
-                    findNavController().navigate(BillSplitFragmentDirections.createNewItem(editedItem = null, CircularRevealTransition.OriginParams(binding.fab)))
+                    findNavController().navigate(BillSplitFragmentDirections.createNewItem(
+                        editedItemId = null,
+                        CircularRevealTransition.OriginParams(binding.fab)))
+                }
+                FRAG_PAYMENTS -> {
+                    // Send email receipt to diners
+                    billSplitViewModel.requestSendEmailReceipt()
                 }
             }
         }
@@ -215,13 +223,13 @@ class BillSplitFragment: Fragment() {
             contactIcon.setContact(newDiner.asContact(), false)
             name.text = newDiner.name
 
-            if(newDiner.itemIds.isEmpty()) {
+            if(newDiner.items.value.isEmpty()) {
                 message.text = resources.getString(R.string.diners_zero_items)
             } else {
                 message.text = resources.getQuantityString(
                     R.plurals.diners_num_items_with_subtotal,
-                    newDiner.itemIds.size,
-                    newDiner.itemIds.size,
+                    newDiner.items.value.size,
+                    newDiner.items.value.size,
                     dinerSubtotal)
             }
 
@@ -264,7 +272,7 @@ class BillSplitFragment: Fragment() {
 
             dinerIcons.removeAllViews()
 
-            when(newItem.diners.size) {
+            when(newItem.diners.value.size) {
                 0 -> {
                     dinerSummary.setText(R.string.items_no_diners_warning)
                     dinerSummary.setTextColor(
@@ -278,7 +286,7 @@ class BillSplitFragment: Fragment() {
                 }
                 else -> {
                     dinerSummary.text = ""
-                    newItem.diners.forEach { diner ->
+                    newItem.diners.value.forEach { diner ->
                         val icon = ContactIcon(requireContext())
                         icon.setSelectable(false)
 
