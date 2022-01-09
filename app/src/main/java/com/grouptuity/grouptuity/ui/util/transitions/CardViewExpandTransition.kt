@@ -1,9 +1,8 @@
-package com.grouptuity.grouptuity.ui.custom.transitions
+package com.grouptuity.grouptuity.ui.util.transitions
 
 import android.animation.Animator
 import android.animation.ValueAnimator
 import android.graphics.Color
-import android.util.Log
 import android.view.View
 import android.view.ViewGroup
 import android.view.animation.AccelerateDecelerateInterpolator

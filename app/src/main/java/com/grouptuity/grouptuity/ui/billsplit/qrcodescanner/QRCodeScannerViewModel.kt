@@ -7,10 +7,11 @@ import android.os.Vibrator
 import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.asLiveData
-import com.google.mlkit.vision.barcode.Barcode
+import com.google.mlkit.vision.barcode.common.Barcode
+import com.grouptuity.grouptuity.GrouptuityApplication
 import com.grouptuity.grouptuity.R
+import com.grouptuity.grouptuity.data.BaseUIViewModel
 import com.grouptuity.grouptuity.data.entities.PaymentMethod
-import com.grouptuity.grouptuity.ui.billsplit.payments.AlgorandAddressParser
 import com.grouptuity.grouptuity.ui.billsplit.payments.CashtagParser
 import com.grouptuity.grouptuity.ui.billsplit.payments.VenmoAddressParser
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -25,7 +26,7 @@ data class QRCodeDisplayResults(val title: String,
                                 val status: QRCodeParser.Status): Parcelable
 
 
-class QRCodeScannerViewModel(app: Application): UIViewModel(app) {
+class QRCodeScannerViewModel(app: Application): BaseUIViewModel(app) {
     companion object {
         private val venmoDisplayTitle = mapOf(
             QRCodeParser.Status.INVALID_URL to R.string.qrcodescanner_title_invalid_url,

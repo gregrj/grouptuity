@@ -13,6 +13,7 @@
         <item name="colorTertiary">@color/gray</item>
         <item name="colorTertiaryVariant">@color/gray_dark</item>
         <item name="colorOnTertiary">@color/white</item>
+        <item name="colorOnTertiaryDisabled">@color/gray_mild_dark</item>
         <item name="colorTertiaryHighlight">@color/gray_light</item>
 
         <item name="colorSurface">@color/white</item>
@@ -31,6 +32,13 @@
         <item name="android:editTextColor">@color/white</item>
         <item name="android:textColorHint">@color/white</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
+    </style>
+
+    <style name="Theme.Grouptuity.Starting" parent="Theme.SplashScreen">
+        <item name="colorPrimary">@color/red</item>
+        <item name="windowSplashScreenBackground">?attr/colorPrimary</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/splash_logo</item>
+        <item name="postSplashScreenTheme">@style/Theme.Grouptuity</item>
     </style>
 
     <style name="Theme.Grouptuity.Secondary" parent="Theme.Grouptuity">
@@ -56,12 +64,6 @@
 
     <style name="Theme.Grouptuity.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
     <style name="Theme.Grouptuity.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
-
-    <style name="Theme.Grouptuity.Splash" parent="Theme.AppCompat.NoActionBar">
-        <item name="android:windowBackground">@drawable/splash_screen</item>
-        <item name="colorPrimary">@color/red</item>
-        <item name="android:statusBarColor">@color/red_dark</item>
-    </style>
 
     <style name="AlertDialogPosSuggestionSecondary" parent="Theme.MaterialComponents.DayNight.Dialog.Alert">
         <item name="colorPrimary">@color/blue</item>

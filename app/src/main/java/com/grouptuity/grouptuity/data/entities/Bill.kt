@@ -14,7 +14,6 @@ import java.math.RoundingMode
 import java.util.*
 import java.util.Collections.sort
 
-
 val billIdMap = mutableMapOf<String, WeakReference<Bill>>()
 
 
@@ -31,7 +30,6 @@ class Bill(
     var title: String,
     val timeCreated: Long
 ): BaseEntity() {
-
     init {
         billIdMap[id] = WeakReference(this)
     }
@@ -126,26 +124,6 @@ class Bill(
     @Ignore private val paymentStableIdMap = mutableMapOf<String, Long>()
 
     @Ignore private val mDinerLookupKeys = mutableSetOf<String>()
-    @Ignore var cashPool: Diner = Diner.newCashPool(id).also { mDinerLookupKeys.add(it.lookupKey) }
-        private set(value) {
-            mDinerLookupKeys.remove(field.lookupKey)
-            field = value
-            mDinerLookupKeys.add(value.lookupKey)
-        }
-    @Ignore var restaurant: Diner = Diner.newRestaurant(id).also { mDinerLookupKeys.add(it.lookupKey) }
-        private set(value) {
-            mDinerLookupKeys.remove(field.lookupKey)
-            field = value
-            mDinerLookupKeys.add(value.lookupKey)
-        }
-    @Ignore var userDiner: Diner? = null
-        private set(value) {
-            field = value
-            _isUserOnBill.value = value != null
-        }
-    @Ignore private val _isUserOnBill = MutableStateFlow(false)
-    @Ignore val isUserOnBill: StateFlow<Boolean> = _isUserOnBill
-
     @Ignore private val mDiners = CachedEntityMap<Diner> {
         it.roundedRestaurantTotal
     }
@@ -166,8 +144,8 @@ class Bill(
     @Ignore private val mDebts = mutableSetOf<Debt>()
     @Ignore private val mCommittedPayments = mutableSetOf<Payment>()
 
-    @Ignore private val _debts = MutableStateFlow<Set<Debt>>(mDebts)
-    @Ignore private val _committedPayments = MutableStateFlow<Set<Payment>>(mCommittedPayments)
+    @Ignore private val _debts = MutableStateFlow(mDebts.toSet())
+    @Ignore private val _committedPayments = MutableStateFlow(mCommittedPayments.toSet())
 
     @Ignore val items: StateFlow<Set<Item>> = mItems.elements
     @Ignore val discounts: StateFlow<Set<Discount>> = mDiscounts.elements
@@ -290,6 +268,26 @@ class Bill(
     @Ignore val intraDinerRoundingAdjustments: StateFlow<Map<Diner, BigDecimal>> =
         _intraDinerRoundingAdjustments
 
+    @Ignore var cashPool: Diner = Diner.newCashPool(id).also { mDinerLookupKeys.add(it.lookupKey) }
+        private set(value) {
+            mDinerLookupKeys.remove(field.lookupKey)
+            field = value
+            mDinerLookupKeys.add(value.lookupKey)
+        }
+    @Ignore var restaurant: Diner = Diner.newRestaurant(id).also { mDinerLookupKeys.add(it.lookupKey) }
+        private set(value) {
+            mDinerLookupKeys.remove(field.lookupKey)
+            field = value
+            mDinerLookupKeys.add(value.lookupKey)
+        }
+    @Ignore var userDiner: Diner? = null
+        private set(value) {
+            field = value
+            _isUserOnBill.value = value != null
+        }
+    @Ignore private val _isUserOnBill = MutableStateFlow(false)
+    @Ignore val isUserOnBill: StateFlow<Boolean> = _isUserOnBill
+
     @Ignore private val transactionProcessor = TransactionProcessor(
         scope,
         id,
@@ -377,7 +375,7 @@ class Bill(
     }
 
     override fun onDelete() {
-        TODO("Not yet implemented")
+        // TODO
     }
 
     fun loadEntities(

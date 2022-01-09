@@ -9,7 +9,7 @@
         android:id="@+id/edit_text"
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:hint="@string/diners_add_self_name_entry_hint"
+        android:hint="@string/diners_add_user_name_entry_hint"
         android:autofillHints="name"
         android:inputType="textPersonName" />
 </FrameLayout>

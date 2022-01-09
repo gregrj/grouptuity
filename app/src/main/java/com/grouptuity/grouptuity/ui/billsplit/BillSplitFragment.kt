@@ -1,9 +1,6 @@
 package com.grouptuity.grouptuity.ui.billsplit
 
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
-import android.util.Log
 import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
@@ -12,7 +9,6 @@ import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.ImageView
 import android.widget.LinearLayout
 import androidx.coordinatorlayout.widget.CoordinatorLayout
-import androidx.core.view.doOnPreDraw
 import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
@@ -29,11 +25,11 @@ import com.grouptuity.grouptuity.data.entities.Item
 import com.grouptuity.grouptuity.databinding.FragBillSplitBinding
 import com.grouptuity.grouptuity.databinding.FragDinersListitemBinding
 import com.grouptuity.grouptuity.databinding.FragItemsListitemBinding
-import com.grouptuity.grouptuity.ui.custom.transitions.CardViewExpandTransition
-import com.grouptuity.grouptuity.ui.custom.transitions.CircularRevealTransition
-import com.grouptuity.grouptuity.ui.custom.transitions.progressWindow
-import com.grouptuity.grouptuity.ui.custom.views.ContactIcon
-import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
+import com.grouptuity.grouptuity.ui.util.transitions.CardViewExpandTransition
+import com.grouptuity.grouptuity.ui.util.transitions.CircularRevealTransition
+import com.grouptuity.grouptuity.ui.util.transitions.progressWindow
+import com.grouptuity.grouptuity.ui.util.views.ContactIcon
+import com.grouptuity.grouptuity.ui.util.views.setNullOnDestroy
 import java.text.NumberFormat
 
 // TODO prevent double tap on fab causing navigation error

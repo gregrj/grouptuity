@@ -1,6 +1,9 @@
 package com.grouptuity.grouptuity.data.entities
 
+import android.app.Application
+import android.util.Log
 import androidx.room.Ignore
+import com.grouptuity.grouptuity.R
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
@@ -9,14 +12,19 @@ import kotlinx.coroutines.launch
 import java.math.BigDecimal
 import java.math.MathContext
 import java.math.RoundingMode
+import java.text.NumberFormat
 import java.util.*
 
 
 val mathContext: MathContext = MathContext.DECIMAL64
+private val percentFormatter = NumberFormat.getPercentInstance().also {
+    it.maximumFractionDigits = 3 // TODO parameterize
+}
 
 
 fun newUUID(): String = UUID.randomUUID().toString()
 
+fun BigDecimal.toPercentString(): String = percentFormatter.format(this.movePointLeft(2))
 
 fun BigDecimal.divideWithZeroBypass(divisor: Int): BigDecimal = when (divisor) {
     0 -> this
@@ -183,7 +191,7 @@ abstract class BaseEntity {
                 mutableMapOf()
             }
 
-        private val _elements = MutableStateFlow<Set<E>>(mElements)
+        private val _elements = MutableStateFlow<Set<E>>(emptySet())
         private val _rawValues = MutableStateFlow<Map<E, BigDecimal>>(emptyMap())
         private val _roundedValues: MutableStateFlow<Map<E, BigDecimal>> =
             if (roundingModeFlow == null) {
@@ -282,9 +290,10 @@ abstract class BaseEntity {
         }
 
         internal fun remove(element: E) {
-            mElements.remove(element)
             mElementScopes.remove(element)?.also { scope ->
                 scope.cancel()
+
+                mElements.remove(element)
 
                 _rawValueFlows.remove(element)
                 mRawValues.remove(element)?.also { value ->
@@ -299,12 +308,12 @@ abstract class BaseEntity {
                         _roundedTotal.value -= value
                     }
                 }
-            }
 
-            _elements.value = mElements.toSet()
+                _elements.value = mElements.toSet()
 
-            transformers.forEach { (map, _) ->
-                map.remove(element)
+                transformers.forEach { (map, _) ->
+                    map.remove(element)
+                }
             }
         }
 

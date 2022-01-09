@@ -1,10 +1,9 @@
-package com.grouptuity.grouptuity.ui.custom.views
+package com.grouptuity.grouptuity.ui.util.views
 
 import android.animation.Animator
 import android.animation.AnimatorSet
 import android.animation.ObjectAnimator
 import android.content.Context
-import android.graphics.Color
 import android.os.Handler
 import android.os.Looper
 import android.util.AttributeSet

@@ -1,18 +1,29 @@
 package com.grouptuity.grouptuity.ui.billsplit
 
+import android.app.Application
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.asLiveData
 import com.grouptuity.grouptuity.GrouptuityApplication
 import com.grouptuity.grouptuity.R
-import com.grouptuity.grouptuity.data.FRAG_DINERS
-import com.grouptuity.grouptuity.data.FRAG_ITEMS
-import com.grouptuity.grouptuity.data.FRAG_PAYMENTS
-import com.grouptuity.grouptuity.data.UIViewModel
+import com.grouptuity.grouptuity.data.*
 import kotlinx.coroutines.flow.*
 
 
+data class BillSplitToolbarState(
+    val activePage: Int,
+    val showIncludeSelf: Boolean,
+    val showClearDiners: Boolean,
+    val showClearItems: Boolean,
+    val checkTaxIsTipped: Boolean,
+    val checkDiscountsReduceTip: Boolean,
+    val showGeneralMenuGroup: Boolean,
+    val showDinersMenuGroup: Boolean,
+    val showItemsMenuGroup: Boolean,
+    val showTaxTipMenuGroup: Boolean,
+    val showPayMenuGroup: Boolean)
 
-class BillSplitViewModel(application: GrouptuityApplication): BaseUIViewModel(application) {
+
+class BillSplitViewModel(application: Application): BaseUIViewModel(application) {
     val dinerCount = repository.numberOfDiners.asLiveData()
     val itemCount = repository.numberOfItems.asLiveData()
 

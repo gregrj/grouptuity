@@ -63,7 +63,7 @@ enum class PaymentMethod(val acceptedByRestaurant: Boolean,
         R.string.payment_method_display_name_payback_later,
         R.string.payment_method_address_name_payback_later,
         R.string.payments_instruction_payback_later,
-        R.string.payments_address_entry_iou_email,
+        R.string.payments_address_entry_payback_later,
         R.drawable.ic_payment_payback_later,
         true),
     VENMO(

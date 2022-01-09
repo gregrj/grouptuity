@@ -50,17 +50,25 @@ abstract class AppDatabase: RoomDatabase() {
     companion object {
         @Volatile
         private var INSTANCE: AppDatabase? = null
+        private const val DATABASE_NAME = "grouptuity.db"
 
         fun getDatabase(context: Context): AppDatabase =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: buildDatabase(context).also { INSTANCE = it }
             }
 
+        fun deleteDatabase(context: Context) {
+            context.deleteDatabase(DATABASE_NAME)
+        }
+
         private fun buildDatabase(context: Context): AppDatabase {
+
+            deleteDatabase(context)
+
             val newDatabase = Room.databaseBuilder(
                 context.applicationContext,
                 AppDatabase::class.java,
-                "grouptuity.db"
+                DATABASE_NAME
             ).build()
             insertInitialData(newDatabase)
             return newDatabase

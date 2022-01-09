@@ -1,29 +1,19 @@
 package com.grouptuity.grouptuity
 
+import android.app.Application
 import android.content.res.Configuration
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
+import com.grouptuity.grouptuity.data.Repository
+import com.grouptuity.grouptuity.data.Event
 
-
-class Event<out T>(private val content: T) {
-    @Volatile
-    private var unconsumed = true
-
-    fun consume(): T? {
-        if(unconsumed) {
-            unconsumed = false
-            return content
-        }
-        return null
-    }
-}
 
 /**
  *
  */
-class AppViewModel(app: GrouptuityApplication): AndroidViewModel(app) {
+class AppViewModel(app: Application): AndroidViewModel(app) {
     private val repository = Repository.getInstance(app)
 
     private val _darkThemeActive = MutableLiveData<Boolean>()

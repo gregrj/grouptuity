@@ -4,19 +4,20 @@ import android.Manifest
 import android.app.Application
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.asLiveData
-import com.grouptuity.grouptuity.Event
+import com.grouptuity.grouptuity.GrouptuityApplication
 import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.*
+import com.grouptuity.grouptuity.data.entities.Contact
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import java.util.*
 
-class AddressBookViewModel(app: Application): UIViewModel(app) {
+
+class AddressBookViewModel(app: Application): BaseUIViewModel(app) {
 
     // TODO selected contact subsequently hidden. Need to discard selection
 
-    private val addressBook = AddressBook.getInstance(app)
+    private val addressBook = repository.addressBook
 
     private val _showHiddenContacts = MutableStateFlow(false)
 
@@ -71,15 +72,20 @@ class AddressBookViewModel(app: Application): UIViewModel(app) {
     private val acquireReadContactsPermissionEventMutable = MutableLiveData<Event<Int>>()
 
     // Live Data Output
-    val animateListUpdates: LiveData<Boolean> = searchQuery.mapLatest { it == null }.withOutputSwitch(isOutputFlowing).asLiveData()
-    val showRefreshAnimation: LiveData<Boolean> = addressBook.refreshingDeviceContacts.withOutputSwitch(isOutputFlowing).asLiveData()
-    val showHiddenContacts: LiveData<Boolean> = _showHiddenContacts.withOutputSwitch(isOutputFlowing).asLiveData()
+    val voiceInput: LiveData<Event<String>> = repository.voiceInputMutable
+    val animateListUpdates: LiveData<Boolean> = searchQuery.map { it == null }.asLiveData(isOutputLocked)
+    val showRefreshAnimation: LiveData<Boolean> = addressBook.refreshingDeviceContacts.asLiveData(isOutputLocked)
+    val showHiddenContacts: LiveData<Boolean> = _showHiddenContacts.asLiveData(isOutputLocked)
     val acquireReadContactsPermissionEvent: LiveData<Event<Int>> = acquireReadContactsPermissionEventMutable
-    val displayedContacts = _displayedContacts.withOutputSwitch(isOutputFlowing).asLiveData()
-    val selections: LiveData<Set<String>> = _selections.mapLatest {
+    val displayedContacts = _displayedContacts.asLiveData(isOutputLocked)
+    val selections: LiveData<Set<String>> = _selections.map {
         stopSearch()
         it
-    }.withOutputSwitch(isOutputFlowing).asLiveData()
+    }.asLiveData(isOutputLocked)
+    val toolBarInTertiaryState: LiveData<Boolean> = combine(_selections, searchQuery) { selectedContacts, query ->
+        // Set toolbar to tertiary if selections exist and not currently searching
+        selectedContacts.isNotEmpty() && query == null
+    }.asLiveData(isOutputLocked)
     val toolBarState: LiveData<ToolBarState> = combine(_selections, searchQuery, addressBook.allContacts) { selectedContacts, query, allContacts ->
         val isSearching = query != null
 
@@ -88,7 +94,6 @@ class AddressBookViewModel(app: Application): UIViewModel(app) {
                 context.resources.getString(R.string.addressbook_toolbar_select_diners),
                 navIconAsClose = if(isSearching) null else false,
                 searchInactive = !isSearching,
-                tertiaryBackground = false,
                 hideVisibilityButtons = true,
                 showAsUnfavorite = false,
                 showAsUnhide = false,
@@ -98,7 +103,6 @@ class AddressBookViewModel(app: Application): UIViewModel(app) {
                 context.resources.getQuantityString(R.plurals.addressbook_toolbar_num_selected, selectedContacts.size, selectedContacts.size),
                 navIconAsClose = if(isSearching) null else true,
                 searchInactive = !isSearching,
-                tertiaryBackground = !isSearching,
                 hideVisibilityButtons = isSearching,
                 showAsUnfavorite = selectedContacts.isNotEmpty() && selectedContacts.all {
                     allContacts[it]?.visibility == Contact.FAVORITE
@@ -108,14 +112,14 @@ class AddressBookViewModel(app: Application): UIViewModel(app) {
                 },
                 showOtherButtons = false)
         }
-    }.distinctUntilChanged().withOutputSwitch(isOutputFlowing).asLiveData()
+    }.asLiveData(isOutputLocked)
     val fabExtended: LiveData<Boolean?> = combine(_selections, searchQuery) { selectedContacts, query ->
         when {
             query != null -> null
             selectedContacts.isEmpty() -> true
             else -> false
         }
-    }.withOutputSwitch(isOutputFlowing).asLiveData()
+    }.asLiveData(isOutputLocked)
 
     override fun notifyTransitionFinished() {
         super.notifyTransitionFinished()
@@ -126,8 +130,7 @@ class AddressBookViewModel(app: Application): UIViewModel(app) {
         }
     }
 
-    fun initialize() {
-        unFreezeOutput()
+    override fun onInitialize(input: Unit?) {
         searchQuery.value = null
         deselectAllContacts()
 
@@ -135,15 +138,12 @@ class AddressBookViewModel(app: Application): UIViewModel(app) {
         acquireReadContactsPermissionEventMutable.value?.consume()
     }
 
-    //TODO why three values? Simplify across all ViewModels
-    fun handleOnBackPressed(): Boolean? {
+    override fun handleOnBackPressed() {
         when {
-            isInputLocked.value -> { }
             searchQuery.value != null -> { stopSearch() }
             _selections.value.isNotEmpty() -> { deselectAllContacts() }
-            else -> { return false }
+            else -> { finishFragment(null) }
         }
-        return null
     }
 
     fun updateSearchQuery(query: String?) { if(searchQuery.value != null) { searchQuery.value = query ?: "" } }
@@ -279,20 +279,28 @@ class AddressBookViewModel(app: Application): UIViewModel(app) {
     }
 
     fun addSelectedContactsToBill() {
-        repository.addContactsAsDiners(context, addressBook.allContacts.value.let { allContacts ->
-            mSelections.mapNotNull { lookupKey ->
-                allContacts[lookupKey]
-            }
-        })
+        // Freeze UI
+        notifyTransitionStarted()
+
+        repository.addContactsAsDiners(
+            context,
+            addressBook.allContacts.value.let { allContacts ->
+                mSelections.mapNotNull { lookupKey ->
+                    allContacts[lookupKey]
+                }
+            },
+            includeWithEveryone = false // TODO prompt
+        )
 
         deselectAllContacts()
+
+        finishFragment(null)
     }
 
     companion object {
         data class ToolBarState(val title: String,
                                 val navIconAsClose: Boolean?, // null -> hide navigation icon
                                 val searchInactive: Boolean,
-                                val tertiaryBackground: Boolean,
                                 val hideVisibilityButtons: Boolean,
                                 val showAsUnfavorite: Boolean,
                                 val showAsUnhide: Boolean,
@@ -354,32 +362,32 @@ private fun computeMatchScore(contact: Contact, searchString: String): Double {
 
 // Only valid for QWERTY keyboard layout
 private val charScoreMap = mapOf(
-        'a' to setOf('q','w','s','z'),
-        'b' to setOf('v','g','h','j','n'),
-        'c' to setOf('x','d','f','g','v'),
-        'd' to setOf('s','e','r','f','c','x'),
-        'e' to setOf('w','s','d','f','r'),
-        'f' to setOf('d','r','t','g','v','c','x'),
-        'g' to setOf('f','t','y','h','b','v','c'),
-        'h' to setOf('g','y','u','j','n','b','v'),
-        'i' to setOf('u','j','k','o'),
-        'j' to setOf('h','u','i','k','m','n','b'),
-        'k' to setOf('j','i','o','l','m','n'),
-        'l' to setOf('k','o','p','m'),
-        'm' to setOf('n','j','k','l'),
-        'n' to setOf('b','h','j','k','m'),
-        'o' to setOf('i','k','l','p'),
-        'p' to setOf('o','l'),
-        'q' to setOf('w','a'),
-        'r' to setOf('e','d','f','t'),
-        's' to setOf('a','w','e','d','x','z'),
-        't' to setOf('r','f','g','y'),
-        'u' to setOf('y','h','j','i'),
-        'v' to setOf('c','f','g','h','b'),
-        'w' to setOf('q','a','s','e'),
-        'x' to setOf('z','s','d','c'),
-        'y' to setOf('t','g','h','u'),
-        'z' to setOf('a','s','x'))
+    'a' to setOf('q','w','s','z'),
+    'b' to setOf('v','g','h','j','n'),
+    'c' to setOf('x','d','f','g','v'),
+    'd' to setOf('s','e','r','f','c','x'),
+    'e' to setOf('w','s','d','f','r'),
+    'f' to setOf('d','r','t','g','v','c','x'),
+    'g' to setOf('f','t','y','h','b','v','c'),
+    'h' to setOf('g','y','u','j','n','b','v'),
+    'i' to setOf('u','j','k','o'),
+    'j' to setOf('h','u','i','k','m','n','b'),
+    'k' to setOf('j','i','o','l','m','n'),
+    'l' to setOf('k','o','p','m'),
+    'm' to setOf('n','j','k','l'),
+    'n' to setOf('b','h','j','k','m'),
+    'o' to setOf('i','k','l','p'),
+    'p' to setOf('o','l'),
+    'q' to setOf('w','a'),
+    'r' to setOf('e','d','f','t'),
+    's' to setOf('a','w','e','d','x','z'),
+    't' to setOf('r','f','g','y'),
+    'u' to setOf('y','h','j','i'),
+    'v' to setOf('c','f','g','h','b'),
+    'w' to setOf('q','a','s','e'),
+    'x' to setOf('z','s','d','c'),
+    'y' to setOf('t','g','h','u'),
+    'z' to setOf('a','s','x'))
 
 private fun scoreCharacter(searchChar: Char, matchChar: Char): Double {
     // requires lowercase chars

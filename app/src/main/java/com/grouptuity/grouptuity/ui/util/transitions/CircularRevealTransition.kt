@@ -1,4 +1,4 @@
-package com.grouptuity.grouptuity.ui.custom.transitions
+package com.grouptuity.grouptuity.ui.util.transitions
 
 import android.animation.Animator
 import android.animation.AnimatorSet

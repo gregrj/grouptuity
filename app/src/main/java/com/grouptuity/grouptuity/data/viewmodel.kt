@@ -8,7 +8,6 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.asLiveData
-import com.grouptuity.grouptuity.GrouptuityApplication
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.cancel
@@ -40,7 +39,7 @@ class Event<out T>(private val value: T) {
 }
 
 
-abstract class UIViewModel<I, O>(app: GrouptuityApplication): AndroidViewModel(app) {
+abstract class UIViewModel<I, O>(app: Application): AndroidViewModel(app) {
     protected val repository = Repository.getInstance(app)
 
     protected val context: Context
@@ -135,7 +134,7 @@ abstract class UIViewModel<I, O>(app: GrouptuityApplication): AndroidViewModel(a
 }
 
 
-abstract class BaseUIViewModel(app: GrouptuityApplication): UIViewModel<Unit?, Unit?>(app) {
+abstract class BaseUIViewModel(app: Application): UIViewModel<Unit?, Unit?>(app) {
     override fun onInitialize(input: Unit?) { }
 
     override fun handleOnBackPressed() { }

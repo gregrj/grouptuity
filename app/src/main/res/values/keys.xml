@@ -4,6 +4,7 @@
     <string name="preference_key_loaded_bill_id">PREF_KEY_LOADED_BILL_ID</string>
     <string name="preference_key_user_name">PREF_KEY_USER_NAME</string>
     <string name="preference_key_user_email">PREF_KEY_USER_EMAIL</string>
+    <string name="preference_key_user_photo_uri">PREF_KEY_USER_PHOTO_URI</string>
     <string name="preference_key_user_venmo">PREF_KEY_USER_VENMO</string>
     <string name="preference_key_user_cashtag">PREF_KEY_USER_CASHTAG</string>
     <string name="preference_key_user_algorand">PREF_KEY_USER_ALGORAND</string>
@@ -23,6 +24,7 @@
 
     <string name="rationale_key_camera">RATIONALE_KEY_CAMERA</string>
 
+    <string name="intent_key_qrcode_subject">INTENT_KEY_QRCODE_SUBJECT</string>
     <string name="intent_key_qrcode_payment_method">INTENT_KEY_QRCODE_PAYMENT_METHOD</string>
     <string name="intent_key_qrcode_diner_name">INTENT_KEY_QRCODE_DINER_NAME</string>
     <string name="intent_key_qrcode_payment_method_address">INTENT_KEY_QRCODE_PAYMENT_METHOD_ADDRESS</string>

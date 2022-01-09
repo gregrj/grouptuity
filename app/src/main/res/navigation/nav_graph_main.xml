@@ -49,7 +49,7 @@
         tools:layout="@layout/frag_address_book">
         <argument
             android:name="origin_params"
-            app:argType="com.grouptuity.grouptuity.ui.custom.transitions.CircularRevealTransition$OriginParams"/>
+            app:argType="com.grouptuity.grouptuity.ui.util.transitions.CircularRevealTransition$OriginParams"/>
         <action android:id="@+id/create_diner" app:destination="@id/contactEntryFragment"/>
     </nav_fragment>
 
@@ -95,7 +95,7 @@
         <argument
             android:name="origin_params"
             app:nullable="true"
-            app:argType="com.grouptuity.grouptuity.ui.custom.transitions.CircularRevealTransition$OriginParams"/>
+            app:argType="com.grouptuity.grouptuity.ui.util.transitions.CircularRevealTransition$OriginParams"/>
 
         <action
             android:id="@+id/item_entry_to_bill_split"
@@ -129,7 +129,7 @@
         <argument
             android:name="origin_params"
             app:nullable="true"
-            app:argType="com.grouptuity.grouptuity.ui.custom.transitions.CircularRevealTransition$OriginParams"/>
+            app:argType="com.grouptuity.grouptuity.ui.util.transitions.CircularRevealTransition$OriginParams"/>
     </nav_fragment>
 
     <nav_fragment

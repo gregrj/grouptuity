@@ -2,7 +2,6 @@ package com.grouptuity.grouptuity.ui.billsplit
 
 import android.content.Context
 import android.os.Bundle
-import android.util.Log
 import android.view.*
 import android.widget.EditText
 import androidx.appcompat.app.AlertDialog
@@ -23,9 +22,10 @@ import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.entities.Diner
 import com.grouptuity.grouptuity.databinding.FragDinersBinding
 import com.grouptuity.grouptuity.databinding.FragDinersListitemBinding
-import com.grouptuity.grouptuity.ui.custom.views.RecyclerViewBottomOffset
-import com.grouptuity.grouptuity.ui.custom.views.RecyclerViewListener
-import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
+import com.grouptuity.grouptuity.ui.util.views.RecyclerViewBottomOffset
+import com.grouptuity.grouptuity.ui.util.views.RecyclerViewListener
+import com.grouptuity.grouptuity.ui.util.views.focusAndShowKeyboard
+import com.grouptuity.grouptuity.ui.util.views.setNullOnDestroy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -113,7 +113,7 @@ class DinersFragment: Fragment() {
         }
 
         binding.addSelf.button.setOnClickListener {
-            dinersViewModel.addSelfOrGetAccounts()?.apply {
+            dinersViewModel.addUserOrGetAccounts()?.apply {
                 // User name has not been set so prompt user before adding self to the bill
                 promptForUserName(this)
             }
@@ -153,7 +153,7 @@ class DinersFragment: Fragment() {
         val editTextDialog = MaterialAlertDialogBuilder(ContextThemeWrapper(requireContext(), R.style.AlertDialog))
             .setIcon(R.drawable.ic_person_24dp)
             .setTitle("Displaying your name")
-            .setView(R.layout.dialog_edit_text_self)
+            .setView(R.layout.dialog_edit_text_user)
             .setNegativeButton(resources.getString(R.string.skip)) { _, _ ->
                 dinersViewModel.addSelfToBill(null)
             }
@@ -167,22 +167,19 @@ class DinersFragment: Fragment() {
         // Positive button is only enabled when the EditText is not empty
         editTextDialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = false
         editTextDialog.findViewById<EditText>(R.id.edit_text)?.also { editText ->
+            editText.requestFocus()
             editText.addTextChangedListener {
                 editTextDialog.getButton(AlertDialog.BUTTON_POSITIVE).isEnabled = !it.isNullOrBlank()
             }
-            editText.requestFocus()
+            editText.focusAndShowKeyboard()
         }
-
-        // Focus on EditText and show keyboard
-        editTextDialog.window?.clearFlags(WindowManager.LayoutParams.FLAG_NOT_FOCUSABLE or WindowManager.LayoutParams.FLAG_ALT_FOCUSABLE_IM)
-        editTextDialog.window?.setSoftInputMode(WindowManager.LayoutParams.SOFT_INPUT_STATE_ALWAYS_VISIBLE)
     }
 
     private inner class DinersRecyclerViewAdapter(private val context: Context,
                                     private val dinersViewModel: DinersViewModel,
                                     private val listener: RecyclerViewListener): RecyclerView.Adapter<DinersRecyclerViewAdapter.ViewHolder>() {
 
-        private var mDataSet = emptyList<Pair<Diner,String>>()
+        private var mDataSet = emptyList<Triple<Diner, String, String>>()
 
         inner class ViewHolder(val viewBinding: FragDinersListitemBinding): RecyclerView.ViewHolder(viewBinding.root) {
             var preDrawListener: ViewTreeObserver.OnPreDrawListener? = null
@@ -198,7 +195,7 @@ class DinersFragment: Fragment() {
             ViewHolder(FragDinersListitemBinding.inflate(LayoutInflater.from(context), parent, false))
 
         override fun onBindViewHolder(holder: ViewHolder, position: Int) {
-            val (newDiner, dinerSubtotal) = mDataSet[position]
+            val (newDiner, dinerSubtotal, dinerItemsAndSubtotalMessage) = mDataSet[position]
 
             holder.apply {
                 itemView.tag = newDiner // store updated data
@@ -220,18 +217,9 @@ class DinersFragment: Fragment() {
 
                 viewBinding.remove.setOnClickListener {
                     dinersViewModel.removeDiner(newDiner)
-                    //TODO handle orphan items / discounts from removed diner
                 }
 
-                if(newDiner.items.value.isEmpty()) {
-                    viewBinding.message.text = context.resources.getString(R.string.diners_zero_items)
-                } else {
-                    viewBinding.message.text = context.resources.getQuantityString(
-                        R.plurals.diners_num_items_with_subtotal,
-                        newDiner.items.value.size,
-                        newDiner.items.value.size,
-                        dinerSubtotal)
-                }
+                viewBinding.message.text = dinerItemsAndSubtotalMessage
 
                 viewBinding.cardBackground.transitionName = "container" + newDiner.id
                 viewBinding.contactIcon.image.transitionName = "image" + newDiner.id
@@ -257,13 +245,14 @@ class DinersFragment: Fragment() {
             }
         }
 
-        suspend fun updateDataSet(newDataSet: List<Pair<Diner, String>>) {
+        suspend fun updateDataSet(newDataSet: List<Triple<Diner, String, String>>) {
             val diffResult = DiffUtil.calculateDiff(object: DiffUtil.Callback() {
                 override fun getOldListSize() = mDataSet.size
 
                 override fun getNewListSize() = newDataSet.size
 
-                override fun areItemsTheSame(oldPosition: Int, newPosition: Int) = newDataSet[newPosition].first.id == mDataSet[oldPosition].first.id
+                override fun areItemsTheSame(oldPosition: Int, newPosition: Int) =
+                    newDataSet[newPosition].first.id == mDataSet[oldPosition].first.id
 
                 override fun areContentsTheSame(oldPosition: Int, newPosition: Int): Boolean {
                     val newDiner = newDataSet[newPosition].first
@@ -272,8 +261,8 @@ class DinersFragment: Fragment() {
                     return newDiner.id == oldDiner.id &&
                             newDiner.name == oldDiner.name &&
                             newDiner.photoUri == oldDiner.photoUri &&
-                            newDiner.items.value.size == oldDiner.items.value.size &&
-                            newDataSet[newPosition].second == mDataSet[oldPosition].second
+                            newDataSet[newPosition].second == mDataSet[oldPosition].second &&
+                            newDataSet[newPosition].third == mDataSet[oldPosition].third
                 }
             })
 

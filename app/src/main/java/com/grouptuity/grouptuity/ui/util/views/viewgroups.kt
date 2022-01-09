@@ -1,4 +1,4 @@
-package com.grouptuity.grouptuity.ui.custom.views
+package com.grouptuity.grouptuity.ui.util.views
 
 import android.content.Context
 import android.util.AttributeSet

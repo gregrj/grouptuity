@@ -8,7 +8,7 @@
 
     <include
         android:id="@+id/add_self"
-        layout="@layout/add_self"/>
+        layout="@layout/add_user"/>
 
     <androidx.recyclerview.widget.RecyclerView
         android:id="@+id/list"

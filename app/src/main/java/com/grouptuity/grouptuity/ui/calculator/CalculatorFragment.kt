@@ -4,15 +4,12 @@ import android.animation.Animator
 import android.animation.ValueAnimator
 import android.graphics.Typeface
 import android.os.Bundle
-import android.util.TypedValue
 import android.view.LayoutInflater
 import android.view.View
 import android.view.ViewGroup
 import android.view.animation.AccelerateDecelerateInterpolator
-import androidx.activity.OnBackPressedCallback
 import androidx.core.animation.doOnStart
 import androidx.core.view.doOnPreDraw
-import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.fragment.navArgs
@@ -23,42 +20,32 @@ import com.grouptuity.grouptuity.MainActivity
 import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.CalculationType
 import com.grouptuity.grouptuity.databinding.FragCalculatorBinding
-import com.grouptuity.grouptuity.ui.custom.transitions.CardViewExpandTransition
-import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
+import com.grouptuity.grouptuity.ui.util.UIFragment
+import com.grouptuity.grouptuity.ui.util.transitions.CardViewExpandTransition
+import com.grouptuity.grouptuity.ui.util.views.setupFixedNumberPad
+import com.grouptuity.grouptuity.ui.util.views.setupToolbarSecondaryTertiaryAnimation
 
-// TODO handle inset changes
 
 const val CALCULATOR_RETURN_KEY = "calculatorReturnKey"
 
 
-class CalculatorFragment: Fragment() {
-    private val args: CalculatorFragmentArgs by navArgs()
-    private var binding by setNullOnDestroy<FragCalculatorBinding>()
-    private lateinit var calculatorViewModel: CalculatorViewModel
-    private lateinit var backPressedCallback: OnBackPressedCallback
+class CalculatorFragment: UIFragment<
+        FragCalculatorBinding,
+        CalculatorViewModel,
+        CalculationType,
+        Pair<Double, String>?>() {
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        calculatorViewModel = ViewModelProvider(requireActivity())[CalculatorViewModel::class.java].also {
-            it.initialize(args.calculationType)
-        }
-        binding = FragCalculatorBinding.inflate(inflater, container, false)
-        return binding.root
-    }
+    private val args: CalculatorFragmentArgs by navArgs()
+
+    override fun inflate(inflater: LayoutInflater, container: ViewGroup?) =
+        FragCalculatorBinding.inflate(inflater, container, false)
+
+    override fun createViewModel() = ViewModelProvider(requireActivity())[CalculatorViewModel::class.java]
+
+    override fun getInitialInput() = args.calculationType
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        // Intercept user interactions while while fragment transitions and animations are running
-        binding.rootLayout.attachLock(calculatorViewModel.isInputLocked)
-
-        // Intercept back pressed events to allow fragment-specific behaviors
-        backPressedCallback = object: OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                if (!calculatorViewModel.isInputLocked.value)
-                    closeFragment()
-            }
-        }
-        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, backPressedCallback)
 
         // Setup transitions
         postponeEnterTransition()
@@ -66,7 +53,35 @@ class CalculatorFragment: Fragment() {
         setupEnterTransition()
         binding.fadeOutEditText.setText(args.previousValue)
 
-        // Setup toolbar
+        setupToolbar()
+
+        setupFixedNumberPad(
+            viewLifecycleOwner,
+            viewModel.calculator,
+            binding.numberPad)
+    }
+
+    override fun onResume() {
+        super.onResume()
+        binding.fadeOutEditText.visibility = View.GONE
+    }
+
+    override fun onFinish(output: Pair<Double, String>?) {
+        setupReturnTransition()
+
+        if (output != null) {
+            findNavController().previousBackStackEntry?.savedStateHandle?.set(
+                CALCULATOR_RETURN_KEY, Pair(args.calculationType, output.first)
+            )
+
+            binding.fadeOutEditText.setText(output.second)
+        }
+
+        // Close fragment using default onBackPressed behavior
+        requireActivity().onBackPressed()
+    }
+
+    private fun setupToolbar() {
         binding.toolbar.apply {
             title = args.title
 
@@ -75,94 +90,17 @@ class CalculatorFragment: Fragment() {
 
             // Close fragment using default onBackPressed behavior unless animation in progress
             setNavigationOnClickListener {
-                if (!calculatorViewModel.isInputLocked.value)
-                    closeFragment()
+                if (!viewModel.isInputLocked.value)
+                    viewModel.handleOnBackPressed()
             }
+
+            setupToolbarSecondaryTertiaryAnimation(
+                requireContext(),
+                viewLifecycleOwner,
+                viewModel.toolBarInTertiaryState,
+                this,
+                binding.statusBarBackgroundView)
         }
-
-        setupNumberPad()
-
-        calculatorViewModel.acceptEvents.observe(viewLifecycleOwner) {
-            it.consume()?.apply {
-                findNavController().previousBackStackEntry?.savedStateHandle?.set(
-                    CALCULATOR_RETURN_KEY, Pair(args.calculationType, this.first)
-                )
-                binding.numberPad.displayTextview.text = this.second
-                binding.fadeOutEditText.setText(this.third)
-                closeFragment()
-            }
-        }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        binding.fadeOutEditText.visibility = View.GONE
-
-        // Reset UI input/output locks leftover from aborted transitions/animations
-        calculatorViewModel.unFreezeOutput()
-        calculatorViewModel.unLockInput()
-    }
-
-    private fun closeFragment() {
-        // Prevent callback from intercepting back pressed events
-        backPressedCallback.isEnabled = false
-
-        // Prevent live updates to UI during return transition
-        calculatorViewModel.freezeOutput()
-
-        setupReturnTransition()
-
-        // Close fragment using default onBackPressed behavior
-        requireActivity().onBackPressed()
-    }
-
-    private fun setupNumberPad() {
-        calculatorViewModel.formattedValue.observe(viewLifecycleOwner, {
-            binding.numberPad.displayTextview.text = it
-        })
-
-        calculatorViewModel.backspaceButtonVisible.observe(viewLifecycleOwner) {
-            binding.numberPad.buttonBackspace.visibility = if(it) View.VISIBLE else View.GONE
-        }
-        binding.numberPad.buttonBackspace.setOnClickListener { calculatorViewModel.removeDigitFromPrice() }
-        binding.numberPad.buttonBackspace.setOnLongClickListener {
-            calculatorViewModel.resetPrice()
-            true
-        }
-
-        calculatorViewModel.zeroButtonEnabled.observe(viewLifecycleOwner) {
-            binding.numberPad.button0.isEnabled = it
-        }
-        calculatorViewModel.nonZeroButtonsEnabled.observe(viewLifecycleOwner) {
-            binding.numberPad.button1.isEnabled = it
-            binding.numberPad.button2.isEnabled = it
-            binding.numberPad.button3.isEnabled = it
-            binding.numberPad.button4.isEnabled = it
-            binding.numberPad.button5.isEnabled = it
-            binding.numberPad.button6.isEnabled = it
-            binding.numberPad.button7.isEnabled = it
-            binding.numberPad.button8.isEnabled = it
-            binding.numberPad.button9.isEnabled = it
-        }
-        calculatorViewModel.decimalButtonEnabled.observe(viewLifecycleOwner) {
-            binding.numberPad.buttonDecimal.isEnabled = it
-        }
-        calculatorViewModel.acceptButtonEnabled.observe(viewLifecycleOwner) {
-            binding.numberPad.buttonAccept.isEnabled = it
-        }
-
-        binding.numberPad.buttonDecimal.setOnClickListener { calculatorViewModel.addDecimalToPrice() }
-        binding.numberPad.button0.setOnClickListener { calculatorViewModel.addDigitToPrice('0') }
-        binding.numberPad.button1.setOnClickListener { calculatorViewModel.addDigitToPrice('1') }
-        binding.numberPad.button2.setOnClickListener { calculatorViewModel.addDigitToPrice('2') }
-        binding.numberPad.button3.setOnClickListener { calculatorViewModel.addDigitToPrice('3') }
-        binding.numberPad.button4.setOnClickListener { calculatorViewModel.addDigitToPrice('4') }
-        binding.numberPad.button5.setOnClickListener { calculatorViewModel.addDigitToPrice('5') }
-        binding.numberPad.button6.setOnClickListener { calculatorViewModel.addDigitToPrice('6') }
-        binding.numberPad.button7.setOnClickListener { calculatorViewModel.addDigitToPrice('7') }
-        binding.numberPad.button8.setOnClickListener { calculatorViewModel.addDigitToPrice('8') }
-        binding.numberPad.button9.setOnClickListener { calculatorViewModel.addDigitToPrice('9') }
-        binding.numberPad.buttonAccept.setOnClickListener { calculatorViewModel.tryAcceptValue() }
     }
 
     private fun setupEnterTransition() {
@@ -233,8 +171,8 @@ class CalculatorFragment: Fragment() {
                     return animator
                 }
             }
-        ).setOnTransitionStartCallback { _, _, _, _ -> calculatorViewModel.notifyTransitionStarted() }
-            .setOnTransitionEndCallback { _, _, _, _ -> calculatorViewModel.notifyTransitionFinished() }
+        ).setOnTransitionStartCallback { _, _, _, _ -> viewModel.notifyTransitionStarted() }
+            .setOnTransitionEndCallback { _, _, _, _ -> viewModel.notifyTransitionFinished() }
 
         binding.coveredFragment.setImageBitmap(MainActivity.storedViewBitmap)
     }
@@ -265,35 +203,35 @@ class CalculatorFragment: Fragment() {
 
         sharedElementReturnTransition = CardViewExpandTransition(binding.container.transitionName, binding.coordinatorLayout.id, false)
             .addElement(
-            binding.fadeOutEditText.transitionName,
-            object: CardViewExpandTransition.Element{
-                override fun captureStartValues(transition: Transition, transitionValues: TransitionValues) {
-                    transitionValues.values[propTopInset] = 0
-                }
-
-                override fun captureEndValues(transition: Transition, transitionValues: TransitionValues) {
-                    transitionValues.values[propTopInset] = 1
-                }
-
-                override fun createAnimator(transition: Transition, sceneRoot: ViewGroup, startValues: TransitionValues, endValues: TransitionValues): Animator? {
-                    val animator = ValueAnimator.ofFloat(0f, 1f)
-                    animator.doOnStart {
-                        binding.coordinatorLayout.alpha = 1f
-                        binding.fadeOutEditText.alpha = 0f
+                binding.fadeOutEditText.transitionName,
+                object: CardViewExpandTransition.Element{
+                    override fun captureStartValues(transition: Transition, transitionValues: TransitionValues) {
+                        transitionValues.values[propTopInset] = 0
                     }
 
-                    animator.addUpdateListener {
-                        val twentyTo60Progress = (2.5f*AccelerateDecelerateInterpolator()
-                            .getInterpolation(it.animatedFraction) - 0.5f).coerceIn(0f, 1f)
-
-                        binding.fadeOutEditText.alpha = twentyTo60Progress
-                        binding.coordinatorLayout.alpha = 1f - twentyTo60Progress
+                    override fun captureEndValues(transition: Transition, transitionValues: TransitionValues) {
+                        transitionValues.values[propTopInset] = 1
                     }
 
-                    return animator
+                    override fun createAnimator(transition: Transition, sceneRoot: ViewGroup, startValues: TransitionValues, endValues: TransitionValues): Animator? {
+                        val animator = ValueAnimator.ofFloat(0f, 1f)
+                        animator.doOnStart {
+                            binding.coordinatorLayout.alpha = 1f
+                            binding.fadeOutEditText.alpha = 0f
+                        }
+
+                        animator.addUpdateListener {
+                            val twentyTo60Progress = (2.5f*AccelerateDecelerateInterpolator()
+                                .getInterpolation(it.animatedFraction) - 0.5f).coerceIn(0f, 1f)
+
+                            binding.fadeOutEditText.alpha = twentyTo60Progress
+                            binding.coordinatorLayout.alpha = 1f - twentyTo60Progress
+                        }
+
+                        return animator
+                    }
                 }
-            }
-        ).setOnTransitionStartCallback { _, _, _, _ -> calculatorViewModel.notifyTransitionStarted() }
+            ).setOnTransitionStartCallback { _, _, _, _ -> viewModel.notifyTransitionStarted() }
 
         // Return transition is needed to prevent next fragment from appearing immediately
         returnTransition = Hold().apply {

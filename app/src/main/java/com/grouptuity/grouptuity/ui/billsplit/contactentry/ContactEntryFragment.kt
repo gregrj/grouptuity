@@ -16,7 +16,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.ImageView
-import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
@@ -26,7 +25,6 @@ import androidx.core.animation.doOnEnd
 import androidx.core.animation.doOnStart
 import androidx.core.view.doOnPreDraw
 import androidx.core.widget.addTextChangedListener
-import androidx.fragment.app.Fragment
 import androidx.lifecycle.ViewModelProvider
 import androidx.navigation.fragment.FragmentNavigatorExtras
 import androidx.navigation.fragment.findNavController
@@ -38,42 +36,31 @@ import com.google.android.material.textfield.TextInputLayout
 import com.google.android.material.transition.Hold
 import com.grouptuity.grouptuity.MainActivity
 import com.grouptuity.grouptuity.R
-import com.grouptuity.grouptuity.data.PaymentMethod
+import com.grouptuity.grouptuity.data.entities.Diner
+import com.grouptuity.grouptuity.data.entities.PaymentMethod
 import com.grouptuity.grouptuity.databinding.FragContactEntryBinding
 import com.grouptuity.grouptuity.ui.billsplit.qrcodescanner.QRCodeScannerActivity
-import com.grouptuity.grouptuity.ui.custom.transitions.CardViewExpandTransition
-import com.grouptuity.grouptuity.ui.custom.transitions.progressWindow
-import com.grouptuity.grouptuity.ui.custom.views.*
+import com.grouptuity.grouptuity.ui.util.UIFragment
+import com.grouptuity.grouptuity.ui.util.transitions.CardViewExpandTransition
+import com.grouptuity.grouptuity.ui.util.transitions.progressWindow
+import com.grouptuity.grouptuity.ui.util.views.clearFocusAndHideKeyboard
+import com.grouptuity.grouptuity.ui.util.views.focusAndShowKeyboard
 
 
-class ContactEntryFragment: Fragment() {
-    private var binding by setNullOnDestroy<FragContactEntryBinding>()
-    private lateinit var viewModel: ContactEntryViewModel
-    private lateinit var backPressedCallback: OnBackPressedCallback
+// TODO voice name entry
+
+class ContactEntryFragment: UIFragment<FragContactEntryBinding, ContactEntryViewModel, Unit?, Diner?>() {
     private lateinit var qrCodeScannerLauncher: ActivityResultLauncher<Intent>
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        viewModel = ViewModelProvider(requireActivity())[ContactEntryViewModel::class.java].apply {
-            initialize()
-        }
+    override fun inflate(inflater: LayoutInflater, container: ViewGroup?) =
+        FragContactEntryBinding.inflate(inflater, container, false)
 
-        binding = FragContactEntryBinding.inflate(inflater, container, false)
-        return binding.root
-    }
+    override fun createViewModel() = ViewModelProvider(requireActivity())[ContactEntryViewModel::class.java]
+
+    override fun getInitialInput(): Unit? = null
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
-
-        // Intercept user interactions while fragment transitions are running
-        binding.rootLayout.attachLock(viewModel.isInputLocked)
-
-        // Intercept back pressed events to allow fragment-specific behaviors
-        backPressedCallback = object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                closeFragment(false)
-            }
-        }
-        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, backPressedCallback)
 
         setupToolbar()
 
@@ -85,7 +72,7 @@ class ContactEntryFragment: Fragment() {
                 val address = result.data?.extras?.get(requireContext().getString(R.string.intent_key_qrcode_payment_method_address)) as String
 
                 when (paymentMethod) {
-                    PaymentMethod.IOU_EMAIL -> { binding.emailInput.setText(address) }
+                    PaymentMethod.PAYBACK_LATER -> { binding.emailInput.setText(address) }
                     PaymentMethod.VENMO -> { binding.venmoInput.setText(address) }
                     PaymentMethod.CASH_APP -> { binding.cashAppInput.setText(address) }
                     PaymentMethod.ALGO -> { binding.algorandInput.setText(address) }
@@ -102,9 +89,13 @@ class ContactEntryFragment: Fragment() {
         setupTextChangedListeners()
 
         binding.fab.setOnClickListener {
-            if (viewModel.enableCreateContact.value == true) {
-                closeFragment(true)
-            }
+            // Collect entries from all input fields and create the new diner
+            viewModel.addContactToBill(
+                binding.nameInput.text.toString(),
+                binding.emailInput.text.toString(),
+                binding.venmoInput.text.toString(),
+                binding.cashAppInput.text.toString(),
+                binding.algorandInput.text.toString())
         }
 
         viewModel.enableCreateContact.observe(viewLifecycleOwner) {
@@ -149,17 +140,38 @@ class ContactEntryFragment: Fragment() {
 
     override fun onResume() {
         super.onResume()
-
         binding.newContactButton.visibility = View.GONE
+    }
 
-        // Reset UI input/output locks leftover from aborted transitions/animations
-        viewModel.unFreezeOutput()
+    override fun onFinish(newDiner: Diner?) {
+        if (newDiner == null) {
+            setupExitTransition()
+
+            // Close fragment using default onBackPressed behavior
+            requireActivity().onBackPressed()
+        } else {
+            // Exit transition is needed to prevent next fragment from appearing immediately
+            exitTransition = Hold().apply {
+                duration = 0L
+                addTarget(requireView())
+            }
+
+            binding.container.transitionName = "new_diner" + newDiner.id
+
+            // Close fragment by popping up to the BillSplitFragment
+            findNavController().navigate(
+                ContactEntryFragmentDirections.contactEntryToBillSplit(newDinerId = newDiner.id),
+                FragmentNavigatorExtras(
+                    binding.container to binding.container.transitionName
+                )
+            )
+        }
     }
 
     private fun setupToolbar() {
         binding.toolbar.inflateMenu(R.menu.toolbar_contactentry)
         binding.toolbar.setNavigationIcon(R.drawable.ic_arrow_back_light)
-        binding.toolbar.setNavigationOnClickListener { closeFragment(false) }
+        binding.toolbar.setNavigationOnClickListener { viewModel.handleOnBackPressed() }
         binding.toolbar.title = getString(R.string.contact_entry_toolbar_title_new_diner)
 
         binding.toolbar.setOnMenuItemClickListener { item ->
@@ -374,45 +386,6 @@ class ContactEntryFragment: Fragment() {
         textInputLayout.isEnabled = false
         textInputLayout.endIconDrawable = null
         textInputLayout.setEndIconOnClickListener(null)
-    }
-
-    private fun closeFragment(addContactToBill: Boolean) {
-        // Prevent callback from intercepting back pressed events
-        backPressedCallback.isEnabled = false
-
-        // Freeze UI in place as the fragment closes
-        viewModel.freezeOutput()
-
-        if(addContactToBill) {
-            // Collect entries from all input fields and create a diner
-            val newDiner = viewModel.addContactToBill(
-                binding.nameInput.text.toString(),
-                binding.emailInput.text.toString(),
-                binding.venmoInput.text.toString(),
-                binding.cashAppInput.text.toString(),
-                binding.algorandInput.text.toString())
-
-            // Exit transition is needed to prevent next fragment from appearing immediately
-            exitTransition = Hold().apply {
-                duration = 0L
-                addTarget(requireView())
-            }
-
-            binding.container.transitionName = "new_diner" + newDiner.id
-
-            // Close fragment by popping up to the BillSplitFragment
-            findNavController().navigate(
-                ContactEntryFragmentDirections.contactEntryToBillSplit(newDiner = newDiner),
-                FragmentNavigatorExtras(
-                    binding.container to binding.container.transitionName
-                )
-            )
-        } else {
-            setupExitTransition()
-
-            // Return to the AddressBookFragment using the default onBackPressed() behavior
-            requireActivity().onBackPressed()
-        }
     }
 
     private fun setupEnterTransition() {

@@ -25,8 +25,8 @@ import com.grouptuity.grouptuity.data.StoredPreference
 import com.grouptuity.grouptuity.databinding.ActivityMainBinding
 import com.grouptuity.grouptuity.databinding.FragSettingsHolderBinding
 import com.grouptuity.grouptuity.ui.calculator.CALCULATOR_RETURN_KEY
-import com.grouptuity.grouptuity.ui.custom.CustomNavigator
-import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
+import com.grouptuity.grouptuity.ui.util.CustomNavigator
+import com.grouptuity.grouptuity.ui.util.views.setNullOnDestroy
 import java.text.NumberFormat
 
 
@@ -167,7 +167,7 @@ class SettingsFragment: PreferenceFragmentCompat() {
         preferenceManager.preferenceDataStore = viewModel.preferenceDataStore
         setPreferencesFromResource(R.xml.preferences, rootKey)
 
-        (findPreference<Preference>(requireContext().getString(R.string.preference_key_user_email)) as EditTextPreference)?.apply {
+        (findPreference<Preference>(requireContext().getString(R.string.preference_key_user_email)) as EditTextPreference).apply {
             setOnBindEditTextListener {
                 it.hint = requireContext().getString(R.string.settings_account_email_hint)
             }

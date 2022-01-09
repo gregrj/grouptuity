@@ -19,7 +19,6 @@ import android.view.View
 import android.view.ViewGroup
 import android.view.animation.AccelerateDecelerateInterpolator
 import android.widget.ArrayAdapter
-import androidx.activity.OnBackPressedCallback
 import androidx.activity.result.ActivityResult
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContracts
@@ -31,7 +30,6 @@ import androidx.core.content.res.ResourcesCompat
 import androidx.core.graphics.ColorUtils
 import androidx.core.view.doOnPreDraw
 import androidx.core.widget.addTextChangedListener
-import androidx.fragment.app.Fragment
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
@@ -57,11 +55,14 @@ import com.google.android.material.transition.Hold
 import com.grouptuity.grouptuity.MainActivity
 import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.*
+import com.grouptuity.grouptuity.data.entities.*
 import com.grouptuity.grouptuity.databinding.*
 import com.grouptuity.grouptuity.ui.billsplit.qrcodescanner.QRCodeScannerActivity
-import com.grouptuity.grouptuity.ui.custom.CustomNavigator
-import com.grouptuity.grouptuity.ui.custom.transitions.CardViewExpandTransition
-import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
+import com.grouptuity.grouptuity.ui.calculator.CalculatorViewModel
+import com.grouptuity.grouptuity.ui.util.CustomNavigator
+import com.grouptuity.grouptuity.ui.util.UIFragment
+import com.grouptuity.grouptuity.ui.util.transitions.CardViewExpandTransition
+import com.grouptuity.grouptuity.ui.util.views.setNullOnDestroy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -73,11 +74,8 @@ import kotlinx.coroutines.withContext
 
 // Note: Bug exists with programmatic changes to endIconMode so custom mode is used with a
 
-class DinerDetailsFragment: Fragment() {
-    private var binding by setNullOnDestroy<FragDinerDetailsBinding>()
+class DinerDetailsFragment: UIFragment<FragDinerDetailsBinding, DinerDetailsViewModel, String, Diner>() {
     private val args: DinerDetailsFragmentArgs by navArgs()
-    private lateinit var viewModel: DinerDetailsViewModel
-    private lateinit var backPressedCallback: OnBackPressedCallback
     private lateinit var qrCodeScannerLauncher: ActivityResultLauncher<Intent>
     private var isToolBarCollapsed = false
     private var itemsExpanded = false
@@ -85,11 +83,12 @@ class DinerDetailsFragment: Fragment() {
     private var reimbursementsExpanded = false
     private var startTransitionPending = false
 
-    override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        viewModel = ViewModelProvider(requireActivity())[DinerDetailsViewModel::class.java]
-        binding = FragDinerDetailsBinding.inflate(inflater, container, false)
-        return binding.root
-    }
+    override fun inflate(inflater: LayoutInflater, container: ViewGroup?) =
+        FragDinerDetailsBinding.inflate(inflater, container, false)
+
+    override fun createViewModel() = ViewModelProvider(requireActivity())[DinerDetailsViewModel::class.java]
+
+    override fun getInitialInput(): String = args.dinerId
 
     override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
         super.onViewCreated(view, savedInstanceState)
@@ -100,22 +99,7 @@ class DinerDetailsFragment: Fragment() {
         // TODO replace with dedicated lock? Should everything just be handled in the onResume method?
         viewModel.notifyTransitionStarted()
 
-        // Intercept user interactions while fragment transitions are running
-        binding.rootLayout.attachLock(viewModel.isInputLocked)
-
-        // Intercept back pressed events to allow fragment-specific behaviors
-        backPressedCallback = object : OnBackPressedCallback(true) {
-            override fun handleOnBackPressed() {
-                if(viewModel.handleOnBackPressed()) {
-                    closeFragment()
-                }
-            }
-        }
-        requireActivity().onBackPressedDispatcher.addCallback(viewLifecycleOwner, backPressedCallback)
-
-        val loadedDiner = args.diner
-        viewModel.initializeForDiner(loadedDiner)
-
+        val loadedDiner = viewModel.loadedDiner.value!!
         when {
             (findNavController().navigatorProvider.getNavigator(CustomNavigator::class.java).lastNavigationWasBackward) -> {
                 // Returning from DebtEntryFragment
@@ -164,7 +148,7 @@ class DinerDetailsFragment: Fragment() {
                 val address = result.data?.extras?.get(requireContext().getString(R.string.intent_key_qrcode_payment_method_address)) as String
 
                 when (paymentMethod) {
-                    PaymentMethod.IOU_EMAIL -> { binding.emailBiographics.input.setText(address) }
+                    PaymentMethod.PAYBACK_LATER -> { binding.emailBiographics.input.setText(address) }
                     PaymentMethod.VENMO -> { binding.venmoBiographics.input.setText(address) }
                     PaymentMethod.CASH_APP -> { binding.cashAppBiographics.input.setText(address) }
                     PaymentMethod.ALGO -> { binding.algorandBiographics.input.setText(address) }
@@ -193,26 +177,10 @@ class DinerDetailsFragment: Fragment() {
         binding.fab.setOnClickListener { viewModel.editBiographics() }
     }
 
-    override fun onResume() {
-        super.onResume()
-
-        // Reset UI input/output locks leftover from aborted transitions/animations
-        viewModel.unFreezeOutput()
-
-        // Manually unlock so AppBarLayout.OnOffsetChangedListener can run
-        viewModel.notifyTransitionFinished()
-    }
-
-    private fun closeFragment() {
-        // Prevent callback from intercepting back pressed events
-        backPressedCallback.isEnabled = false
-
-        // Manually lock so AppBarLayout.OnOffsetChangedListener does not show fab
+    override fun onFinish(output: Diner) {
+        // Manually lock so AppBarLayout.OnOffsetChangedListener does not show fab TODO?
         viewModel.notifyTransitionStarted()
         binding.fab.hide()
-
-        // Freeze UI in place as the fragment closes
-        viewModel.freezeOutput()
 
         // Closing animation shrinking fragment into the FAB of the previous fragment.
         // Transition is defined here to incorporate dynamic changes to window insets.
@@ -327,7 +295,7 @@ class DinerDetailsFragment: Fragment() {
             }
         }
 
-        setupBiographicsItem(PaymentMethod.IOU_EMAIL, binding.emailBiographics, viewModel.email)
+        setupBiographicsItem(PaymentMethod.PAYBACK_LATER, binding.emailBiographics, viewModel.email)
 
         setupBiographicsItem(PaymentMethod.VENMO, binding.venmoBiographics, viewModel.venmoAddress)
 
@@ -672,7 +640,7 @@ class DinerDetailsFragment: Fragment() {
             (requireActivity() as MainActivity).storeViewAsBitmap(requireView())
 
             findNavController().navigate(
-                DinerDetailsFragmentDirections.addDebt(args.diner),
+                DinerDetailsFragmentDirections.addDebt(viewModel.loadedDiner.value!!.id),
                 FragmentNavigatorExtras(
                     binding.addDebtContainer to binding.addDebtContainer.transitionName,
                     binding.addDebtButton to binding.addDebtButton.transitionName
@@ -878,31 +846,31 @@ class DinerDetailsFragment: Fragment() {
                     binding.nestedScrollView.alpha = 0f
 
                     this.animate()
-                    .setDuration(transition.duration)
-                    .setUpdateListener {
-                        // Fade in CardView content and toolbar during card expansion
-                        val progress = AccelerateDecelerateInterpolator().getInterpolation(it.animatedFraction)
-                        binding.nestedScrollView.alpha = progress
-                        this.setContentScrimColor(
-                            ColorUtils.setAlphaComponent(
-                                TypedValue().also { this.context.theme.resolveAttribute(R.attr.colorPrimary, it, true) }.data,
-                                (progress*255).toInt()
-                            ))
-                        this.setStatusBarScrimColor(
-                            ColorUtils.setAlphaComponent(
-                                TypedValue().also { this.context.theme.resolveAttribute(R.attr.colorPrimaryVariant, it, true) }.data,
-                                (progress*255).toInt()
-                            ))
+                        .setDuration(transition.duration)
+                        .setUpdateListener {
+                            // Fade in CardView content and toolbar during card expansion
+                            val progress = AccelerateDecelerateInterpolator().getInterpolation(it.animatedFraction)
+                            binding.nestedScrollView.alpha = progress
+                            this.setContentScrimColor(
+                                ColorUtils.setAlphaComponent(
+                                    TypedValue().also { this.context.theme.resolveAttribute(R.attr.colorPrimary, it, true) }.data,
+                                    (progress*255).toInt()
+                                ))
+                            this.setStatusBarScrimColor(
+                                ColorUtils.setAlphaComponent(
+                                    TypedValue().also { this.context.theme.resolveAttribute(R.attr.colorPrimaryVariant, it, true) }.data,
+                                    (progress*255).toInt()
+                                ))
 
-                        // Fade in navigation icon and toolbar title at the end of the animation
-                        val eightyTo100Progress = (5f*progress - 4f).coerceIn(0f, 1f)
-                        sceneRoot.findViewById<Toolbar>(R.id.toolbar)?.alpha = eightyTo100Progress
-                        this.setCollapsedTitleTextColor(
-                            ColorUtils.setAlphaComponent(
-                                TypedValue().also { this.context.theme.resolveAttribute(R.attr.colorOnPrimary, it, true) }.data,
-                                (eightyTo100Progress*255).toInt()
-                            ))
-                    }.start()
+                            // Fade in navigation icon and toolbar title at the end of the animation
+                            val eightyTo100Progress = (5f*progress - 4f).coerceIn(0f, 1f)
+                            sceneRoot.findViewById<Toolbar>(R.id.toolbar)?.alpha = eightyTo100Progress
+                            this.setCollapsedTitleTextColor(
+                                ColorUtils.setAlphaComponent(
+                                    TypedValue().also { this.context.theme.resolveAttribute(R.attr.colorOnPrimary, it, true) }.data,
+                                    (eightyTo100Progress*255).toInt()
+                                ))
+                        }.start()
                 }
             }
             .addListener(object : Transition.TransitionListener {

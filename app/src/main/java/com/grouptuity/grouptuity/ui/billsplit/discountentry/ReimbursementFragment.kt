@@ -13,11 +13,11 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import androidx.recyclerview.widget.*
 import com.grouptuity.grouptuity.R
-import com.grouptuity.grouptuity.data.Diner
+import com.grouptuity.grouptuity.data.entities.Diner
 import com.grouptuity.grouptuity.databinding.FragDiscountEntryReimbursementBinding
 import com.grouptuity.grouptuity.databinding.ListDinerBinding
-import com.grouptuity.grouptuity.ui.custom.views.RecyclerViewListener
-import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
+import com.grouptuity.grouptuity.ui.util.views.RecyclerViewListener
+import com.grouptuity.grouptuity.ui.util.views.setNullOnDestroy
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext

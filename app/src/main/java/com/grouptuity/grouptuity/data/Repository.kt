@@ -1,5 +1,6 @@
 package com.grouptuity.grouptuity.data
 
+import android.app.Application
 import android.content.Context
 import android.database.Cursor
 import android.icu.text.NumberFormat
@@ -15,6 +16,7 @@ import com.grouptuity.grouptuity.data.entities.*
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.*
 import java.math.BigDecimal
+import java.math.RoundingMode
 import java.text.DateFormat
 import java.text.SimpleDateFormat
 import java.util.*
@@ -34,10 +36,10 @@ class Repository(context: Context) {
 
         private lateinit var scope: CoroutineScope
 
-        fun getInstance(application: GrouptuityApplication): Repository {
+        fun getInstance(application: Application): Repository {
             return INSTANCE ?: synchronized(this) {
                 INSTANCE ?: run {
-                    scope = application.scope
+                    scope = (application as GrouptuityApplication).scope
                     StoredPreference.initialize(application)
                     val instance = Repository(application.applicationContext)
                     INSTANCE = instance
@@ -51,12 +53,7 @@ class Repository(context: Context) {
 
         fun <T> Flow<Set<T>>.toSortedEntityList(selector: (T) -> Long): StateFlow<List<T>> =
             this.stateIn(scope, SharingStarted.WhileSubscribed(), emptySet())
-                .mapLatest { entitySet -> entitySet.sortedBy { selector(it) } }
-                .stateIn(scope, SharingStarted.WhileSubscribed(), emptyList())
-
-        fun <T> Flow<Set<T>>.toSortedEntityList(comparator: Comparator<in T>): StateFlow<List<T>> =
-            this.stateIn(scope, SharingStarted.WhileSubscribed(), emptySet())
-                .mapLatest { entitySet -> entitySet.sortedWith(comparator) }
+                .map { entitySet -> entitySet.sortedBy { selector(it) } }
                 .stateIn(scope, SharingStarted.WhileSubscribed(), emptyList())
     }
 
@@ -119,6 +116,7 @@ class Repository(context: Context) {
     val groupTipAmount: StateFlow<String> = bill.flatMapLatest { it.groupTipAmount }.toCurrencyString()
     val groupTotal: StateFlow<String> = bill.flatMapLatest { it.groupTotal }.toCurrencyString()
 
+    // Individual Diner Data
     val individualSubtotals: StateFlow<Map<Diner,BigDecimal>> = diners.assemble(scope) {
         it.displayedSubtotal
     }
@@ -126,10 +124,12 @@ class Repository(context: Context) {
     // Other derived data
     val numberOfDiners: StateFlow<Int> = diners.map { it.size }.asState(0)
     val numberOfItems: StateFlow<Int> = items.map { it.size }.asState(0)
+    val currencyDigits: StateFlow<Int> = bill.flatMapLatest { it.currencyFlow }.map{ it.defaultFractionDigits }.asState(2)
     val isUserOnBill: StateFlow<Boolean> = bill.flatMapLatest { it.isUserOnBill }.asState(false)
     val isTaxTipped: StateFlow<Boolean> = bill.flatMapLatest { it.isTaxTippedFlow }.asState(false)
     val doDiscountsReduceTip: StateFlow<Boolean> = bill.flatMapLatest { it.discountsReduceTipFlow }.asState(false)
     val hasUnprocessedPayments = bill.flatMapLatest { it.hasUnprocessedPayments }.asState(false)
+    val discountRoundingMode: StateFlow<RoundingMode> = bill.flatMapLatest { it.discountRoundingModeFlow }.asState(RoundingMode.HALF_UP)
 
     // Bill Functions
     fun createAndLoadNewBill() {
@@ -146,7 +146,7 @@ class Repository(context: Context) {
             timestamp)
 
         if (StoredPreference.autoAddUser.value) {
-            addUserAsDiner(false)
+            addUserAsDiner(false, skipDatabaseSave=true)
         }
 
         // Write updates to the database
@@ -240,8 +240,14 @@ class Repository(context: Context) {
     }
 
     // Diner Functions
-    fun getDiner(dinerId: String): Diner? = mBill.diners.value.find { it.id == dinerId }
-    fun addUserAsDiner(includeWithEveryone: Boolean, name: String? = null) {
+    fun getDiner(dinerId: String?): Diner? = dinerId?.let {
+        mBill.diners.value.find { it.id == dinerId }
+    }
+    fun addUserAsDiner(
+        includeWithEveryone: Boolean,
+        name: String? = null,
+        skipDatabaseSave: Boolean = false
+    ) {
         // Retrieve or create a Contact representing the user
         val userContact = if (name != null) {
             // Save new name to preferences, but also manually create a copy of Contact.user with
@@ -254,7 +260,9 @@ class Repository(context: Context) {
 
         // Add a new diner to the Bill associated with the user Contact
         mBill.createDiners(listOf(userContact), includeWithEveryone)[0]?.also {
-            database.saveDiner(it)
+            if (!skipDatabaseSave) {
+                database.saveDiner(it)
+            }
         }
     }
     fun createDinerFromNewContact(
@@ -324,7 +332,7 @@ class Repository(context: Context) {
     }
 
     // Item Functions
-    fun getItem(itemId: String): Item? = mBill.items.value.find { it.id == itemId }
+    fun getItem(itemId: String?): Item? = itemId?.let { mBill.items.value.find { it.id == itemId } }
     fun createNewItem(
         price: String,
         name: String,
@@ -353,7 +361,9 @@ class Repository(context: Context) {
     }
 
     // Discount Functions
-    fun getDiscount(discountId: String): Discount? = mBill.discounts.value.first { it.id == discountId }
+    fun getDiscount(discountId: String?): Discount? = discountId?.let {
+        mBill.discounts.value.first { it.id == discountId }
+    }
     fun createNewDiscountForItemsByPercent(
         percent: BigDecimal,
         cost: BigDecimal,

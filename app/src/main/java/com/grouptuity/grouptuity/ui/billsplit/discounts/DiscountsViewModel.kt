@@ -13,7 +13,7 @@ import java.math.BigDecimal
 import java.text.NumberFormat
 
 
-class DiscountsViewModel(app: GrouptuityApplication): BaseUIViewModel(app) {
+class DiscountsViewModel(app: Application): BaseUIViewModel(app) {
     val discounts: StateFlow<List<Discount>> = repository.discounts
     val diners = repository.diners.asLiveData()
     val items = repository.items.asLiveData()

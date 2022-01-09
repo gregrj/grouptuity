@@ -1,14 +1,15 @@
 package com.grouptuity.grouptuity.ui.basictipcalc
 
 import android.app.Application
-import android.util.Log
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.asLiveData
-import com.grouptuity.grouptuity.Event
+import com.grouptuity.grouptuity.GrouptuityApplication
 import com.grouptuity.grouptuity.R
+import com.grouptuity.grouptuity.data.BaseUIViewModel
 import com.grouptuity.grouptuity.data.CalculationType
-import com.grouptuity.grouptuity.data.UIViewModel
+import com.grouptuity.grouptuity.data.Event
+import com.grouptuity.grouptuity.data.StoredPreference
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
@@ -19,7 +20,7 @@ import kotlin.math.max
 
 // TODO convert to big decimal
 
-class BasicTipCalcViewModel(app: Application): UIViewModel<Unit?, Unit?>(app) {
+class BasicTipCalcViewModel(app: Application): BaseUIViewModel(app) {
     private val currencyFormatter: NumberFormat = NumberFormat.getCurrencyInstance()
     private val percentFormatter: NumberFormat = NumberFormat.getPercentInstance().apply {
         this.minimumFractionDigits = 0
@@ -36,10 +37,10 @@ class BasicTipCalcViewModel(app: Application): UIViewModel<Unit?, Unit?>(app) {
 
     private val mBillAmountInput = MutableStateFlow(Pair(0.0, CalculationType.SUBTOTAL))
     private val mDiscountInput = MutableStateFlow(Pair(0.0, false))
-    private val mTaxInput = MutableStateFlow(Pair(repository.defaultTaxPercent.value.toDouble(), true))
-    private val mTipInput = MutableStateFlow(Pair(repository.defaultTipPercent.value.toDouble(), true))
-    private val mTaxTipped = MutableStateFlow(repository.taxIsTipped.value)
-    private val mDiscountReducesTip = MutableStateFlow(repository.discountsReduceTip.value)
+    private val mTaxInput = MutableStateFlow(Pair(StoredPreference.defaultTaxPercent.value.toDouble(), true))
+    private val mTipInput = MutableStateFlow(Pair(StoredPreference.defaultTipPercent.value.toDouble(), true))
+    private val mTaxTipped = MutableStateFlow(StoredPreference.taxIsTipped.value)
+    private val mDiscountReducesTip = MutableStateFlow(StoredPreference.discountsReduceTip.value)
 
     private val calculation = combine(
         mBillAmountInput,
@@ -478,30 +479,30 @@ class BasicTipCalcViewModel(app: Application): UIViewModel<Unit?, Unit?>(app) {
     private val discountPercent = MutableStateFlow(0.0)
     private val discountAmount = MutableStateFlow(0.0)
     private val subtotalWithDiscounts = MutableStateFlow(0.0)
-    private val taxPercent = MutableStateFlow(repository.defaultTaxPercent.value.toDouble())
+    private val taxPercent = MutableStateFlow(StoredPreference.defaultTaxPercent.value.toDouble())
     private val taxAmount = MutableStateFlow(0.0)
     private val subtotalWithDiscountsAndTax = MutableStateFlow(0.0)
-    private val tipPercent = MutableStateFlow(repository.defaultTipPercent.value.toDouble())
+    private val tipPercent = MutableStateFlow(StoredPreference.defaultTipPercent.value.toDouble())
     private val tipAmount = MutableStateFlow(0.0)
     private val total = MutableStateFlow(0.0)
     private val warningMessageEventMutable = MutableLiveData<Event<String>>()
 
-    val subtotalString: LiveData<String> = subtotal.mapLatest { currencyFormatter.format(it) }.asLiveData()
-    val discountPercentString: LiveData<String> = discountPercent.mapLatest {
+    val subtotalString: LiveData<String> = subtotal.map { currencyFormatter.format(it) }.asLiveData()
+    val discountPercentString: LiveData<String> = discountPercent.map {
         if (it > 100.0) { greaterThan100Pct } else { percentFormatter.format(0.01*it) }
     }.asLiveData()
-    val discountAmountString: LiveData<String> = discountAmount.mapLatest { currencyFormatter.format( it) }.asLiveData()
-    val afterDiscountString: LiveData<String> = subtotalWithDiscounts.mapLatest { currencyFormatter.format( it) }.asLiveData()
+    val discountAmountString: LiveData<String> = discountAmount.map { currencyFormatter.format( it) }.asLiveData()
+    val afterDiscountString: LiveData<String> = subtotalWithDiscounts.map { currencyFormatter.format( it) }.asLiveData()
     val taxPercentString: LiveData<String> = combine(taxPercent, mTaxInput) { taxPct, taxInput ->
         if (taxPct > 100.0 && !taxInput.second) { greaterThan100Pct } else { percentFormatter.format(0.01*taxPct) }
     }.asLiveData()
-    val taxAmountString: LiveData<String> = taxAmount.mapLatest { currencyFormatter.format( it) }.asLiveData()
-    val afterTaxString: LiveData<String> = subtotalWithDiscountsAndTax.mapLatest { currencyFormatter.format(it) }.asLiveData()
+    val taxAmountString: LiveData<String> = taxAmount.map { currencyFormatter.format( it) }.asLiveData()
+    val afterTaxString: LiveData<String> = subtotalWithDiscountsAndTax.map { currencyFormatter.format(it) }.asLiveData()
     val tipPercentString: LiveData<String> = combine(tipPercent, mTipInput) { tipPct, tipInput ->
         if (tipPct > 100.0 && !tipInput.second) { greaterThan100Pct } else { percentFormatter.format(0.01*tipPct) }
     }.asLiveData()
-    val tipAmountString: LiveData<String> = tipAmount.mapLatest { currencyFormatter.format( it) }.asLiveData()
-    val totalString: LiveData<String> = total.mapLatest { currencyFormatter.format( it) }.asLiveData()
+    val tipAmountString: LiveData<String> = tipAmount.map { currencyFormatter.format( it) }.asLiveData()
+    val totalString: LiveData<String> = total.map { currencyFormatter.format( it) }.asLiveData()
     val taxTipped: LiveData<Boolean> = mTaxTipped.asLiveData()
     val discountReducesTip: LiveData<Boolean> = mDiscountReducesTip.asLiveData()
     val warningMessageEvent: LiveData<Event<String>> = warningMessageEventMutable
@@ -616,9 +617,9 @@ class BasicTipCalcViewModel(app: Application): UIViewModel<Unit?, Unit?>(app) {
     fun reset() {
         mBillAmountInput.value = Pair(0.0, CalculationType.SUBTOTAL)
         mDiscountInput.value = Pair(0.0, false)
-        mTaxInput.value = Pair(repository.defaultTaxPercent.value.toDouble(), true)
-        mTipInput.value = Pair(repository.defaultTipPercent.value.toDouble(), true)
-        mTaxTipped.value = repository.taxIsTipped.value
-        mDiscountReducesTip.value = repository.discountsReduceTip.value
+        mTaxInput.value = Pair(StoredPreference.defaultTaxPercent.value.toDouble(), true)
+        mTipInput.value = Pair(StoredPreference.defaultTipPercent.value.toDouble(), true)
+        mTaxTipped.value = StoredPreference.taxIsTipped.value
+        mDiscountReducesTip.value = StoredPreference.discountsReduceTip.value
     }
 }

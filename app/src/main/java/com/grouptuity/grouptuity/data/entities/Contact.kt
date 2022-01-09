@@ -41,8 +41,7 @@ class Contact(
     val addresses: MutableMap<PaymentMethod, String> = mutableMapOf()
 ): Parcelable {
 
-    @Ignore
-    var photoUri: String? = null
+    @Ignore var photoUri: String? = null
 
     constructor(name: String, defaults: Map<PaymentMethod, String>): this(
         GROUPTUITY_LOOKUPKEY_PREFIX + UUID.randomUUID(),

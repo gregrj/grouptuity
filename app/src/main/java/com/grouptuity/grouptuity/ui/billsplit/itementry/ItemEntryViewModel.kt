@@ -13,16 +13,14 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
 import java.text.NumberFormat
 
-class ItemEntryViewModel(app: Application): UIViewModel(app) {
-    companion object {
-        data class ToolBarState(val title: String, val navIconVisible: Boolean, val nameEditVisible: Boolean, val tertiaryBackground: Boolean)
-    }
 
-class ItemEntryViewModel(app: GrouptuityApplication): UIViewModel<String?, Item?>(app) {
+class ItemEntryViewModel(app: Application): UIViewModel<String?, Item?>(app) {
     private val formatter = NumberFormat.getCurrencyInstance()
-    private val calculator = CalculatorData(CalculationType.ITEM_PRICE, acceptValueCallback = {
+
+    private val calculatorData = CalculatorData(CalculationType.ITEM_PRICE) {
         hasUntouchedPriorSelections = false
-    })
+    }
+    val calculator = CalculatorImpl(this, calculatorData)
 
     // Item Name
     private val itemNameInput = MutableStateFlow<String?>(null)
@@ -32,7 +30,7 @@ class ItemEntryViewModel(app: GrouptuityApplication): UIViewModel<String?, Item?
     private val diners: StateFlow<List<Diner>> = repository.diners.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, emptyList())
     private val selectionSet = mutableSetOf<Diner>()
     private val _selections = MutableStateFlow(selectionSet.toSet())
-    private val selectionCount: Flow<Int> = _selections.mapLatest { it.size }
+    private val selectionCount: Flow<Int> = _selections.map { it.size }
     private val areAllDinersSelected: Flow<Boolean> = combine(selectionCount, repository.diners) { selectionCount, diners -> selectionCount == diners.size }
     private var hasUntouchedPriorSelections = false
 
@@ -42,6 +40,7 @@ class ItemEntryViewModel(app: GrouptuityApplication): UIViewModel<String?, Item?
     private val editingName = MutableStateFlow(false)
 
     // Live Data Output
+    val voiceInput: LiveData<Event<String>> = repository.voiceInputMutable
     val dinerData: LiveData<List<Pair<Diner, String>>> = combineTransform(repository.diners, repository.individualSubtotals, pauseDinerRefresh) { diners, subtotals, pause ->
         if(!pause) {
             // Diners paired with their individual subtotals as currency strings
@@ -49,40 +48,78 @@ class ItemEntryViewModel(app: GrouptuityApplication): UIViewModel<String?, Item?
                 diner to formatter.format(subtotals.getOrDefault(diner, 0.0))
             })
         }
-    }.withOutputSwitch(isOutputFlowing).asLiveData()
+    }.asLiveData(isOutputLocked)
     val itemName: LiveData<String> = repository.items.combine(itemNameInput) { items, nameInput ->
         nameInput ?: getApplication<Application>().resources.getString(R.string.itementry_toolbar_item_number) + (items.size + 1)
-    }.withOutputSwitch(isOutputFlowing).asLiveData()
-    val selections: LiveData<Set<Diner>> = _selections.withOutputSwitch(isOutputFlowing).asLiveData()
-    val toolBarState: LiveData<ToolBarState> = combine(calculator.isNumberPadVisible, editingName, itemName.asFlow(), selectionCount, areAllDinersSelected) {
-            calcVisible, editing, name, count, allSelected ->
-        if(!calcVisible && count > 0) {
-            // Selecting diners and has at least one selection
-            ToolBarState(
-                title = if(allSelected) {
-                    getApplication<Application>().resources.getQuantityString(R.plurals.itementry_num_diners_selected_everyone, count, count)
-                } else {
-                    getApplication<Application>().resources.getQuantityString(R.plurals.itementry_num_diners_selected, count, count)
-                },
-                navIconVisible = true,
-                nameEditVisible = false,
-                tertiaryBackground = true
-            )
-        } else {
-            // Calculator is visible or no diners are selected
-            ToolBarState(title = name, navIconVisible = !editing, nameEditVisible = calcVisible, tertiaryBackground = false)
+    }.asLiveData(isOutputLocked)
+    val selections: LiveData<Set<Diner>> = _selections.asLiveData(isOutputLocked)
+    val toolBarNavIconVisible: LiveData<Boolean> = combine(
+        calculatorData.isNumberPadVisible,
+        editingName,
+        selectionCount,
+    ) { calcVisible, editing, count ->
+        when {
+            calcVisible -> {
+                // Calculator is visible
+                !editing
+            }
+            count == 0 -> {
+                // Selecting diners but no diners are selected
+                !editing
+            }
+            else -> {
+                // Selecting diners and has at least one selection
+                true
+            }
         }
-    }.withOutputSwitch(isOutputFlowing).asLiveData()
-    val selectAllButtonDisabled: LiveData<Boolean> = areAllDinersSelected.withOutputSwitch(isOutputFlowing).asLiveData()
-    val editNameShimVisible: LiveData<Boolean> = editingName.withOutputSwitch(isOutputFlowing).asLiveData()
-
-    val formattedPrice: LiveData<String> = calculator.displayValue.withOutputSwitch(isOutputFlowing).asLiveData()
-    val numberPadVisible: LiveData<Boolean> = calculator.isNumberPadVisible.withOutputSwitch(isOutputFlowing).asLiveData()
-    val priceBackspaceButtonVisible: LiveData<Boolean> = calculator.backspaceButtonVisible.withOutputSwitch(isOutputFlowing).asLiveData()
-    val priceEditButtonVisible: LiveData<Boolean> = calculator.editButtonVisible.withOutputSwitch(isOutputFlowing).asLiveData()
-    val priceZeroButtonEnabled: LiveData<Boolean> = calculator.zeroButtonEnabled.withOutputSwitch(isOutputFlowing).asLiveData()
-    val priceDecimalButtonEnabled: LiveData<Boolean> = calculator.decimalButtonEnabled.withOutputSwitch(isOutputFlowing).asLiveData()
-    val priceAcceptButtonEnabled: LiveData<Boolean> = calculator.acceptButtonEnabled.withOutputSwitch(isOutputFlowing).asLiveData()
+    }.asLiveData(isOutputLocked)
+    val toolBarEditButtonVisible: LiveData<Boolean> = combine(
+        calculatorData.isNumberPadVisible,
+        selectionCount,
+    ) { calcVisible, count ->
+        calcVisible || count == 0
+    }.asLiveData(isOutputLocked)
+    val toolBarTitle: LiveData<String> = combine(
+        calculatorData.isNumberPadVisible,
+        itemName.asFlow(),
+        selectionCount,
+        areAllDinersSelected
+    ) { calcVisible, name, count, allSelected ->
+        when {
+            calcVisible || count == 0 -> {
+                // Calculator is visible
+                name
+            }
+            allSelected -> {
+                getApplication<Application>().resources.getQuantityString(R.plurals.itementry_num_diners_selected_everyone, count, count)
+            }
+            else -> {
+                getApplication<Application>().resources.getQuantityString(R.plurals.itementry_num_diners_selected, count, count)
+            }
+        }
+    }.asLiveData(isOutputLocked)
+    val toolBarInTertiaryState: LiveData<Boolean> = combine(
+        calculatorData.isNumberPadVisible,
+        selectionCount,
+        calculatorData.acceptButtonEnabled
+    ) { calcVisible, count, acceptButtonEnabled ->
+        when {
+            calcVisible -> {
+                // Calculator is visible
+                acceptButtonEnabled
+            }
+            count == 0 -> {
+                // Selecting diners but no diners are selected
+                false
+            }
+            else -> {
+                // Selecting diners and has at least one selection
+                true
+            }
+        }
+    }.asLiveData(isOutputLocked)
+    val selectAllButtonDisabled: LiveData<Boolean> = areAllDinersSelected.asLiveData(isOutputLocked)
+    val editNameShimVisible: LiveData<Boolean> = editingName.asLiveData(isOutputLocked)
 
     override fun notifyTransitionFinished() {
         super.notifyTransitionFinished()
@@ -97,12 +134,12 @@ class ItemEntryViewModel(app: GrouptuityApplication): UIViewModel<String?, Item?
         selectionSet.clear()
         editingName.value = false
 
-        val item = input?.let { repository.getItem(input) }
+        val item = repository.getItem(input)
 
         if(item == null) {
             // New item
             loadedItem.value = null
-            calculator.reset(CalculationType.ITEM_PRICE, null, showNumberPad = true)
+            calculatorData.reset(CalculationType.ITEM_PRICE, null, showNumberPad = true)
             itemNameInput.value = null
             hasUntouchedPriorSelections = false
         } else {
@@ -118,31 +155,20 @@ class ItemEntryViewModel(app: GrouptuityApplication): UIViewModel<String?, Item?
         _selections.value = selectionSet.toSet()
     }
 
-    fun handleOnBackPressed(): Boolean? {
+    override fun handleOnBackPressed() {
         when {
-            isInputLocked.value -> { }
-            numberPadVisible.value == true -> {
+            calculatorData.isNumberPadVisible.value -> {
                 when {
                     editingName.value -> { stopNameEdit() }
-                    calculator.tryRevertToLastValue() -> {  }
-                    else -> { return false }
+                    !calculatorData.tryRevertToLastValue() -> { finishFragment(null) }
                 }
             }
-            hasUntouchedPriorSelections || selectionSet.isEmpty() -> { return false }
+            hasUntouchedPriorSelections || selectionSet.isEmpty() -> {
+                finishFragment(null)
+            }
             else -> { clearDinerSelections() }
         }
-        return null
     }
-
-    fun openCalculator() {
-        calculator.clearValue()
-        calculator.showNumberPad()
-    }
-    fun addDigitToPrice(digit: Char) = calculator.addDigit(digit)
-    fun addDecimalToPrice() = calculator.addDecimal()
-    fun removeDigitFromPrice() = calculator.removeDigit()
-    fun resetPrice() = calculator.clearValue()
-    fun acceptPrice() = calculator.tryAcceptValue()
 
     fun startNameEdit() { editingName.value = true }
     fun stopNameEdit() {
@@ -181,12 +207,8 @@ class ItemEntryViewModel(app: GrouptuityApplication): UIViewModel<String?, Item?
         _selections.value = selectionSet.toSet()
     }
 
-    fun promptToApplyEntireBillDiscounts() {
-        //TODO
-    }
-
-    fun trySavingItem(applyEntireBillDiscounts: Boolean) {
-        val dinerSelections = _selections.value
+    fun trySavingItem() {
+        val dinerSelections = selections.value
 
         if (dinerSelections.isNullOrEmpty()) {
             /* No diner selections so cannot proceed */
@@ -198,16 +220,17 @@ class ItemEntryViewModel(app: GrouptuityApplication): UIViewModel<String?, Item?
                     repository.createNewItem(
                         calculatorData.numericalValue.value.toString(),
                         itemName.value ?: "Item",
-                        dinerSelections,
-                        applyEntireBillDiscounts
+                        selectionSet,
+                        applyEntireBillDiscounts = false // TODO prompt
                     )
                 } else {
                     // Editing an existing item
                     repository.editItem(
                         editedItem,
-                        itemName.value ?: editedItem.name,
                         calculatorData.numericalValue.value.toString(),
-                        dinerSelections)
+                        itemName.value ?: "Item",
+                        selectionSet
+                    )
 
                     editedItem
                 }

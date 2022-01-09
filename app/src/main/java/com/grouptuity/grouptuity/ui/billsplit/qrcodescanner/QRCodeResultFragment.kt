@@ -8,7 +8,7 @@ import android.view.ViewGroup
 import androidx.fragment.app.FragmentManager
 import com.google.android.material.bottomsheet.BottomSheetDialogFragment
 import com.grouptuity.grouptuity.databinding.QrCodeResultSheetBinding
-import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
+import com.grouptuity.grouptuity.ui.util.views.setNullOnDestroy
 
 
 class QRCodeResultFragment: BottomSheetDialogFragment() {

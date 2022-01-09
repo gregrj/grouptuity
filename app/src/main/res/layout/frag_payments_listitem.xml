@@ -31,7 +31,7 @@
             app:layout_constraintStart_toEndOf="@+id/payment_method_flip_button"
             app:layout_constraintTop_toTopOf="parent"/>
 
-        <com.grouptuity.grouptuity.ui.custom.views.FlipButton
+        <com.grouptuity.grouptuity.ui.util.views.FlipButton
             android:id="@+id/payment_method_flip_button"
             android:layout_width="48dp"
             android:layout_height="48dp"
@@ -66,19 +66,142 @@
                 android:visibility="gone"
                 app:tint="?attr/colorOnTertiary"
                 android:contentDescription="@string/payments_close_selection_list" />
-        </com.grouptuity.grouptuity.ui.custom.views.FlipButton>
+        </com.grouptuity.grouptuity.ui.util.views.FlipButton>
 
-        <com.grouptuity.grouptuity.ui.custom.views.ExpandableLayout
+        <com.grouptuity.grouptuity.ui.util.views.ExpandableLayout
             android:id="@+id/payment_methods_expanding_layout"
             android:layout_width="0dp"
             android:layout_height="0dp"
-            android:gravity="center_vertical"
+            android:gravity="center"
             android:orientation="horizontal"
             app:layout_constraintBottom_toBottomOf="parent"
             app:layout_constraintStart_toEndOf="@id/payment_method_flip_button"
-            app:layout_constraintTop_toTopOf="parent" />
+            app:layout_constraintTop_toTopOf="parent" >
 
-        <com.grouptuity.grouptuity.ui.custom.views.ContactIcon
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_weight="1"/>
+
+            <ImageView
+                android:id="@+id/payment_method_cash_button"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:src="@drawable/ic_payment_cash"
+                app:tint="?attr/colorOnTertiary"/>
+
+            <Space
+                android:id="@+id/credit_card_space"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_weight="1"/>
+
+            <ImageView
+                android:id="@+id/payment_method_credit_card_button"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:src="@drawable/ic_payment_credit_card"
+                app:tint="?attr/colorOnTertiary"/>
+
+            <Space
+                android:id="@+id/credit_card_split_space"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_weight="1"/>
+
+            <ImageView
+                android:id="@+id/payment_method_credit_card_split_button"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:src="@drawable/ic_payment_credit_card_split"
+                app:tint="?attr/colorOnTertiary"/>
+
+            <Space
+                android:id="@+id/payback_later_space"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_weight="1"/>
+
+            <ImageView
+                android:id="@+id/payment_method_payback_later_button"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:src="@drawable/ic_payment_payback_later"
+                app:tint="?attr/colorOnTertiary"/>
+
+            <Space
+                android:id="@+id/more_ptp_space"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_weight="1"/>
+
+            <ImageView
+                android:id="@+id/payment_method_more_ptp_button"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:src="@drawable/ic_payment_more_ptp"
+                app:tint="?attr/colorOnTertiary"/>
+
+            <Space
+                android:id="@+id/venmo_space"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_weight="1"/>
+
+            <ImageView
+                android:id="@+id/payment_method_venmo_button"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:src="@drawable/ic_payment_venmo"/>
+
+            <Space
+                android:id="@+id/cash_app_space"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_weight="1"/>
+
+            <ImageView
+                android:id="@+id/payment_method_cash_app_button"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:src="@drawable/ic_payment_cash_app"/>
+
+            <Space
+                android:id="@+id/algorand_space"
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_weight="1"/>
+
+            <ImageView
+                android:id="@+id/payment_method_algorand_button"
+                android:layout_width="36dp"
+                android:layout_height="36dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:clickable="true"
+                android:src="@drawable/ic_payment_algorand"
+                app:tint="?attr/colorOnTertiary"/>
+
+            <Space
+                android:layout_width="0dp"
+                android:layout_height="0dp"
+                android:layout_weight="1"/>
+        </com.grouptuity.grouptuity.ui.util.views.ExpandableLayout>
+
+        <com.grouptuity.grouptuity.ui.util.views.ContactIcon
             android:id="@+id/payer_contact_icon"
             android:layout_width="0dp"
             android:layout_height="0dp"
@@ -163,7 +286,7 @@
             app:layout_constraintStart_toEndOf="@id/payer_contact_icon_reference"
             android:visibility="invisible"/>
 
-        <com.grouptuity.grouptuity.ui.custom.views.ContactIcon
+        <com.grouptuity.grouptuity.ui.util.views.ContactIcon
             android:id="@+id/payer_contact_icon_reference"
             android:layout_width="0dp"
             android:layout_height="0dp"

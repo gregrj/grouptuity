@@ -3,9 +3,10 @@ package com.grouptuity.grouptuity.ui.billsplit.debtentry
 import android.app.Application
 import androidx.lifecycle.LiveData
 import androidx.lifecycle.asFlow
-import androidx.lifecycle.asLiveData
+import com.grouptuity.grouptuity.GrouptuityApplication
 import com.grouptuity.grouptuity.R
 import com.grouptuity.grouptuity.data.*
+import com.grouptuity.grouptuity.data.entities.Diner
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.*
@@ -13,37 +14,46 @@ import java.math.BigDecimal
 import java.text.NumberFormat
 
 
-class DebtEntryViewModel(app: Application): UIViewModel(app) {
+class DebtEntryViewModel(app: Application): UIViewModel<String?, Boolean>(app) {
     companion object {
         data class ToolBarState(val title: String, val navIconVisible: Boolean, val nameEditVisible: Boolean, val tertiaryBackground: Boolean)
         data class DinerDatapoint(val diner: Diner, val isDebtor: Boolean, val isCreditor: Boolean, val message: String?)
     }
 
     private val currencyFormatter = NumberFormat.getCurrencyInstance()
-    private val calculator = CalculatorData(CalculationType.DEBT_AMOUNT)
+    private val calcData = CalculatorData(CalculationType.DEBT_AMOUNT) {
+        // TODO
+        // Prevent live updates to UI during return exit transition
+        // freezeOutput()
+
+        // Block user input during return exit transition
+        // notifyTransitionStarted()
+    }
+    val calculator = CalculatorImpl(this, calcData)
+
     var launchingDiner: Diner? = null
         private set
+    var addedDebtToBill = false
 
     // Debt Name
     private val debtNameInput = MutableStateFlow<String?>(null)
     val hasDebtNameInput get() = debtNameInput.value != null
+    val voiceInput: LiveData<Event<String>> = repository.voiceInputMutable
 
     // Debtor/Creditor selection
     private val diners: StateFlow<List<Diner>> = repository.diners.stateIn(CoroutineScope(Dispatchers.Default), SharingStarted.Eagerly, emptyList())
     private val creditorSelectionSet = mutableSetOf<Diner>()
     private val _creditorSelections = MutableStateFlow(creditorSelectionSet.toSet())
-    private val creditorSelectionCount: Flow<Int> = _creditorSelections.mapLatest { it.size }
+    private val creditorSelectionCount: Flow<Int> = _creditorSelections.map { it.size }
     private val debtorSelectionSet = mutableSetOf<Diner>()
     private val _debtorSelections = MutableStateFlow(debtorSelectionSet.toSet())
-    private val debtorSelectionCount: Flow<Int> = _debtorSelections.mapLatest { it.size }
+    private val debtorSelectionCount: Flow<Int> = _debtorSelections.map { it.size }
 
     // UI State
     private val editingName = MutableStateFlow(false)
     private var hasEditedCreditorSelections = false
     private var hasEditedDebtorSelections = false
     private var lastEditWasCreditor = true
-    private val areAllCreditorsSelected: Flow<Boolean> = combine(creditorSelectionCount, repository.diners) { selectionCount, diners -> selectionCount == diners.size }
-    private val areAllDebtorsSelected: Flow<Boolean> = combine(debtorSelectionCount, repository.diners) { selectionCount, diners -> selectionCount == diners.size }
     val isLaunchingDinerPresent: Boolean get() = launchingDiner == null || creditorSelectionSet.contains(launchingDiner) || debtorSelectionSet.contains(launchingDiner)
 
     // Live Data Output
@@ -80,7 +90,7 @@ class DebtEntryViewModel(app: Application): UIViewModel(app) {
                 }
             })
         }
-    }.withOutputSwitch(isOutputFlowing).asLiveData()
+    }.asLiveData(isOutputLocked)
     val debtName: LiveData<String> = repository.debts.combine(debtNameInput) { debts, nameInput ->
         nameInput ?: getApplication<Application>().resources.getString(R.string.debtentry_toolbar_debt_number) + (debts.size + 1)
     }.asLiveData(isOutputLocked)
@@ -148,10 +158,10 @@ class DebtEntryViewModel(app: Application): UIViewModel(app) {
                                 R.plurals.debtentry_toolbar_multiple_paying,
                                 debtorCount,
                                 debtorCount) + " " +
-                            getApplication<Application>().resources.getQuantityString(
-                                R.plurals.debtentry_toolbar_paying_multiple,
-                                creditorCount,
-                                creditorCount)
+                                    getApplication<Application>().resources.getQuantityString(
+                                        R.plurals.debtentry_toolbar_paying_multiple,
+                                        creditorCount,
+                                        creditorCount)
                         }
                     },
                     navIconVisible = true,
@@ -160,27 +170,18 @@ class DebtEntryViewModel(app: Application): UIViewModel(app) {
                 )
             }
         }
-    }.withOutputSwitch(isOutputFlowing).asLiveData()
-    val editNameShimVisible: LiveData<Boolean> = editingName.withOutputSwitch(isOutputFlowing).asLiveData()
+    }.asLiveData(isOutputLocked)
+    val editNameShimVisible: LiveData<Boolean> = editingName.asLiveData(isOutputLocked)
 
-    val formattedPrice: LiveData<String> = calculator.displayValue.withOutputSwitch(isOutputFlowing).asLiveData()
-    val numberPadVisible: LiveData<Boolean> = calculator.isNumberPadVisible.withOutputSwitch(isOutputFlowing).asLiveData()
-    val priceBackspaceButtonVisible: LiveData<Boolean> = calculator.backspaceButtonVisible.withOutputSwitch(isOutputFlowing).asLiveData()
-    val priceEditButtonVisible: LiveData<Boolean> = calculator.editButtonVisible.withOutputSwitch(isOutputFlowing).asLiveData()
-    val priceZeroButtonEnabled: LiveData<Boolean> = calculator.zeroButtonEnabled.withOutputSwitch(isOutputFlowing).asLiveData()
-    val priceDecimalButtonEnabled: LiveData<Boolean> = calculator.decimalButtonEnabled.withOutputSwitch(isOutputFlowing).asLiveData()
-    val priceAcceptButtonEnabled: LiveData<Boolean> = calculator.acceptButtonEnabled.withOutputSwitch(isOutputFlowing).asLiveData()
-
-    fun initializeForDiner(diner: Diner?) {
-        unFreezeOutput()
-
-        launchingDiner = diner
+    override fun onInitialize(input: String?) {
+        launchingDiner = repository.getDiner(input)
+        addedDebtToBill = false
 
         creditorSelectionSet.clear()
         debtorSelectionSet.clear()
 
-        if(input != null) {
-            debtorSelectionSet.add(input)
+        if(launchingDiner != null) {
+            debtorSelectionSet.add(launchingDiner!!)
         }
 
         editingName.value = false
@@ -188,75 +189,57 @@ class DebtEntryViewModel(app: Application): UIViewModel(app) {
         hasEditedDebtorSelections = false
         lastEditWasCreditor = false
 
-        calculator.reset(CalculationType.ITEM_PRICE, null, showNumberPad = true)
+        calcData.reset(CalculationType.ITEM_PRICE, null, showNumberPad = true)
         debtNameInput.value = null
 
         _creditorSelections.value = creditorSelectionSet.toSet()
         _debtorSelections.value = debtorSelectionSet.toSet()
     }
 
-    fun handleOnBackPressed(): Boolean = when {
-        isInputLocked.value -> { false }
-        numberPadVisible.value == true -> {
-            when {
-                editingName.value -> {
-                    stopNameEdit()
-                    false
+    override fun handleOnBackPressed() {
+        when {
+            calcData.isNumberPadVisible.value -> {
+                when {
+                    editingName.value -> { stopNameEdit() }
+                    !calcData.tryRevertToLastValue() -> { finishFragment(false) }
                 }
-                calculator.tryRevertToLastValue() -> { false }
-                else -> { true }
             }
-        }
-        !hasEditedCreditorSelections && debtorSelectionSet.isEmpty() -> {
-            true
-        }
-        !hasEditedDebtorSelections && creditorSelectionSet.isEmpty() -> {
-            true
-        }
-        lastEditWasCreditor -> {
-            if (creditorSelectionSet.isEmpty()) {
-                if (debtorSelectionSet.isEmpty()) {
-                    true
-                } else {
-                    clearDebtorSelections()
-                    false
-                }
-            } else {
-                clearCreditorSelections()
-                false
+            !hasEditedCreditorSelections && debtorSelectionSet.isEmpty() -> {
+                finishFragment(false)
             }
-        }
-        else -> {
-            if (debtorSelectionSet.isEmpty()) {
+            !hasEditedDebtorSelections && creditorSelectionSet.isEmpty() -> {
+                finishFragment(false)
+            }
+            lastEditWasCreditor -> {
                 if (creditorSelectionSet.isEmpty()) {
-                    true
+                    if (debtorSelectionSet.isEmpty()) {
+                        finishFragment(false)
+                    } else {
+                        clearDebtorSelections()
+                    }
                 } else {
                     clearCreditorSelections()
-                    false
                 }
-            } else {
-                clearDebtorSelections()
-                false
+            }
+            else -> {
+                if (debtorSelectionSet.isEmpty()) {
+                    if (creditorSelectionSet.isEmpty()) {
+                        finishFragment(false)
+                    } else {
+                        clearCreditorSelections()
+                    }
+                } else {
+                    clearDebtorSelections()
+                }
             }
         }
     }
-
-    fun openCalculator() {
-        calculator.clearValue()
-        calculator.showNumberPad()
-    }
-    fun addDigitToPrice(digit: Char) = calculator.addDigit(digit)
-    fun addDecimalToPrice() = calculator.addDecimal()
-    fun removeDigitFromPrice() = calculator.removeDigit()
-    fun resetPrice() = calculator.clearValue()
-    fun acceptPrice() = calculator.tryAcceptValue()
 
     fun startNameEdit() { editingName.value = true }
     fun stopNameEdit() {
         if(editingName.value)
             editingName.value = false
     }
-
     fun acceptDebtNameInput(name: String) {
         debtNameInput.value = name
         stopNameEdit()
@@ -326,5 +309,7 @@ class DebtEntryViewModel(app: Application): UIViewModel(app) {
             debtName.value ?: "Debt",
             debtorSelectionSet,
             creditorSelectionSet)
-        }
+
+        finishFragment(true)
+    }
 }

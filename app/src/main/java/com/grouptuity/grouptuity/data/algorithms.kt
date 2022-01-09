@@ -360,7 +360,7 @@ class TransactionProcessor(
             /* Insert zero amount payments to restaurant for diners without bills. This is needed for
             the diner to appear as a candidate for acting as a surrogate. These transactions should not
             appear when the PaymentFragment is in the default state. */
-            for (diner in dinersWithoutBills) {
+            for (diner in dinersWithoutBills.toSet()) {
                 createPayment(
                     BigDecimal.ZERO,
                     PaymentMethod.CASH,
@@ -372,3 +372,5 @@ class TransactionProcessor(
             paymentsMap
         }.stateIn(scope, SharingStarted.WhileSubscribed(), emptyMap())
 }
+
+

@@ -25,7 +25,7 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintBottom_toBottomOf="parent"/>
 
-    <com.grouptuity.grouptuity.ui.custom.views.ContactIcon
+    <com.grouptuity.grouptuity.ui.util.views.ContactIcon
         android:id="@+id/contact_icon"
         android:layout_width="@dimen/contact_photo_size"
         android:layout_height="@dimen/contact_photo_size"

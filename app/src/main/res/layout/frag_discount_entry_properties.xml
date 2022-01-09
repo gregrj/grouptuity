@@ -68,7 +68,7 @@
             android:gravity="center"
             app:singleSelection="true">
 
-            <com.grouptuity.grouptuity.ui.custom.views.MaterialRadioButton
+            <com.grouptuity.grouptuity.ui.util.views.MaterialRadioButton
                 android:id="@+id/button_items"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"
@@ -85,7 +85,7 @@
                 app:strokeColor="@color/secondary_radio_button_stroke_colors"
                 app:rippleColor="?attr/colorSecondaryHighlight"/>
 
-            <com.grouptuity.grouptuity.ui.custom.views.MaterialRadioButton
+            <com.grouptuity.grouptuity.ui.util.views.MaterialRadioButton
                 android:id="@+id/button_diners"
                 android:layout_width="0dp"
                 android:layout_height="wrap_content"

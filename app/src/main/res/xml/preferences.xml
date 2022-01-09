@@ -37,22 +37,22 @@
         <SwitchPreferenceCompat
             app:key="@string/preference_key_tax_is_tipped"
             app:title="@string/settings_bill_tip_applied_to_tax"
-            app:summaryOn="@string/settings_bill_auto_add_self_summary_on"
-            app:summaryOff="@string/settings_bill_auto_add_self_summary_off"
+            app:summaryOn="@string/settings_bill_auto_add_user_summary_on"
+            app:summaryOff="@string/settings_bill_auto_add_user_summary_off"
             app:iconSpaceReserved="false"/>
 
         <SwitchPreferenceCompat
             app:key="@string/preference_key_discounts_reduce_tip"
             app:title="@string/settings_bill_discounts_reduce_tip"
-            app:summaryOn="@string/settings_bill_auto_add_self_summary_on"
-            app:summaryOff="@string/settings_bill_auto_add_self_summary_off"
+            app:summaryOn="@string/settings_bill_auto_add_user_summary_on"
+            app:summaryOff="@string/settings_bill_auto_add_user_summary_off"
             app:iconSpaceReserved="false"/>
 
         <SwitchPreferenceCompat
-            app:key="@string/preference_key_auto_add_self"
-            app:title="@string/settings_bill_auto_add_self"
-            app:summaryOn="@string/settings_bill_auto_add_self_summary_on"
-            app:summaryOff="@string/settings_bill_auto_add_self_summary_off"
+            app:key="@string/preference_key_auto_add_user"
+            app:title="@string/settings_bill_auto_add_user"
+            app:summaryOn="@string/settings_bill_auto_add_user_summary_on"
+            app:summaryOff="@string/settings_bill_auto_add_user_summary_off"
             app:iconSpaceReserved="false"/>
 
         <SwitchPreferenceCompat

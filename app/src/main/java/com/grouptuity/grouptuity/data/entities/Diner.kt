@@ -81,14 +81,21 @@ class Diner(@PrimaryKey val id: String,
         it.amountFlow
     }
 
-    val items: StateFlow<Set<Item>> = mItems.elements
-    val dinerDiscountsReceived: StateFlow<Set<Discount>> = mDinerDiscounts.elements
-    val itemDiscountsReceived: StateFlow<Set<Discount>> = mItemDiscounts.firstTypeElements
-    val discountsPurchased: StateFlow<Set<Discount>> = mDiscountReimbursementCredits.elements
-    val debtsOwed: StateFlow<Set<Debt>> = mDebtsOwed.elements
-    val debtsHeld: StateFlow<Set<Debt>> = mDebtsHeld.elements
-    val paymentsSent: StateFlow<Set<Payment>> = mPaymentsSent.elements
-    val paymentsReceived: StateFlow<Set<Payment>> = mPaymentsReceived.elements
+    @Ignore val items: StateFlow<Set<Item>> = mItems.elements
+    @Ignore val dinerDiscountsReceived: StateFlow<Set<Discount>> = mDinerDiscounts.elements
+    @Ignore val itemDiscountsReceived: StateFlow<Set<Discount>> = mItemDiscounts.firstTypeElements
+    @Ignore val discountsWithDebts: StateFlow<Set<Discount>> =
+        combine(
+            mDinerDiscountReimbursementDebts.elements,
+            mItemDiscountReimbursementDebts.firstTypeElements
+        ) { fromDiners, fromItems ->
+            fromDiners union fromItems
+        }.stateIn(scope, SharingStarted.WhileSubscribed(), emptySet())
+    @Ignore val discountsPurchased: StateFlow<Set<Discount>> = mDiscountReimbursementCredits.elements
+    @Ignore val debtsOwed: StateFlow<Set<Debt>> = mDebtsOwed.elements
+    @Ignore val debtsHeld: StateFlow<Set<Debt>> = mDebtsHeld.elements
+    @Ignore val paymentsSent: StateFlow<Set<Payment>> = mPaymentsSent.elements
+    @Ignore val paymentsReceived: StateFlow<Set<Payment>> = mPaymentsReceived.elements
 
     @Ignore internal val rawSubtotal: StateFlow<BigDecimal> = mItems.rawTotal
     @Ignore private val roundedSubtotal: StateFlow<BigDecimal> = mItems.roundedTotal

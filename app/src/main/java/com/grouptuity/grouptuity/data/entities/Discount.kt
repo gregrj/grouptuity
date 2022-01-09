@@ -118,7 +118,7 @@ class Discount(
                 numRecipients
             ) { asPercent, discountValue, subtotal, subtotalSum, numRecipients ->
                 if (asPercent) {
-                    discountValue.multiply(subtotal.divideWithZeroBypass(subtotalSum),mathContext)
+                    discountValue.multiply(subtotal.divideWithZeroBypass(subtotalSum), mathContext)
                 } else {
                     discountValue.divideWithZeroBypass(numRecipients)
                 }

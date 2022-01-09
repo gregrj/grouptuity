@@ -48,6 +48,6 @@
             android:maxLines="1"
             style="@android:style/TextAppearance.Large"
             android:textColor="?attr/colorOnSurfaceMediumEmphasis"
-            android:text="@string/diners_add_self"/>
+            android:text="@string/diners_add_user"/>
     </androidx.constraintlayout.widget.ConstraintLayout>
 </com.google.android.material.card.MaterialCardView>

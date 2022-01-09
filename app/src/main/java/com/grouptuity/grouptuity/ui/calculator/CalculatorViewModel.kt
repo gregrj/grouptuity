@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.grouptuity.grouptuity.GrouptuityApplication
 import com.grouptuity.grouptuity.data.*
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.launch
 
 
 class CalculatorViewModel(app: GrouptuityApplication): UIViewModel<CalculationType, Pair<Double, String>?>(app) {
@@ -34,11 +35,15 @@ class CalculatorViewModel(app: GrouptuityApplication): UIViewModel<CalculationTy
                 }
             }
         }
-    }.asLiveData()
+    }
 
-    fun initialize(type: CalculationType) {
-        unFreezeOutput()
-        calcData.reset(type,null, showNumberPad = true)
+    override fun onInitialize(input: CalculationType) {
+        unlockOutput()
+        calcData.reset(input,null, showNumberPad = true)
+    }
+
+    override fun handleOnBackPressed() {
+        TODO("Not yet implemented")
     }
 
     fun addDigitToPrice(digit: Char) = calcData.addDigit(digit)

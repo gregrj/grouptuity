@@ -19,15 +19,15 @@ import androidx.viewpager2.adapter.FragmentStateAdapter
 import androidx.viewpager2.widget.ViewPager2
 import com.google.android.material.dialog.MaterialAlertDialogBuilder
 import com.grouptuity.grouptuity.R
-import com.grouptuity.grouptuity.data.Diner
-import com.grouptuity.grouptuity.data.Item
+import com.grouptuity.grouptuity.data.entities.Diner
+import com.grouptuity.grouptuity.data.entities.Item
 import com.grouptuity.grouptuity.databinding.FragDiscountEntryListBinding
 import com.grouptuity.grouptuity.databinding.FragDiscountEntryPropertiesBinding
 import com.grouptuity.grouptuity.databinding.ListDinerBinding
 import com.grouptuity.grouptuity.databinding.ListItemBinding
-import com.grouptuity.grouptuity.ui.custom.views.RecyclerViewListener
-import com.grouptuity.grouptuity.ui.custom.views.setNullOnDestroy
-import com.grouptuity.grouptuity.ui.custom.views.ContactIcon
+import com.grouptuity.grouptuity.ui.util.views.RecyclerViewListener
+import com.grouptuity.grouptuity.ui.util.views.setNullOnDestroy
+import com.grouptuity.grouptuity.ui.util.views.ContactIcon
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -135,7 +135,7 @@ class PropertiesFragment: Fragment() {
         }
 
         binding.buttonItems.setOnClickListener {
-            if(discountEntryViewModel.dinerSelections.value?.isNotEmpty() == true) {
+            if(!discountEntryViewModel.recipientSelections.value.isNullOrEmpty()) {
                 MaterialAlertDialogBuilder(requireContext(), R.style.AlertDialogPosSuggestionSecondary)
                     .setTitle(resources.getString(R.string.discountentry_alert_switch_to_items_title))
                     .setMessage(resources.getString(R.string.discountentry_alert_switch_to_items_message))
@@ -152,7 +152,7 @@ class PropertiesFragment: Fragment() {
         }
 
         binding.buttonDiners.setOnClickListener {
-            if(discountEntryViewModel.itemSelections.value?.isNotEmpty() == true) {
+            if(!discountEntryViewModel.itemSelections.value.isNullOrEmpty()) {
                 MaterialAlertDialogBuilder(requireContext(), R.style.AlertDialogPosSuggestionSecondary)
                     .setTitle(resources.getString(R.string.discountentry_alert_switch_to_diners_title))
                     .setMessage(resources.getString(R.string.discountentry_alert_switch_to_diners_message))
@@ -178,7 +178,7 @@ internal class DinersListFragment: Fragment() {
     private var observing = false
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        discountEntryViewModel = ViewModelProvider(requireActivity()).get(DiscountEntryViewModel::class.java)
+        discountEntryViewModel = ViewModelProvider(requireActivity())[DiscountEntryViewModel::class.java]
         binding = FragDiscountEntryListBinding.inflate(inflater, container, false)
         return binding.root
     }
@@ -331,7 +331,7 @@ internal class ItemsListFragment: Fragment() {
     private var observing = false
 
     override fun onCreateView(inflater: LayoutInflater, container: ViewGroup?, savedInstanceState: Bundle?): View {
-        discountEntryViewModel = ViewModelProvider(requireActivity()).get(DiscountEntryViewModel::class.java)
+        discountEntryViewModel = ViewModelProvider(requireActivity())[DiscountEntryViewModel::class.java]
         binding = FragDiscountEntryListBinding.inflate(inflater, container, false)
         return binding.root
     }
@@ -456,13 +456,13 @@ internal class ItemsListFragment: Fragment() {
                 }
 
                 viewBinding.dinerIcons.removeAllViews()
-                if(newItem.dinerIds.isEmpty()) {
+                if(newItem.diners.value.isEmpty()) {
                     viewBinding.dinerSummary.setTextColor(colorPrimary)
                 } else {
                     viewBinding.dinerSummary.text = ""
                     viewBinding.dinerSummary.setTextColor(colorOnBackground)
 
-                    newItem.diners.forEach { diner ->
+                    newItem.diners.value.forEach { diner ->
                         val icon = ContactIcon(context)
                         icon.setSelectable(false)
 

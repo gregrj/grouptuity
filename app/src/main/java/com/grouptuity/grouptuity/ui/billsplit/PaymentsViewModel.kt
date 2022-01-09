@@ -24,7 +24,7 @@ data class PaymentData(val payment: Payment,
                        val displayState: Int)
 
 
-class PaymentsViewModel(app: GrouptuityApplication): BaseUIViewModel(app) {
+class PaymentsViewModel(app: Application): BaseUIViewModel(app) {
 
     companion object {
         const val DEFAULT_STATE = 0
@@ -32,6 +32,7 @@ class PaymentsViewModel(app: GrouptuityApplication): BaseUIViewModel(app) {
         const val SHOWING_INSTRUCTIONS_STATE = 2
         const val CANDIDATE_STATE = 3
         const val INELIGIBLE_STATE = 4
+        const val PROCESSING_STATE = 5
 
         const val SELECTING_PAYER_ALIAS = 0
         const val SELECTING_PAYEE_ALIAS = 1
@@ -43,8 +44,7 @@ class PaymentsViewModel(app: GrouptuityApplication): BaseUIViewModel(app) {
     private val showSetAddressDialogEventMutable = MutableLiveData<Event<Triple<Int, Diner, PaymentMethod>>>()
     val showSetAddressDialogEvent: LiveData<Event<Triple<Int, Diner, PaymentMethod>>> = showSetAddressDialogEventMutable
 
-    val processPaymentsEvent: LiveData<Event<Boolean>> = repository.requestProcessPaymentsEvent
-
+    var paymentInProcessing: Payment? = null
     private val activePaymentAndMethod = repository.activePaymentAndMethod
     private var cachedMethod: PaymentMethod? = null
     private var cachedPayerAddress: String? = null
@@ -80,8 +80,7 @@ class PaymentsViewModel(app: GrouptuityApplication): BaseUIViewModel(app) {
                                 createPaymentData(
                                     payment,
                                     surrogates.contains(payment.payer),
-                                    PROCESSING_STATE,
-                                    eligibleSurrogates
+                                    PROCESSING_STATE
                                 )
                             } else {
                                 null
@@ -97,8 +96,7 @@ class PaymentsViewModel(app: GrouptuityApplication): BaseUIViewModel(app) {
                                 createPaymentData(
                                     payment,
                                     surrogates.contains(payment.payer),
-                                    DEFAULT_STATE,
-                                    eligibleSurrogates
+                                    DEFAULT_STATE
                                 )
                             } else {
                                 null
@@ -154,7 +152,7 @@ class PaymentsViewModel(app: GrouptuityApplication): BaseUIViewModel(app) {
             }
         }.asLiveData()
 
-    private fun createPaymentData(payment: Payment, actingAsSurrogate: Boolean, displayState: Int, eligibleSurrogates: Set<Diner>) =
+    private fun createPaymentData(payment: Payment, actingAsSurrogate: Boolean, displayState: Int) =
         when {
             payment.payer.isCashPool -> {
                 PaymentData(
@@ -439,16 +437,6 @@ class PaymentsViewModel(app: GrouptuityApplication): BaseUIViewModel(app) {
                     cachedSurrogateAddress)
                 setActivePayment(null)
             }
-        }
-    }
-
-    fun handleOnBackPressed(): Boolean {
-        return when {
-            activePaymentAndMethod.value.first != null -> {
-                setActivePayment(null)
-                false
-            }
-            else -> { true }
         }
     }
 }
